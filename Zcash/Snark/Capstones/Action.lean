@@ -102,6 +102,72 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
           (adaptiveStatement_pairCount_lt numProofs family) B epsilon
             profile.finderAdvantageLE hsurface)
 
+/-- Consensus-generic adaptive-statement knowledge soundness with executable work accounting.
+The adversary program erases to the original game, while its group work and the complete cached
+reduction work are derived from syntax and the captured verifier shape. -/
+theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
+    (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex actionCircuit.n → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (certificate :
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementAdversaryCostCertificate
+        family workLimit)
+    (profile : ComputedAdaptiveActionStatementFSFamily.CertifiedAdaptiveStatementDlogProfile
+      family (adaptiveStatement_pairCount_lt numProofs family) B workLimit certificate) :
+    (independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+      ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+        family.adaptiveStatementKnowledgeFailureEvent
+          (adaptiveStatement_pairCount_lt numProofs family)) ≤
+      (profile.advantage (adaptiveStatementCachedRandomOracleQueries family)
+          (workLimit + adaptiveStatementReductionGroupWork
+            (actionProofParamsFor numProofs)) +
+        1 / Fintype.card Fp) +
+      (family.Q + 1 : ℕ) *
+        (1 / Fintype.card Fp +
+          actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal)) +
+          algebraicRootBudget
+            (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs))
+            actionCircuit.domainExponent +
+          ∑ i : Fin 5,
+            ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+                numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) /
+              Fintype.card Fp) := by
+  let epsilon : Fin 5 → ENNReal := fun i =>
+    ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+        numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp
+  have hsurface : ∀
+      (basis : AugmentedIndex actionCircuit.n → VestaG)
+      (i : Fin 5)
+      (instanceCommitment :
+        Fin (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)).numProofs →
+          Nat → VestaG)
+      (ps : ProofString
+        (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) Fp VestaG)
+      (source : List (AlgebraicPoint (F := Fp) basis))
+      (earlier : Fin (i : ℕ) → Fp),
+      uniformChallenge.toOuterMeasure
+          (adaptiveActionSurfaceAtOf basis instanceCommitment i ps source earlier) ≤
+        epsilon i := by
+    intro basis i instanceCommitment ps source earlier
+    exact orchard_adaptiveActionStatementSurface_measure_le_for
+      numProofs basis instanceCommitment i ps source earlier
+  have hevent := family.event_prob_eq_of_uniformURS
+    (orchardGeneratorROSetup query) B (orchardGeneratorROBasis query)
+    (orchard_uniformURSIdentification_of_generatorRO
+      actionCircuit.domainExponent B hB query hquery)
+    (family.adaptiveStatementKnowledgeFailureEvent
+      (adaptiveStatement_pairCount_lt numProofs family))
+  calc
+    _ = _ := hevent
+    _ ≤ _ := by
+      simpa only [epsilon, CircuitShape.withProofParams_k] using
+        (family.adaptiveStatementKnowledgeFailure_prob_le
+          (adaptiveStatement_pairCount_lt numProofs family) B epsilon
+            profile.finderAdvantageLE_current hsurface)
+
 /-- **Adaptive-statement knowledge capstone.**  At `Q ≤ 2^123`, joint statement/proof
 selection, the executable witness projection, and the shared relation finder fit a `2^126`
 random-oracle/group-work envelope and `2^-83` statistical remainder; the finder and the
@@ -217,5 +283,184 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
           (adaptiveStatement_pairCount_lt numProofs family) h⟩, ?_⟩
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
+
+/-- Shared arithmetic and transfer proof for the two certified work ceilings below. -/
+private theorem adaptiveStatementCertifiedEndpoint
+    (numProofs workLimit : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    (hworkLower : 2 ^ 123 ≤ workLimit) (hworkUpper : workLimit ≤ 2 ^ 125)
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex actionCircuit.n → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (hQ : family.Q ≤ 2 ^ 123)
+    (certificate :
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementAdversaryCostCertificate
+        family workLimit)
+    (profile : ComputedAdaptiveActionStatementFSFamily.CertifiedAdaptiveStatementDlogProfile
+      family (adaptiveStatement_pairCount_lt numProofs family) B workLimit certificate) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.adaptiveStatementKnowledgeFailureEvent
+            (adaptiveStatement_pairCount_lt numProofs family)) ≤
+      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
+      (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis O, certificate.proverGroupWork basis O ≤ workLimit) ∧
+      ∀ basis O,
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤
+            2 * workLimit ∧
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).value.isSome =
+            (family.adaptiveStatementKnowledgeExtractor
+              (adaptiveStatement_pairCount_lt numProofs family) basis O).isSome ∧
+        family.cachedRelationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O =
+          family.relationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O := by
+  have hk :
+      (AdaptiveActionStatementShape (actionProofParamsFor numProofs)).k = 11 := by
+    unfold AdaptiveActionStatementShape
+    rw [actionShapeFor_eq_fixtureShape]
+    rfl
+  have hqueries : adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 := by
+    rw [adaptiveStatementCachedRandomOracleQueries, hk]
+    calc
+      family.Q + 11 + 11 ≤ 2 ^ 123 + 22 := by omega
+      _ ≤ 2 ^ 124 := by norm_num
+  have hqueriesDlog : adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 126 :=
+    hqueries.trans (by norm_num)
+  have hreduction := adaptiveStatementReductionGroupWork_at_consensus numProofs hn
+  have hreductionLimit :
+      adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ workLimit :=
+    hreduction.trans hworkLower
+  have hgroupDlog :
+      workLimit + adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤
+        2 ^ 126 := by
+    calc
+      workLimit + adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤
+          2 ^ 125 + 2 ^ 123 := Nat.add_le_add hworkUpper hreduction
+      _ ≤ 2 ^ 126 := by norm_num
+  have hprob :
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            family.adaptiveStatementKnowledgeFailureEvent
+              (adaptiveStatement_pairCount_lt numProofs family)) ≤
+        profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
+    refine le_trans
+      (orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
+        numProofs workLimit B hB query hquery family certificate profile) ?_
+    have hsum :
+        (∑ i : Fin 5,
+          ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
+              numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp) =
+          (((numProofs * 992851621 + 20470 : ℕ) : ENNReal) /
+            Fintype.card Fp) := by
+      norm_num [Fin.sum_univ_succ]
+      simp only [div_eq_mul_inv]
+      ring
+    rw [hsum]
+    refine le_trans ?_
+      (add_le_add (profile.advantage_mono hqueriesDlog hgroupDlog)
+        (actionStatisticalModelFor_at_2pow123 hn hQ))
+    refine le_trans ?_ (add_le_add le_rfl
+      (adaptiveStatementStatisticalModelFor_le_action numProofs family.Q))
+    unfold adaptiveStatementStatisticalModelFor actionSemanticModelFor
+    dsimp only
+    push_cast
+    simp only [div_eq_mul_inv]
+    ring_nf
+    exact le_rfl
+  refine ⟨hprob, hqueries, hreduction, certificate.erase_eq,
+    certificate.proverGroupWork_le, ?_⟩
+  intro basis O
+  refine ⟨family.costedCachedKnowledgeExtractor_two_mul_bound
+      (adaptiveStatement_pairCount_lt numProofs family) certificate hreductionLimit basis O,
+    ?_, family.cachedRelationFinder_eq
+      (adaptiveStatement_pairCount_lt numProofs family) basis O⟩
+  exact family.cachedKnowledgeExtractor_isSome_eq
+    (adaptiveStatement_pairCount_lt numProofs family) basis O
+
+/-- **Certified `2^123` adaptive-statement endpoint.**  The random-oracle budget is a separate
+premise.  The adversary's costed program erases to the original algebraic adversary, the complete
+reduction trace is shape-derived, and the cached extractor costs at most `2^124` group operations. -/
+theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex actionCircuit.n → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (hQ : family.Q ≤ 2 ^ 123)
+    (certificate :
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementAdversaryCostCertificate
+        family (2 ^ 123))
+    (profile : ComputedAdaptiveActionStatementFSFamily.CertifiedAdaptiveStatementDlogProfile
+      family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 123) certificate) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.adaptiveStatementKnowledgeFailureEvent
+            (adaptiveStatement_pairCount_lt numProofs family)) ≤
+      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
+      (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 123) ∧
+      ∀ basis O,
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤
+            2 ^ 124 ∧
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).value.isSome =
+            (family.adaptiveStatementKnowledgeExtractor
+              (adaptiveStatement_pairCount_lt numProofs family) basis O).isSome ∧
+        family.cachedRelationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O =
+          family.relationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O := by
+  simpa only [show 2 * 2 ^ 123 = 2 ^ 124 by norm_num] using
+    (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 123) hn le_rfl (by norm_num)
+      B hB query hquery family hQ certificate profile)
+
+/-- **Certified `2^125` adaptive-statement endpoint.**  A costed adversary bounded by `2^125`
+group operations and the complete cached reduction fit a `2^126` DLOG-work envelope.  The
+random-oracle budget remains independently bounded by `Q ≤ 2^123` and is not inflated to match. -/
+theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    {T : Type*} [DecidableEq T]
+    (B : VestaG) (hB : B ≠ 0)
+    (query : AugmentedIndex actionCircuit.n → T)
+    (hquery : Function.Injective query)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (hQ : family.Q ≤ 2 ^ 123)
+    (certificate :
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementAdversaryCostCertificate
+        family (2 ^ 125))
+    (profile : ComputedAdaptiveActionStatementFSFamily.CertifiedAdaptiveStatementDlogProfile
+      family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 125) certificate) :
+    ((independentProductPMF (orchardGeneratorROSetup query)
+      (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+        ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+          family.adaptiveStatementKnowledgeFailureEvent
+            (adaptiveStatement_pairCount_lt numProofs family)) ≤
+      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
+      (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 125) ∧
+      ∀ basis O,
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤
+            2 ^ 126 ∧
+        (family.costedCachedKnowledgeExtractor
+          (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).value.isSome =
+            (family.adaptiveStatementKnowledgeExtractor
+              (adaptiveStatement_pairCount_lt numProofs family) basis O).isSome ∧
+        family.cachedRelationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O =
+          family.relationFinder (adaptiveStatement_pairCount_lt numProofs family) basis O := by
+  simpa only [show 2 * 2 ^ 125 = 2 ^ 126 by norm_num] using
+    (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 125) hn (by norm_num) le_rfl
+      B hB query hquery family hQ certificate profile)
 
 end Zcash.Snark.Capstone

@@ -124,6 +124,7 @@ import Zcash.Snark.Soundness.Composition.DeployedRootContainment
 -- The straight-line AGM route: staged IPA representations, fixed-call deployed constraint
 -- extraction, and an explicit finite-security DLOG work profile.
 import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
+import Zcash.Snark.Soundness.AGM.CostedOracle
 -- The constraint-level and straight-line family interfaces are inhabited at the witness shape.
 import Zcash.Snark.Soundness.Composition.StraightLineWitness
 -- The zero-data keystone and the constant zero prover family, at any shape.
@@ -154,3 +155,5 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementCapstone
 import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
 import Zcash.Snark.Soundness.Action.AdaptiveStatementProfile
 import Zcash.Snark.Soundness.Action.AdaptiveStatementReads
+import Zcash.Snark.Soundness.Action.AdaptiveStatementCached
+import Zcash.Snark.Soundness.Action.AdaptiveStatementCost

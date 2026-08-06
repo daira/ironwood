@@ -174,7 +174,8 @@ build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's con
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the exact straight-line false-statement endpoint and the
-adaptive-statement knowledge-failure endpoint with its `2^123` work-factor instantiation, and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
+adaptive-statement knowledge-failure endpoints with certified `2^123` and `2^125` adversary-work
+instantiations and a separate oracle-query budget, and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
 Each family's `Random/` subfolder holds the random match-only
@@ -219,8 +220,10 @@ root, IPA, and semantic surfaces under the single `(Q + 1)` query factor; `Prove
 `Semantic`, and `Complete` identify the selected statement's decoded polynomials with the
 executable resolver stages; `Event` unions the priced events and `Capstone` discharges the
 statistical residual against them; `Knowledge` ends at the executable knowledge extractor and
-its failure bound; and `Profile` prices the whole reduction at the `2^123` computational work
-target. The shared `AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment
+its failure bound; `Cached` proves that one retained execution gives the same finder and extraction
+event; and `Cost` derives the complete reduction trace and certified `2×` group-work bound.
+`Profile` retains the older declared-resource compatibility theorem. The shared
+`AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment
 activity predicates, challenge surfaces, and pointwise semantic terminal both Action routes
 consume.
 
@@ -231,7 +234,8 @@ Six subtrees carry the heavier machinery:
   augmented basis `(g, U, W)` (`Adapter`, following
   [Fuchsbauer–Kiltz–Loss 2018](https://eprint.iacr.org/2017/620)), adds the algebraic
   coefficients to the online prover interfaces (`OnlineMembers`, `OnlineMultiopen`), feeds the
-  binding-signature relations in as AGM inputs (`BindingSignature`), and bounds the reduction's
+  binding-signature relations in as AGM inputs (`BindingSignature`), reifies erasable group-work
+  events for adaptive programs (`CostedOracle`), and bounds the reduction's
   probability loss (`Probability`, `ProbabilityCoins`, `ProbabilityVesta`) — programming *every*
   basis slot from the
   DL challenge rather than guessing which slot the relation will hit, so the loss is an additive
