@@ -66,6 +66,11 @@ find Zcash -name '*.lean' -print | sort | awk '
   }
 
   # ── *.lean files: the module universe and its internal import edges ─────────
+  # Imports are recorded only from the file HEADER (Lean permits them nowhere
+  # else): edge scanning stops at the first line that is not blank, a comment,
+  # `module`/`prelude`, or an import. Without this, an import-shaped line inside
+  # a block comment or docstring would create a phantom edge — and a phantom
+  # edge lets the guard pass for a module `lake build` never elaborates.
   {
     if (!(FILENAME in seen)) {
       seen[FILENAME] = 1
@@ -76,13 +81,30 @@ find Zcash -name '*.lean' -print | sort | awk '
       order[nuniv++] = mod
       filemod[mod] = FILENAME
       curmod = mod
+      hdrdone = 0
+      cdepth = 0
     }
+    if (hdrdone) next
     line = $0
+    if (cdepth > 0) {                     # inside a (possibly nested) block comment
+      cdepth += gsub(/\/-/, "/-", line) - gsub(/-\//, "-/", line)
+      next
+    }
+    if (line ~ /^[ \t]*$/) next           # blank
+    if (line ~ /^[ \t]*--/) next          # line comment
+    if (line ~ /^[ \t]*\/-/) {            # block comment or docstring opens
+      cdepth += gsub(/\/-/, "/-", line) - gsub(/-\//, "-/", line)
+      next
+    }
     sub(/^public[ \t]+/, "", line)
+    sub(/^meta[ \t]+/, "", line)
     if (line ~ /^import[ \t]+/) {
       split(line, parts, /[ \t]+/)
       adj[curmod] = adj[curmod] " " parts[2]
+      next
     }
+    if (line ~ /^(module|prelude)[ \t]*$/) next
+    hdrdone = 1                           # first real command: the header is over
   }
 
   END {

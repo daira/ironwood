@@ -114,7 +114,10 @@ jobs:
       #    and manifest pins alone — not the commit. Between dependency bumps
       #    every PR and push reuses ONE stable entry, which stays LRU-fresh
       #    and is never re-uploaded (the save step is skipped on an exact
-      #    key hit).
+      #    key hit). Caveat: entries saved from a pull_request run are scoped
+      #    to that PR's merge ref, so after a bump each open PR cold-builds
+      #    its own entry until the first post-merge push to main publishes
+      #    the shared main-scoped one — merge bumps promptly.
       #  * Project build (`.lake/build`, ~0.7 GB compressed): keyed per
       #    commit and restored by key prefix from the most recent entry.
       #    Entries are small enough that the quota holds ~10 of them next to
@@ -188,7 +191,12 @@ jobs:
       #    cleanup, so partial progress from an interrupted build warms the
       #    next attempt. Cache entries are immutable, but this layer's keys
       #    are per-commit, so a partial entry is superseded as soon as the
-      #    next push builds further.
+      #    next push builds further. The restore step must itself have
+      #    COMPLETED, though: a cancellation landing mid-untar would
+      #    otherwise save the truncated tree, and since restore-keys resolve
+      #    to the most recently created prefix match, every subsequent run
+      #    would warm-start from the gutted entry and re-publish it under
+      #    its own key.
       #  * Dependencies: only if the build step actually succeeded. This
       #    layer's key is shared and stable until the next dependency bump,
       #    and the exact-key-hit guard (needed to avoid futile duplicate-key
@@ -199,7 +207,7 @@ jobs:
       #    the previous entry (restore-keys above) until its first green run
       #    publishes a complete one.
       - name: Save project build cache
-        if: always() && steps.restore-build.outputs.cache-hit != 'true'
+        if: always() && steps.restore-build.outcome == 'success' && steps.restore-build.outputs.cache-hit != 'true'
         uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: .lake/build
