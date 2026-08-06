@@ -11,7 +11,7 @@ cardinality factor.
 The reduction samples a basis as uniform scalar multiples of `B`.
 `OrchardUniformURSIdentification` says that the deployed setup has the same distribution.
 `orchard_uniformURSIdentification_of_generatorRO` proves this inside a uniform generator random-
-oracle model. Treating halo2's hash-to-curve as that oracle remains an assumption.
+oracle model. Treating halo2's hash-to-curve as that oracle remains a heuristic identification.
 
 `Soundness.FiatShamir.Adversary.Algebraic` builds the basis-indexed adversary family from the deployed
 bounded-query Fiat–Shamir adversary and names the events this file prices.
@@ -54,7 +54,7 @@ def orchardGeneratorROBasis {T : Type*} {k : ℕ}
 
 This models halo2's parameter derivation (`gᵢ = H(0 || i)`, `W = H(1)`, `U = H(2)`). For `B ≠ 0`,
 scalar multiplication by `B` maps uniform scalars to uniform Vesta points. Identifying halo2's
-concrete hash-to-curve with this oracle remains an assumption. -/
+concrete hash-to-curve with this oracle remains a heuristic identification. -/
 theorem orchard_uniformURSIdentification_of_generatorRO {T : Type*} [DecidableEq T]
     (k : ℕ) (B : VestaG) (hB : B ≠ 0)
     (query : AugmentedIndex (2 ^ k) → T) (hquery : Function.Injective query) :

@@ -156,8 +156,8 @@ structure ActionWitness (KW F G RHO PSI MHASH MENC : Type*) (d : ℕ) where
 satisfy this interface (the latter enforces strictly more).
 
 This is the security-game statement — the abstract ledger meaning of a successful
-action — and it is deliberately separate from the circuit-facing `SpecPost`:
-`Bridge.specPost_to_ledger` verifies that every `SpecPost` case becomes either this
+action — and it is deliberately separate from the circuit-facing `ActionSpec`:
+`Bridge.actionSpec_to_ledger` verifies that every `ActionSpec` case becomes either this
 statement or an exhibited `Bridge.ActionBreak`. The interface itself stays
 `Prop`-only; the breaks-as-computed-data pattern applies at the bridge
 (`Bridge.classifyAction`, reduced onward to the games-facing discrete-log-relation

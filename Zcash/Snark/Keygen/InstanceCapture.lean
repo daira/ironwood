@@ -125,49 +125,12 @@ def capturedActionInputs : Fin Fixture.shape.numProofs → PublicInputs Fp := fu
     enableOutput := column.getD 8 0
     disableCrossAddress := column.getD 9 0 }
 
-/-- **The Action layout serializes its public input as exactly the element vector.** The layout
-declares one instance column of ten rows, so `usedRows = 10` and each row index resolves to its own
-cell — no zero padding and no reordering. -/
-theorem publicInputRows_zero (input : PublicInputs Fp) :
-    actionCircuit.publicInputRows input ⟨0⟩ = (toElements input).toList := by
-  cases input
-  rfl
-
-/-- Every other instance column is serialized as ten zero rows: the layout declares no cell there,
-so each row falls off the end of the element vector. -/
-theorem publicInputRows_ne_zero (input : PublicInputs Fp) {column : ℕ} (hcolumn : column ≠ 0) :
-    ∀ i, (actionCircuit.publicInputRows input ⟨column⟩).getD i 0 = 0 := by
-  -- Every serialized entry looks its row up in the cell list, misses, and reads past the end of
-  -- the element vector.
-  have hzero : ∀ x ∈ actionCircuit.publicInputRows input ⟨column⟩, x = (0 : Fp) := by
-    intro x hx
-    rw [show actionCircuit.publicInputRows input ⟨column⟩ =
-        (List.range PublicInputs.layout.usedRows).map (fun row =>
-          (toElements input).toList.getD
-            (PublicInputs.layout.cellList.idxOf ((⟨column⟩ : Column .instance), row)) 0) from rfl]
-      at hx
-    obtain ⟨row, -, rfl⟩ := List.mem_map.mp hx
-    rw [List.idxOf_eq_length (by
-      simp only [PublicInputs.layout, PublicInputLayout.cellList]
-      simp
-      intro _ hindex
-      exact hcolumn hindex.symm)]
-    have hlen : (toElements input).toList.length ≤ PublicInputs.layout.cellList.length := by
-      simp only [PublicInputLayout.cellList_length, Vector.length_toList]
-      exact le_refl _
-    exact List.getD_eq_default _ _ hlen
-  intro i
-  rcases lt_or_ge i (actionCircuit.publicInputRows input ⟨column⟩).length with h | h
-  · rw [List.getD_eq_getElem _ _ h]
-    exact hzero _ (List.getElem_mem h)
-  · exact List.getD_eq_default _ _ h
-
 /-- **The captured column is the circuit's serialization of the captured record.** Ten field
 elements, checked against the capture. -/
 theorem publicInputRows_capturedActionInputs (proofIndex : Fin Fixture.shape.numProofs) :
     actionCircuit.publicInputRows (capturedActionInputs proofIndex) ⟨0⟩ =
       capturedPublicInstances.getD (proofIndex.val * capturedNumInstanceColumns) [] := by
-  rw [publicInputRows_zero]
+  rw [actionCircuit_publicInputRows_zero]
   fin_cases proofIndex
   native_decide
 
@@ -211,7 +174,7 @@ theorem instanceCommitment_capturedActionInputs :
           actionCircuit_omega_captured) _ _
         (by fin_cases proofIndex; native_decide)]
   · -- Every other column: the circuit serializes zeros, the capture stores nothing, both give `w`.
-    rw [commitInstance_of_rows_zero _ (publicInputRows_ne_zero _ hcolumn),
+    rw [commitInstance_of_rows_zero _ (actionCircuit_publicInputRows_ne_zero _ hcolumn),
       List.getD_eq_default _ _ (by
         simp only [capturedPublicInstances, capturedNumInstanceColumns, List.length_cons,
           List.length_nil]

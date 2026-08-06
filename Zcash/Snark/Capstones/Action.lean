@@ -99,7 +99,8 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
     _ ≤ _ := by
       simpa only [epsilon, CircuitShape.withProofParams_k] using
         (family.adaptiveStatementKnowledgeFailure_prob_le
-          (adaptiveStatement_pairCount_lt numProofs family) B epsilon profile.hardness hsurface)
+          (adaptiveStatement_pairCount_lt numProofs family) B epsilon
+            profile.finderAdvantageLE hsurface)
 
 /-- **Adaptive-statement knowledge capstone.**  At `Q ≤ 2^123`, joint statement/proof
 selection, the executable witness projection, and the shared relation finder fit a `2^126`

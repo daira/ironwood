@@ -166,16 +166,16 @@ theorem path_iff_guarded_smoke
   Merkle.path_iff_guarded_defined
 
 /-- The circuit-level postcondition refines directly to the ledger action alternative. -/
-theorem spec_post_bridge_smoke {MSG SIG : Type*}
+theorem actionSpec_bridge_smoke {MSG SIG : Type*}
     (verify bverify : PallasGroup → MSG → SIG → Prop)
-    {wit : ActionData}
-    (h : SpecPost orchardGenerators orchardBases () () wit) :
-    ActionBreak wit ∨
-      ∃ inst w, PublicProjection wit inst ∧
+    (input : PublicInputs Fp) (wit : PrivateWitness)
+    (h : ActionSpec input wit) :
+    ActionBreak (combine input wit) ∨
+      ∃ inst w, PublicProjection (combine input wit) inst ∧
         ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied wit w ∧
-        EnableFlagsSatisfied wit w :=
-  specPost_to_ledger verify bverify h
+        CrossAddressSatisfied (combine input wit) w ∧
+        EnableFlagsSatisfied (combine input wit) w :=
+  actionSpec_to_ledger verify bverify input wit h
 
 open Zcash.Meta
 
@@ -235,7 +235,7 @@ assert_axioms Zcash.Security.Ledger.Bridge.guardedPath_of_exact +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
-assert_axioms Zcash.Security.Ledger.BridgeTests.spec_post_bridge_smoke +native(
+assert_axioms Zcash.Security.Ledger.BridgeTests.actionSpec_bridge_smoke +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

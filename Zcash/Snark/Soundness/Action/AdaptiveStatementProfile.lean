@@ -233,7 +233,7 @@ structure AdaptiveStatementDlogProfile {pp : ProofParams}
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
-  hardness : TextbookDLWithCoinsAdvantageLE B (family.relationFinder hchar)
+  finderAdvantageLE : TextbookDLWithCoinsAdvantageLE B (family.relationFinder hchar)
     (advantage (adaptiveStatementDlogRandomOracleQueries family)
       (adaptiveStatementDlogGroupWork proverGroupWork reductionGroupWork))
 

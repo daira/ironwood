@@ -56,29 +56,7 @@ theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
 theorem adaptiveActionPublicInputRows_ne_zero (input : PublicInputs Fp)
     {column : ℕ} (hcolumn : column ≠ 0) :
     ∀ i, (actionCircuit.publicInputRows input ⟨column⟩).getD i 0 = 0 := by
-  have hzero : ∀ x ∈ actionCircuit.publicInputRows input ⟨column⟩, x = (0 : Fp) := by
-    intro x hx
-    rw [show actionCircuit.publicInputRows input ⟨column⟩ =
-        (List.range PublicInputs.layout.usedRows).map (fun row =>
-          (toElements input).toList.getD
-            (PublicInputs.layout.cellList.idxOf ((⟨column⟩ : Column .instance), row)) 0)
-        from rfl] at hx
-    obtain ⟨row, -, rfl⟩ := List.mem_map.mp hx
-    rw [List.idxOf_eq_length (by
-      simp only [PublicInputs.layout, PublicInputLayout.cellList]
-      simp
-      intro _ hindex
-      exact hcolumn hindex.symm)]
-    have hlen : (toElements input).toList.length ≤
-        PublicInputs.layout.cellList.length := by
-      simp only [PublicInputLayout.cellList_length, Vector.length_toList]
-      exact le_refl _
-    exact List.getD_eq_default _ _ hlen
-  intro i
-  rcases lt_or_ge i (actionCircuit.publicInputRows input ⟨column⟩).length with h | h
-  · rw [List.getD_eq_getElem _ _ h]
-    exact hzero _ (List.getElem_mem h)
-  · exact List.getD_eq_default _ _ h
+  exact actionCircuit_publicInputRows_ne_zero input hcolumn
 
 /-- A zero public-instance column commits only to its blinding generator, for any verifier URS. -/
 theorem adaptiveCommitInstance_of_rows_zero {G : Type*} [AddCommGroup G] [Module Fp G]
