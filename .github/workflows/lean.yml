@@ -91,6 +91,13 @@ jobs:
       # such a leaf, but not a stray native_decide or other unexpected axiom; the pin does.
       - name: Verify soundness endpoints are axiom-censused
         run: scripts/check_endpoint_census.sh
+      # Every module file must be reachable from the lakefile's defaultTargets — a module
+      # outside that set is not elaborated at all, and nothing else fails when one falls out.
+      # Coverage stopped being a pure import-reachability property when `Zcash/Snark.lean`
+      # ceased re-exporting `Soundness/` (issue #153); the subtree is pinned by an explicit
+      # lakefile glob, and this check asserts the end-to-end property for the whole package.
+      - name: Verify build coverage of every module
+        run: scripts/check_build_coverage.sh
       # ── Caching (issue #153) ─────────────────────────────────────────────
       # lean-action's built-in cache is disabled below: it archives the entire
       # `.lake` directory (~2.6 GB compressed) under a per-commit key, so the
