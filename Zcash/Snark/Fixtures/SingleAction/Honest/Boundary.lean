@@ -31,7 +31,7 @@ def derivedVk : VerifyingKey shape Fp G :=
 `nonInteractiveFingerprint_matches`. -/
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
-      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+      (nonInteractiveFingerprintForStatement capturedFs (fun _ => capturedVkTranscriptRepr)
         derivedVk derivedInstanceCommitment ps)
       capturedMsm := by
   unfold derivedVk
@@ -44,7 +44,7 @@ circuit's commitment of the captured public inputs (`Keygen.instanceCommitment_c
 so both group-element families on the Lean side are derivations, not dump entries. -/
 theorem nonInteractiveFingerprint_matches_derived_inputs :
     MsmMatch
-      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+      (nonInteractiveFingerprintForStatement capturedFs (fun _ => capturedVkTranscriptRepr)
         derivedVk
         (actionCircuit.instanceCommitment capturedURS Keygen.capturedActionInputs) ps)
       capturedMsm := by

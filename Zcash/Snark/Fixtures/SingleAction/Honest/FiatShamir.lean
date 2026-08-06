@@ -131,7 +131,7 @@ theorem capturedRawInstances_commitments_eq_on_layout :
 
 /-- The composed rejecting verifier reproduces checked assembly at the captured challenges. -/
 theorem assembleNonInteractiveInstances?_matches_captured :
-    assembleNonInteractiveInstances? capturedFs capturedVkTranscriptRepr vk
+    assembleNonInteractiveInstances? capturedFs (fun _ => capturedVkTranscriptRepr) vk
       capturedRawInstances commitLagrange ps =
         assemble? vk derivedInstanceCommitment ps ch := by
   simp only [assembleNonInteractiveInstances?, validateInstances?,
@@ -153,7 +153,7 @@ theorem assembleNonInteractiveInstances?_matches_captured :
 /-- The Fiat–Shamir-derived fingerprint matches the captured single-action MSM under the concrete
 captured schedule oracle above. -/
 theorem nonInteractiveFingerprint_matches :
-    MsmMatch (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+    MsmMatch (nonInteractiveFingerprintForStatement capturedFs (fun _ => capturedVkTranscriptRepr)
       vk derivedInstanceCommitment ps) capturedMsm := by
   unfold nonInteractiveFingerprintForStatement
   rw [deriveChallengesForStatement_matches_captured_schedule]

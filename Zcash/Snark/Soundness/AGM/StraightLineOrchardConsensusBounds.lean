@@ -6,8 +6,7 @@ import Zcash.Snark.Soundness.AGM.StraightLineFiniteSecurity
 
 The DLOG advantage remains an explicit finite-security profile.  This file evaluates the
 information-theoretic terms, connects the implemented direct-coordinate cost, and records the
-tight three-bit query/group-work interpretation, with a caller-supplied five-bit envelope
-kept as a compatibility theorem.
+tight three-bit query/group-work interpretation.
 -/
 
 namespace Zcash.Snark.FixtureMax
@@ -51,21 +50,6 @@ theorem consensusStraightLineStatisticalModel_eq (T : Nat) :
   push_cast
   simp only [div_eq_mul_inv]
   ring
-
-/-- At the `2^122` adversary-work target, all non-DLOG terms together are below `2^-85`.
-The dominant contribution is the deliberately conservative all-members multiopen root union. -/
-theorem consensusStraightLineStatisticalModel_at_2pow122 :
-    consensusStraightLineStatisticalModel (2 ^ 122) <=
-      1 / (2 ^ 85 : ENNReal) := by
-  rw [consensusStraightLineStatisticalModel_eq, card_Fp]
-  convert ennreal_nat_div_le_one_div_straightLine
-    (a := ((2 ^ 122 + 1) * (1 + 11 * 2 + 20470) +
-      (2 ^ 122 + 23) * 53_686_986_342_456 + 1))
-    (p := scalarFieldOrder) (m := 2 ^ 85)
-    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD])
-    (by norm_num)
-    (by norm_num [scalarFieldOrder, CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]) using 1
-  norm_num
 
 /-- At the largest work target supported by the explicit direct profile under a conservative
 three-bit total-resource loss, the non-DLOG terms are below `2^-84`.  This is a probability
@@ -255,49 +239,5 @@ theorem orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_secur
   exact add_le_add
     (profile.advantage_mono hqueries hgroup)
     consensusStraightLineStatisticalModel_at_2pow123
-
-/-- Compatibility package for the older caller-supplied five-bit envelope.  The primary direct
-endpoint above removes the free reduction-group-work allowance and states the tighter, honest
-123-bit protocol work target. -/
-theorem orchard_deployed_straightline_consensus_2pow122_generatorRO_finite_security
-    {T' : Type*} [DecidableEq T']
-    (B : VestaG) (hB : B ≠ 0)
-    (query : AugmentedIndex (2 ^ (shape orchardConsensusMaxProofs).k) -> T')
-    (hquery : Function.Injective query)
-    (family : ComputedStraightLineDeployedFSFamily (shape orchardConsensusMaxProofs))
-    (static : DeployedConstraintStaticChecks family.toRootFamily)
-    (schedule : DeployedConstraintXSqueezeSchedule family.toRootFamily
-      ((20470 : Nat) / (Fintype.card Fp : ENNReal)))
-    (profile : family.StraightLineFiveBitDlogProfile B (2 ^ 122)) :
-    ((independentProductPMF (orchardGeneratorROSetup query)
-        (PMF.uniformOfFintype
-          (BTranscript Fp VestaG
-            (preIpaLen (shape orchardConsensusMaxProofs) family.init.length 10 +
-              3 * (shape orchardConsensusMaxProofs).k) -> Fp))).toOuterMeasure
-          ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
-            family.straightLineConstraintFailureEvent static) <=
-        profile.advantage (2 ^ 127) (2 ^ 127) +
-          1 / (2 ^ 85 : ENNReal)) ∧
-      family.straightLineDlogRandomOracleQueries <= 2 ^ 127 ∧
-      straightLineDlogGroupWork profile.proverGroupWork profile.reductionGroupWork <= 2 ^ 127 := by
-  constructor
-  · have hcost := profile.solverCost_at_2pow122
-    refine le_trans
-      (straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO
-        B hB query hquery family static schedule profile.toStraightLineConstraintDlogProfile
-        profile.queryBound) ?_
-    exact add_le_add
-      (profile.advantage_mono hcost.1 hcost.2)
-      consensusStraightLineStatisticalModel_at_2pow122
-  · exact profile.solverCost_at_2pow122
-
-/-- The final work-factor arithmetic used in prose: an explicit five-bit overhead takes the
-`2^122` adversary target exactly to the `2^127` DLOG-solver scale.  Vesta's expected
-endomorphism-accelerated Pollard-rho cost is about `2^126.0`, one bit below that ceiling, so the
-hardness premise is genuinely restrictive only for adversary work up to about `2^121`: the
-five-bit overhead costs the guarantee one bit against the `2^122` target. -/
-theorem consensus_five_bit_overhead_at_2pow122 :
-    32 * 2 ^ 122 = 2 ^ 127 :=
-  ComputedStraightLineDeployedFSFamily.five_bit_overhead_at_2pow122
 
 end Zcash.Snark.FixtureMax

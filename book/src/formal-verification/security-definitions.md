@@ -77,7 +77,7 @@ flowchart TD
   KERR --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/KnowledgeError.lean'>challenge hash as random<br/>oracle; query-time labels<br/>pin the bad challenge (AGM)</a>"| ROM
   NDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
   SDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Circuits/Integration/AdaptiveActionEvent.lean'>online AGM +<br/>independent<br/>hash-to-curve bases</a>"| DL
+  KS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>online AGM +<br/>independent<br/>hash-to-curve bases</a>"| DL
   KS -->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/FiatShamir'>Fiat–Shamir<br/>heuristic</a>"| ROM
   MC --> SDLR
   CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/|𝔽|,<br/>no assumption</a>"| ROM

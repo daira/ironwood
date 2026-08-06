@@ -34,7 +34,7 @@ open Zcash.Snark
 Fiat–Shamir prefix is the statement-bound one. -/
 theorem nonInteractiveFingerprint_matches_derived :
     MsmMatch
-      (nonInteractiveFingerprintForStatement capturedFs capturedVkTranscriptRepr
+      (nonInteractiveFingerprintForStatement capturedFs (fun _ => capturedVkTranscriptRepr)
         derivedVk derivedInstanceCommitment ps)
       capturedMsm := by
   have h : vk = derivedVk := vk_eq_derived

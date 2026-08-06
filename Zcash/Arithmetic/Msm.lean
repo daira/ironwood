@@ -74,6 +74,33 @@ def addToUScalar {k : ℕ} {F G : Type*} [Add F] (c : F) (m : Msm k F G) : Msm k
 def addToWScalar {k : ℕ} {F G : Type*} [Add F] (c : F) (m : Msm k F G) : Msm k F G :=
   { m with wScalar := m.wScalar + c }
 
+/-! ### Term counts
+
+The `other` length is the group-operation count an `eval` spends beyond the fixed
+`2 ^ k + 2` generator sweep; these lemmas track it through the assembly combinators. -/
+
+@[simp] theorem other_zero {k : ℕ} {F G : Type*} [Zero F] : (Msm.zero k F G).other = [] := rfl
+
+@[simp] theorem other_length_appendTerm {k : ℕ} {F G : Type*} (c : F) (P : G) (m : Msm k F G) :
+    (m.appendTerm c P).other.length = m.other.length + 1 := rfl
+
+@[simp] theorem other_length_scale {k : ℕ} {F G : Type*} [Mul F] (c : F) (m : Msm k F G) :
+    (m.scale c).other.length = m.other.length := by
+  simp [scale]
+
+@[simp] theorem other_length_add {k : ℕ} {F G : Type*} [Add F] (m₁ m₂ : Msm k F G) :
+    (m₁.add m₂).other.length = m₁.other.length + m₂.other.length := by
+  simp [add]
+
+@[simp] theorem other_addToGScalars {k : ℕ} {F G : Type*} [Add F] [Zero F] (l : List F)
+    (m : Msm k F G) : (addToGScalars l m).other = m.other := rfl
+
+@[simp] theorem other_addToUScalar {k : ℕ} {F G : Type*} [Add F] (c : F) (m : Msm k F G) :
+    (addToUScalar c m).other = m.other := rfl
+
+@[simp] theorem other_addToWScalar {k : ℕ} {F G : Type*} [Add F] (c : F) (m : Msm k F G) :
+    (addToWScalar c m).other = m.other := rfl
+
 /-- Evaluate the MSM against an `URS` as
 `(∑ᵢ gScalarsᵢ • gᵢ) + wScalar • w + uScalar • u + Σ (c • P)`. The verifier accepts iff this is `0`. -/
 def eval {F G : Type*} [Field F] [AddCommGroup G] [Module F G]

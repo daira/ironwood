@@ -37,11 +37,13 @@ The instance-commitment derivation (`instance_commitments_derived`,
 functions it ranges over; see the single-action sibling for why this is the fixture's new trust
 surface.
 
-One AGM capstone is retained: the straight-line endpoint, which consumes an online
-representation trace and has a pointwise four-invocation bound.  Those representations are ghost
-extractor data: they are neither transmitted nor checked by the Halo2 verifier.  Accordingly the
-endpoint is only an AGM-and-random-oracle result under the supplied finite-security Vesta DLOG
-profile.
+The retained AGM capstones include the straight-line endpoint and the adaptive-statement knowledge
+endpoints.  Their representations are ghost extractor data: they are neither transmitted nor
+checked by the Halo2 verifier.  Accordingly the endpoints are AGM-and-random-oracle results under
+the supplied finite-security Vesta DLOG profiles.  The adaptive-statement profile conservatively
+charges its four short-circuiting finder stages and one additional extraction traversal.  The
+adversary's group work and the complete reduction postprocessing work remain explicit bounded
+profile inputs; only the named assembly/basis sub-budget is operationally derived here.
 -/
 
 assert_axioms Zcash.Snark.Fixture2.capturedPointCoordinatesValid_eq_true +native(
@@ -414,24 +416,6 @@ assert_axioms Zcash.Snark.Capstone.derived_lookups +native(
 -- The shared five-surface probability bound the two Action endpoints are built from. It is a
 -- per-challenge measure rather than a protocol capstone; the pin is what the `_probability_bound`
 -- suffix rule demands, not an independent claim.
-assert_axioms Zcash.Snark.Capstone.adaptiveActionSurface_probability_bound +native(
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
-  Zcash.Snark.Capstone.actionLookupInputArity_le,
-  Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
-  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 assert_axioms Zcash.Snark.Capstone.capturedActionStaticChecks +native(
   CompElliptic.Fields.Pasta.pallasBase,
@@ -460,19 +444,23 @@ assert_axioms Zcash.Snark.Capstone.capturedActionXSqueezeSchedule +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_soundness_finite_security +native(
+-- Adaptive-statement knowledge soundness binds the statement-selected instance prefix before
+-- `theta` and conservatively charges every stage of the combined finder.
+assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
   Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
   Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
   Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
   Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -488,19 +476,21 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_soundness_fini
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soundness_finite_security +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
   Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
   Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
   Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
   Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
   Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -517,62 +507,8 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soun
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- The unpriced-resource form of the adaptive knowledge-failure bound.
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_knowledge_soundness_error_bound +native(
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
-  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
-  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
-  Zcash.Snark.Capstone.actionLookupInputArity_le,
-  Zcash.Snark.Capstone.resolverPermutationCell_card_eq, Zcash.Snark.Fixture.vk_chunk_width_le,
-  Zcash.Snark.Fixture.vk_gates_degree_le, Zcash.Snark.Fixture.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le, Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 -- Its consensus-generic form.
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptive_bundle_soundness_error_bound +native(
-  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
-  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
-  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
-  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
-  Zcash.Snark.ActionGateCoherence.selectorDegree,
-  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
-  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
-  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
-  Zcash.Snark.Capstone.actionLookupInputArity_le,
-  Zcash.Snark.Capstone.resolverPermutationCell_card_eq, Zcash.Snark.Fixture.vk_chunk_width_le,
-  Zcash.Snark.Fixture.vk_gates_degree_le, Zcash.Snark.Fixture.vk_lookup_input_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_table_degree_le, Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 
 -- The instance-commitment derivation: the two captured claims, plus the data and functions they
 -- range over. The latter are flagless — they are ordinary definitions, so compiler trust must not
@@ -718,15 +654,11 @@ assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroRootFamily +native(CompEllipt
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroIpaTrace +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroStraightLineFamily +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_computable Zcash.Snark.Fixture2.capturedLiveZeroAdaptiveFamily +choice +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.capturedLiveZeroStaticChecks +native(
   Zcash.Snark.Fixture2.vk_advice_layout_length, Zcash.Snark.Fixture2.vk_fixed_layout_length,
   Zcash.Snark.Fixture2.vk_instance_layout_length, Zcash.Snark.Fixture2.vk_n_cast_ne_zero,
   Zcash.Snark.Fixture2.vk_omega_order, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture2.straightLineInterface_nonempty_at_captured_shape +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.Fixture2.adaptiveInterface_nonempty_at_captured_shape +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The consensus-maximum work-factor packages (`Zcash.Snark.FixtureMax`, reached through
@@ -738,8 +670,6 @@ assert_axioms Zcash.Snark.Fixture2.adaptiveInterface_nonempty_at_captured_shape 
 -- hypotheses rather than discharging them from the capture, so they reach no fixture native
 -- certificate — only the Vesta point count, through the `Fp`-module structure on the curve.
 assert_axioms Zcash.Snark.FixtureMax.orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.FixtureMax.orchard_deployed_straightline_consensus_2pow122_generatorRO_finite_security +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how

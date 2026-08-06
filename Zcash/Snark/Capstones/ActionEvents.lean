@@ -5,7 +5,8 @@ import Zcash.Snark.Soundness.AGM.StraightLineOrchardConsensusBounds
 import Zcash.Snark.Keygen.Certificate
 import Zcash.Snark.Soundness.Action.StraightLineEvent
 import Zcash.Snark.Soundness.Action.StraightLineBudgets
-import Zcash.Snark.Soundness.Action.AdaptiveEvent
+import Zcash.Snark.Soundness.Action.AdaptiveStatementProfile
+import Zcash.Snark.Soundness.Action.AdaptiveStatementReads
 
 /-!
 # The events the Action endpoints bound
