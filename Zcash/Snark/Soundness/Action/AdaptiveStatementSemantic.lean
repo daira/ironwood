@@ -27,7 +27,7 @@ theorem adaptiveStatementInstanceLayout_column_lt {pp : ProofParams}
   rw [adaptiveActionStatement_numInstanceColumns]
   have hmem' : (column, rotation) ∈ actionCircuit.instanceQueryLayout := by
     simpa only [actionCircuit.toVerifierKey_instanceQueryLayout] using hmem
-  have hall := ActionPermutationDomain.instanceQueryLayout_columns_lt
+  have hall := actionCircuit.instanceQueryLayout_columns_lt
   exact hall (column, rotation) hmem'
 
 theorem BatchWitnessV.acceptedPolynomial_eq_online_of_query {pp : ProofParams}

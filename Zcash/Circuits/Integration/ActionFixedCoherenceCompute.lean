@@ -33,7 +33,7 @@ open Zcash.Snark.Keygen
 reduction barrier, so no kernel route reaches this number: `decide` is stuck on the sealed
 constant and stays stuck after `Internal.actionCircuit_eq_impl` opens it.  No configure law
 bounds the derived fixed-column list either, so — as for the sibling counts in this file and in
-`ActionPermutationDomainCompute` — the count is anchored by evaluation.  Its consumer is the
+`Action.TopLevel` — the count follows compositionally from configuration. Its consumer is the
 `fixedRepresentations_length_le` obligation on the adaptive-statement family, whose interface cap
 this count sits far below. -/
 theorem fixedColumnCount_eq :

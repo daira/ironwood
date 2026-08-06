@@ -100,9 +100,9 @@ theorem adaptiveStatementLagrangePrefix :
               (omegaOf (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).k)
               (Pi.single i (1 : Fp)))) :=
   ofPrefix_setup_of_closed _
-    (Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt)
+    (Nat.le_of_lt_succ ActionConstraintBounds.domainExponent_lt)
     (derivedUrsGLagrange_generator_eq _
-      (Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt))
+      (Nat.le_of_lt_succ ActionConstraintBounds.domainExponent_lt))
 
 /-- The canonical augmented-basis representation of a fixed-column commitment, using the dense
 keygen row and Halo2's default blind `1`. -/
