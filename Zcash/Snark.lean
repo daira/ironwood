@@ -65,14 +65,10 @@ import Zcash.Snark.Verifier.Deployed
 import Zcash.Snark.Verifier.Parametric
 import Zcash.Snark.Verifier.GroupingRef
 import Zcash.Snark.Fingerprint.Match
--- The quantified random match — the sample space, the good event's enumerated
--- denominator factors, and the rational-representation walk of the assembled coefficients.
-import Zcash.Snark.Fingerprint.SampleSpace
-import Zcash.Snark.Fingerprint.Rational.GoodEvent
-import Zcash.Snark.Fingerprint.Rational.Representation
-import Zcash.Snark.Fingerprint.Rational.ConstraintWalk
-import Zcash.Snark.Fingerprint.Rational.GroupingTable
-import Zcash.Snark.Fingerprint.Rational.IpaWalk
-import Zcash.Snark.Fingerprint.Rational.OpeningWalk
-import Zcash.Snark.Fingerprint.Rational.Capstone
-import Zcash.Snark.Fingerprint.Epsilon
+-- The quantified random match — the sample space, the good event's enumerated denominator
+-- factors, and the rational-representation walk (`Fingerprint/SampleSpace`, `Fingerprint/
+-- Rational/`, `Fingerprint/Epsilon`) — is deliberately NOT re-exported, for the same reason
+-- as `Soundness/` above: the captures reference none of it, and its `Rational/Capstone`
+-- chain (~4 min) sat on every capture lane's build path through this umbrella. Its
+-- consumers (each random family's `Epsilon.lean`, and the census files through them)
+-- import it directly, and the `FixtureCheck` glob keeps it in the default build.
