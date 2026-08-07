@@ -246,7 +246,7 @@ executable projection must have returned `none`.
 
 This is the step by which the advertised knowledge endpoints imply ordinary Action soundness at
 the same error: the accepting-false-statement set is contained in the event they already bound,
-so that weaker property is not stated separately.  It is a containment, not an endpoint -- no
+so that weaker property is not stated separately.  It is a containment, not an endpoint — no
 probability is claimed here. -/
 theorem acceptFalseStatement_subset_knowledgeFailure {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)

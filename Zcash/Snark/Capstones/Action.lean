@@ -5,8 +5,9 @@ import Zcash.Snark.Capstones.ActionBudgets
 
 Captured checks and executable terminals yield knowledge-soundness bounds against an adversary
 that chooses the public statement and proof together, for every consensus-valid Action bundle
-size. Two endpoints state them: the consensus-generic compositional error formula, and its
-instantiation at the `2^123` work-factor target.
+size. Five endpoints state them: the consensus-generic compositional error formula and its
+staged-certified counterpart, the instantiation at the `2^123` work-factor target, and the
+conditionally staged-certified forms at `2^123` and `2^125` adversary work.
 
 Knowledge soundness is the only property advertised here.  Ordinary soundness is not stated
 separately because it is the weaker consequence at the same error:

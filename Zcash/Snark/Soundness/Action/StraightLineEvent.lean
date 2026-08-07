@@ -60,7 +60,7 @@ projection must have returned `none`.
 This is the straight-line counterpart of
 `ComputedAdaptiveActionStatementFSFamily.acceptFalseStatement_subset_knowledgeFailure`, and the
 step by which the advertised knowledge endpoints imply ordinary Action soundness at the same
-error.  It is a containment, not an endpoint -- no probability is claimed here. -/
+error.  It is a containment, not an endpoint — no probability is claimed here. -/
 theorem acceptFalseStatement_subset_knowledgeFailure :
     family.straightLineConstraintSemanticFailureEvent
         (fun _ _ => BundleStatement inputs) ⊆

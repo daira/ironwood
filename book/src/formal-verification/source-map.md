@@ -331,10 +331,11 @@ Six subtrees carry the heavier machinery:
 Where the deployed Action circuit's own statements are stated. `ActionEvents` carries the shape
 identification the rest of the chain is stated over, `ActionChecks` carries the captured key's
 scalars and static checks, `ActionBudgets` discharges the semantic surfaces, and `Action` states
-the two endpoints — knowledge-soundness bounds for every consensus-valid bundle size, one in
-compositional error-formula form and one in resource-accounted finite-security form. Knowledge
-soundness is the only property advertised: it implies the plain-soundness statement, so that is
-not stated separately.
+the endpoints — knowledge-soundness bounds for every consensus-valid bundle size, in
+compositional error-formula form, in resource-accounted finite-security form at the `2^123` work
+factor, and in the staged-certified forms carrying their group-work accounting at `2^123` and
+`2^125` adversary work. Knowledge soundness is the only property advertised: it implies the
+plain-soundness statement, so that is not stated separately.
 
 Endpoints about the *verifier's algebra* rather than the circuit statement live with the layer that
 proves them: the captured straight-line knowledge errors in
