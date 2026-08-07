@@ -141,10 +141,10 @@ no smaller, so that no adversary with a meaningful guarantee is excluded.
 The near-coincidence with Pollard rho's estimated cost on Vesta (about $2^{126}$, using
 the curve's automorphisms) is therefore a stopping rationale, not a dependence: a revised
 attack estimate would change the interpretation, not the theorem. And the quoted bound is
-the worst covered point —the theorems evaluate the advantage function at the finder's
-exact accounted counts and relax to the envelope by monotonicity— so, with generic-attack
-success falling off steeply below its threshold, an adversary far below the target gets a
-far stronger interpreted bound.
+the worst covered point: the theorems evaluate the advantage function at the finder's
+exact accounted counts, and substituting the larger envelope numbers can only increase
+it. Since generic-attack success falls off steeply below its threshold, an adversary far
+below the target gets a far stronger interpreted bound.
 Reading resource-parameterized claims this way —as attack-cost curves rather than
 single thresholds— follows Bernstein,
 [Understanding brute force](https://cr.yp.to/snuffle/bruteforce-20050425.pdf), 2005.
