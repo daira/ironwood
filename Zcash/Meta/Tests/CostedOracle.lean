@@ -39,6 +39,14 @@ namespace Zcash.Snark
 #guard_msgs (whitespace := lax) in
 #check ComputedAdaptiveActionStatementFSFamily.costedAdaptiveStatementCanonicalInstances
 
+/-- error: Unknown constant `Zcash.Snark.CostedVestaComp.auditMsms` -/
+#guard_msgs (whitespace := lax) in
+#check CostedVestaComp.auditMsms
+
+/-- error: Unknown constant `Zcash.Snark.CostedVestaComp.repeatAudit` -/
+#guard_msgs (whitespace := lax) in
+#check CostedVestaComp.repeatAudit
+
 /- The certified endpoint now has a named coverage predicate for both staged reduction programs. -/
 #check ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
 

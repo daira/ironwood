@@ -1367,8 +1367,11 @@ theorem costedCachedKnowledgeExtractor_two_mul_bound {pp : ProofParams}
   refine (family.costedCachedKnowledgeExtractor_groupWork_le hchar certificate basis O).trans ?_
   omega
 
-/-- DLOG advantage interface for the certified one-execution finder.  Unlike the legacy profile,
-there are no caller-selected prover or reduction work numbers. -/
+/-- DLOG advantage interface for the conditionally certified one-execution finder. Unlike the
+legacy profile, there are no caller-selected prover or reduction group-work numbers: those come
+from the staged adversary and complete reified reduction programs. Here “certified” does not mean
+assumption-free: host-language staging fidelity remains explicit, and direct-coordinate/list work
+is a separate coverage obligation rather than part of the Vesta group-operation cost language. -/
 structure CertifiedAdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -1388,6 +1391,9 @@ structure CertifiedAdaptiveStatementDlogProfile {pp : ProofParams}
       (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
     AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .extractor family hchar
       certificate B z x y O
+  /-- Coverage for three direct-coordinate decodes. The cost expression is computed from the
+  selected run, but the adversary/family-supplied assembly-source length has no structural bound
+  in this interface, so this inequality remains an explicit non-group-work premise. -/
   directDecodeWorkBound : ∀ basis O,
     adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
       adaptiveStatementDirectDecodeOps family basis O ≤ workLimit

@@ -411,16 +411,6 @@ def evalMsmMatrixCertified (matrix : List (List (List (Fp × VestaG)))) :
         bind (evalMsmMatrixCertified rest) fun rows =>
           pure ⟨values.1 :: rows.1, by rw [values.2, rows.2]; rfl⟩
 
-/-- Execute a list of concrete MSMs for their audited effects. -/
-def auditMsms (termSets : List (List (Fp × VestaG))) : CostedVestaComp Unit :=
-  map (fun _ => ()) (evalMsms termSets)
-
-/-- Execute the same closed computation `count` times for its audited effects. -/
-def repeatAudit (count : Nat) (A : CostedVestaComp α) : CostedVestaComp Unit :=
-  match count with
-  | 0 => pure ()
-  | count + 1 => bind A fun _ => repeatAudit count A
-
 @[simp] theorem run_pure (a : α) : run (pure a) = a := rfl
 
 @[simp] theorem run_bind (A : CostedVestaComp α) (f : α → CostedVestaComp β) :
@@ -467,16 +457,6 @@ def repeatAudit (count : Nat) (A : CostedVestaComp α) : CostedVestaComp Unit :=
       matrix.map fun row =>
         row.map fun terms => (terms.map fun term => term.1 • term.2).sum :=
   (run (evalMsmMatrixCertified matrix)).2
-
-@[simp] theorem run_auditMsms (termSets : List (List (Fp × VestaG))) :
-    run (auditMsms termSets) = () := by
-  simp [auditMsms]
-
-@[simp] theorem run_repeatAudit (count : Nat) (A : CostedVestaComp α) :
-    run (repeatAudit count A) = () := by
-  induction count with
-  | zero => rfl
-  | succ count ih => simp [repeatAudit, ih]
 
 @[simp] theorem groupWork_pure (a : α) : groupWork (pure a) = 0 := rfl
 
@@ -530,17 +510,6 @@ def repeatAudit (count : Nat) (A : CostedVestaComp α) : CostedVestaComp Unit :=
   induction matrix with
   | nil => rfl
   | cons row rest ih => simp [evalMsmMatrixCertified, ih]
-
-@[simp] theorem groupWork_auditMsms (termSets : List (List (Fp × VestaG))) :
-    groupWork (auditMsms termSets) = (termSets.map List.length).sum := by
-  simp [auditMsms]
-
-@[simp] theorem groupWork_repeatAudit (count : Nat) (A : CostedVestaComp α) :
-    groupWork (repeatAudit count A) = count * groupWork A := by
-  induction count with
-  | zero => simp [repeatAudit]
-  | succ count ih =>
-      simp [repeatAudit, ih, Nat.succ_mul, Nat.add_comm]
 
 end CostedVestaComp
 end Zcash.Snark

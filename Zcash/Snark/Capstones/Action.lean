@@ -102,10 +102,12 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
           (adaptiveStatement_pairCount_lt numProofs family) B epsilon
             profile.finderAdvantageLE hsurface)
 
-/-- Consensus-generic adaptive-statement knowledge soundness with staged work accounting.
-The adversary program erases to the original game.  Its staged group work and the cached
-reduction's group-law work are derived from syntax and the captured verifier shape; host-language
-staging fidelity remains explicit in the adversary certificate and reduction profile. -/
+/-- Consensus-generic adaptive-statement knowledge soundness with conditional staged work
+accounting. The adversary program erases to the original game. Its staged group work and the
+cached reduction's group-law work are derived from syntax and the captured verifier shape.
+Host-language staging fidelity and the separately modeled direct-decode bound remain explicit
+profile premises; “certified” here therefore describes the checked group-operation accounting,
+not an assumption-free closed theorem. -/
 theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
     (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -337,8 +339,6 @@ private theorem adaptiveStatementCertifiedEndpoint
     calc
       family.Q + 11 + 11 ≤ 2 ^ 123 + 22 := by omega
       _ ≤ 2 ^ 124 := by norm_num
-  have hqueriesDlog : adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 :=
-    hqueries
   have hreduction := adaptiveStatementReductionGroupWork_at_consensus numProofs hn
   have hreductionLimit :
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ workLimit :=
@@ -371,7 +371,7 @@ private theorem adaptiveStatementCertifiedEndpoint
       ring
     rw [hsum]
     refine le_trans ?_
-      (add_le_add (profile.advantage_mono hqueriesDlog hgroupDlog)
+      (add_le_add (profile.advantage_mono hqueries hgroupDlog)
         (actionStatisticalModelFor_at_2pow123 hn hQ))
     refine le_trans ?_ (add_le_add le_rfl
       (adaptiveStatementStatisticalModelFor_le_action numProofs family.Q))
@@ -396,10 +396,10 @@ private theorem adaptiveStatementCertifiedEndpoint
   exact family.cachedKnowledgeExtractor_isSome_eq
     (adaptiveStatement_pairCount_lt numProofs family) basis O
 
-/-- **Staged-certified `2^123` adaptive-statement endpoint.**  The random-oracle budget is a
-separate premise.  The costed program erases to the original algebraic adversary, its staging
-fidelity is explicit, the programmed reduction is data-coupled and staged, and the cached
-extractor costs at most `2^124` group operations. -/
+/-- **Conditionally staged-certified `2^123` adaptive-statement endpoint.** The random-oracle and
+direct-decode budgets are separate premises. The costed program erases to the original algebraic
+adversary, its staging fidelity is explicit, the programmed reduction is data-coupled and staged,
+and the cached extractor costs at most `2^124` group operations. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -444,10 +444,10 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
     (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 123) hn le_rfl (by norm_num)
       B hB query hquery family hQ certificate profile)
 
-/-- **Staged-certified `2^125` adaptive-statement endpoint.**  A faithfully staged adversary and
-data-coupled, faithfully staged reduction fit a `2^126` DLOG-work envelope when adversary work is
-bounded by `2^125`.  The random-oracle budget remains independently bounded by `Q ≤ 2^123` and is
-not inflated. -/
+/-- **Conditionally staged-certified `2^125` adaptive-statement endpoint.** A faithfully staged
+adversary and data-coupled, faithfully staged reduction fit a `2^126` DLOG group-work envelope when
+adversary work is bounded by `2^125`. The random-oracle budget remains independently bounded by
+`Q ≤ 2^123`; direct-decode coverage also remains an explicit, separate profile premise. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]

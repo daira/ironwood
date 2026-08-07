@@ -174,7 +174,7 @@ build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's con
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the exact straight-line false-statement endpoint and the
-adaptive-statement knowledge-failure endpoints with staged-certified `2^123` and `2^125`
+adaptive-statement knowledge-failure endpoints with conditionally staged-certified `2^123` and `2^125`
 adversary-work instantiations, data-coupled programmed-basis and verifier-commitment accounting,
 explicit adversary/reduction staging obligations, and a separate oracle-query budget, and
 `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
@@ -225,8 +225,9 @@ statistical residual against them; `Knowledge` ends at the executable knowledge 
 its failure bound; `Cached` proves that one retained execution gives the same finder and extraction
 event; and `Cost` constructs the programmed basis through reified Vesta operations, feeds those
 computed points into the adversary, threads reified canonical commitments into verifier assembly,
-and derives the staged-certified `2×` bound. Its explicit adversary and reduction staging
-obligations record that relating host-language code to the cost DSL is still external. `Profile`
+and derives the conditional staged `2×` group-operation bound. Its explicit adversary and reduction
+staging obligations record that relating host-language code to the cost DSL is still external;
+the separately modeled direct-decode inequality also remains a profile premise. `Profile`
 retains the older declared-resource
 compatibility theorem. The shared
 `AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment

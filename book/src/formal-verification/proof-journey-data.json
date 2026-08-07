@@ -483,7 +483,7 @@
         "The adaptive-statement finder and witness extractor reuse one adversary output, annotation log, and challenge vectors; the cached finder is pointwise equal to the original finder and extraction succeeds on exactly the same oracle tables.",
         "The Action knowledge extractors are executable and return the actual private witnesses for every proof in the bundle together with proofs that they satisfy the compiled Action specification; both the adaptive-statement and straight-line/sequential relation projections share their route's data-bearing outcome.",
         "The resource model keeps random-oracle queries, Vesta group operations, and direct-coordinate work separate. The DLOG advantage term is the conclusion of the programmed-basis reduction; the theorem does not take a DLOG-hardness proposition as a premise.",
-        "For every Action count at or below Orchard's consensus maximum, the staged-certified adaptive-statement endpoints bound verifier acceptance with failed executable witness extraction by <code>Adv_DLOG(2^124,2^126) + 2^-83</code>. They cover represented online-AGM adversaries with random-oracle challenge derivation. At the separate <code>Q ≤ 2^123</code> oracle parameter, both <code>2^123</code> and <code>2^125</code> adversary group-work budgets are covered; the latter's adversary-plus-reduction group work is at most <code>2^126</code>. Programmed-basis results feed the adversary and reified canonical commitments feed verifier assembly; the endpoint exposes staging fidelity for both adversary and reduction, direct-decode work, and the executable read-set bound rather than folding them into the DLOG group budget."
+        "For every Action count at or below Orchard's consensus maximum, the conditionally staged-certified adaptive-statement endpoints bound verifier acceptance with failed executable witness extraction by <code>Adv_DLOG(2^124,2^126) + 2^-83</code>. They cover represented online-AGM adversaries with random-oracle challenge derivation. At the separate <code>Q ≤ 2^123</code> oracle parameter, both <code>2^123</code> and <code>2^125</code> adversary group-work budgets are covered; the latter's adversary-plus-reduction group work is at most <code>2^126</code>. Programmed-basis results feed the adversary and reified canonical commitments feed verifier assembly. The theorem remains conditional on adversary/reduction staging fidelity and a direct-decode bound; those premises and the executable read-set bound are exposed rather than folded into the DLOG group budget."
       ],
       "residuals": [
         "Identify Blake2b and halo2's concrete hash-to-curve with their modeled random oracles, relate a concrete implementation to the costed algebraic program, choose a concrete interpretation of the resulting finite-resource Vesta DLOG advantage, and identify the extracted circuit witnesses with the ledger-level Orchard witness relation. The theorem covers represented online-AGM adversaries, not arbitrary non-algebraic random-oracle adversaries."
@@ -597,8 +597,8 @@
       "id": "compose",
       "chapter": "Capstones",
       "title": "Compose legacy opening and circuit satisfaction",
-      "claim": "The extracted opening and gate identity form SnarkRelation, which the legacy propositional Vesta capstone family exposes at the verifier boundary.",
-      "summary": "SnarkRelation is the conjunction of one pinned IPA opening and circuit satisfaction for the same witness. The legacy opening and constraint capstones package this route across abstract, deployed, adaptive, rewind, xgood, and x4 variants; the computed explicit-certificate AGM/DL endpoint is tracked separately.",
+      "claim": "Given the accepting rewind data and structural premises named by a legacy Vesta rung, Lean constructs one SnarkRelation joining the extracted IPA opening to circuit satisfaction for the same witness.",
+      "summary": "These are conditional extraction theorems over explicit transcript trees or accepting rewinds, not finite-resource guarantees for an executable adversary. They cover the abstract, deployed, adaptive, xgood, and x4 variants without assigning a numerical query or work envelope. The live represented-adversary probability guarantees and their coverage parameters are stated separately in the AGM stage.",
       "nodes": [
         "IpaRelation",
         "circuitSat",
@@ -643,10 +643,10 @@
       ],
       "proves": [
         "The legacy opening and constraint branches refer to the same pinned verifier statement.",
-        "The legacy capstone family makes each modeled adversary and residual hypothesis explicit."
+        "Each legacy rung exposes the accepting execution data and structural conditions it requires."
       ],
       "residuals": [
-        "Different legacy capstones retain different structural and probability premises.",
+        "These rungs do not by themselves model or resource-bound an executable adversary; different variants retain different structural and probability premises.",
         "SnarkRelation is not yet the intended high-level Ironwood security statement."
       ],
       "durationMs": 9500
@@ -655,8 +655,8 @@
       "id": "boundary",
       "chapter": "Trust boundary",
       "title": "Stop at the exact formal boundary",
-      "claim": "The formal chain reaches SnarkRelation and explicit reduction disjunctions; it does not erase the remaining modeling and composition gaps.",
-      "summary": "The final view keeps hypotheses and out-of-Lean assumptions visible. This is the honest endpoint: a large mechanized core with named inputs, probability budgets, computational assumptions, and uncomposed execution semantics rather than an all-green claim of end-to-end verification.",
+      "claim": "The formal chain reaches executable Action witnesses or explicit relation data and states every remaining model boundary as a premise or documented interpretation step.",
+      "summary": "The strongest adaptive capstones cover represented online algebraic adversaries in the random-oracle model at explicit query and group-work parameters; their staging and direct-decode premises remain visible. Legacy rewind rungs remain conditional on supplied accepting trees. Neither route identifies concrete hashes, the captured verifier artifact, or the compiled circuit witness with the ledger-level Orchard relation inside Lean.",
       "nodes": [
         "capstones",
         "structural",
@@ -707,7 +707,7 @@
       ],
       "residuals": [
         "High-level relation, VK derivation, Rust-capture trust, Blake2b-as-RO, generator hash-to-curve-as-RO, the AGM idealization, and a concrete interpretation of the finite-resource DLOG advantage.",
-        "Runtime extraction, real-adversary execution, oracle-query loss, and combined error budgeting."
+        "The adaptive group-work result is conditional on adversary/reduction staging fidelity and direct-decode coverage; the legacy rewind capstones still require their named execution and probability premises."
       ],
       "durationMs": 11000
     }
