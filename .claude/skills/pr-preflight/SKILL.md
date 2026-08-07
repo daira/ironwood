@@ -1,6 +1,6 @@
 ---
 name: pr-preflight
-description: Pre-PR audit of an ironwood branch against the violations reviewers flag most — census inclusion and reachability, native_decide necessity, noncomputable on reductions, break-event fabricability, overclaiming prose, and merge-artifact churn. Use before opening or updating a PR, when self-reviewing a branch, after a rebase or merge, when adding endpoints/native_decide/noncomputable/break structures, or when asked to "preflight", "pre-PR check", or "audit the branch".
+description: Pre-PR audit of an ironwood branch against the violations reviewers flag most — census inclusion and reachability, unnecessary trust-base growth (native_decide, @[csimp]), noncomputable on reductions, break-event fabricability, overclaiming prose, and merge-artifact churn. Use before opening or updating a PR, when self-reviewing a branch, after a rebase or merge, when adding endpoints/native_decide/csimp/noncomputable/break structures, or when asked to "preflight", "pre-PR check", or "audit the branch".
 ---
 
 # PR preflight (compiled from PR #4–#173 review feedback)
@@ -21,10 +21,13 @@ Check all six failure modes; each has occurred in a merged or nearly-merged PR.
    `_capstone`) has its own `assert_axioms` / `assert_computable` entry in
    `Zcash/TrustBoundary.lean` or a fixture-local trust-boundary module. Transitive coverage
    through a dependent's pin is not coverage — it vanishes when the dependent is refactored.
-2. **The pinned module is reachable from a build root.** A census entry in a file no target
-   imports never runs. For each new `.lean` file, confirm it is in the import cone of
-   `Zcash.lean` or `FixtureCheck`; a file with no consumer and no target membership is checked
-   by nothing, however many assertions it contains.
+2. **The pinned module is reachable from some default target.** A census entry in a module
+   nothing builds never runs. For each new `.lean` file, confirm it is reachable from one of
+   the lakefile's `defaultTargets` — either in an import cone or matched directly by a lakefile
+   glob (`Zcash.Snark.Soundness.+`), which covers a module no import reaches. Run
+   `scripts/check_build_coverage.sh`, which asserts exactly this for every module in the
+   package. A file with no consumer and no target membership is checked by nothing, however
+   many assertions it contains.
 3. **Fully qualified names.** `open Zcash.Snark` does not bring `Deployed.foo` into scope as
    bare `foo`; an unqualified census entry can silently resolve to the wrong homonym. Census
    entries write the full path.
@@ -34,18 +37,35 @@ Check all six failure modes; each has occurred in a merged or nearly-merged PR.
 5. **Rebases drop entries silently.** After any rebase or merge, read
    `git diff main...HEAD -- Zcash/TrustBoundary.lean` and account for every *deleted* line by
    name. A consolidation that loses another PR's pins passes CI and loses the guarantee.
-6. **Tightest true tier, minimal flags.** Try the census entry without `+choice` / `+native`;
-   keep flags only if the build demands them. Never `assert_no_sorry` — both census commands
+6. **The flags are automatic; the tier claim is not.** Don't audit flag minimality by hand — a
+   missing `+choice` / `+native` fails, and so does a redundant one, so the build settles the
+   flag set either way. A narrowing elsewhere in the PR that makes a flag unnecessary surfaces
+   as a census error rather than as silent over-permission. What does need judgment: never
+   `assert_no_sorry` — both census commands
    imply it and we always want an axiom assertion. `#guard_msgs`-pinned `#print axioms` is
    weaker than `assert_axioms +native(...)`, not stricter; don't describe or use it as the
    stronger check outside the fixture censuses where the exact axiom set is the claim.
 
 Run `scripts/check_endpoint_census.sh` and `scripts/check_csimp_census.sh` before handing over.
 
-## 2. `native_decide` — data anchoring only, minimal, and trending to zero
+## 2. Trust surface — every extension of the trusted base is argued for
 
-The repo's stated direction is removal ("the performance gain is not worth the extension of the
-trusted base"). For each `native_decide` the diff adds, in order:
+The governing rule is general, not a per-feature quota: **we shouldn't be unnecessarily
+increasing the trust base.** CompElliptic's
+[Trust Discipline](https://github.com/daira/CompElliptic#trust-discipline) is the standard this
+development follows, and
+[lean-native-trust-research.md](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md)
+records what `native_decide` and `@[csimp]` actually depend on.
+
+Both extend the trusted base and neither is free. `@[csimp]` extends it further — its
+equivalence proof rules out only a limited class of mistakes, not the expansion itself — so
+removing an existing `@[csimp]` outranks removing a `native_decide`, and no *new* `@[csimp]` is
+added at all. But `native_decide` is held to the same direction of travel, not a lower bar:
+ideally it does not appear either. Audit every use stringently against the ladder below instead
+of waving it through, and treat data anchoring as where a survivor may live, not as a standing
+licence.
+
+For each `native_decide` the diff adds, in order:
 
 1. Does `decide` or `norm_num` close it? Then use that. (A reviewer caught `(-1 : Fp) ≠ 1`
    proved by `native_decide`.)
@@ -59,9 +79,11 @@ trusted base"). For each `native_decide` the diff adds, in order:
    Correctness properties of objects the repo derives itself are proved by construction or
    generically, not natively.
 
-Any survivor needs its census pin with the `+native(decl)` origin and a one-sentence
-justification in the PR. Native *execution* (evaluation-based checks in the lane import cone)
-is an explicit documented opt-in — never ambient.
+A survivor has to earn the trust it adds. It needs its census pin with the `+native(decl)`
+origin, plus a justification in the PR that says which rungs above were tried and why each
+failed — "it was easier" and "it is only a fixture" are not that. Native *execution*
+(evaluation-based checks in the lane import cone) is an explicit documented opt-in — never
+ambient.
 
 The same tier logic bans bespoke axioms and `implemented_by` outright: when the fact is proven
 upstream (CompElliptic, Mathlib), remove the axiom rather than pin it.
@@ -143,7 +165,17 @@ For every touched docstring, module doc, book sentence, and the PR body:
   you can't. Use this citation format:
   `(Author(s), linked title[, section/theorem][, venue year])`.
   For example:
-  
+
+  ```
+  (Jaeger–Tessaro, <a href="https://eprint.iacr.org/2020/1213">Expected-Time Cryptography: Generic Techniques and Applications to Concrete Soundness</a>, Lemma 3)
+  ```
+
+  Link to full text if at all possible. Include the venue and year only if it is
+  not an eprint and the version referenced is the one we want readers to look at;
+  don't link to one version and then give the venue and year for another
+  substantially different conference or journal version. Publication precedent
+  doesn't matter for our purposes, pointing readers to a full, preferably
+  open-access copy with all corrections does.
 
 ## 6. Diff hygiene — the diff contains only its own changes
 
@@ -158,13 +190,28 @@ For every touched docstring, module doc, book sentence, and the PR body:
 
 ## 7. Interface and proof hygiene (quick checklist)
 
-- Interfaces keep abstract spellings (`actionCircuit.domainExponent`, not `11`); concretization
-  happens inside proofs or at the fixture boundary. No raised `maxHeartbeats` — seal the
-  concrete def (`irreducible` / opaque) instead.
+- Abstract in the middle, concrete at both ends. Interfaces and lemmas are generic over the
+  circuit (`circuit.domainExponent`, not `11`), so they say something beyond the deployed
+  instance. Final capstone statements, which are not generic, state the deployed literals
+  instead: `11` is the actual Zcash number that is trusted, where `actionCircuit.domainExponent`
+  could a priori be anything, and a reviewer should not have to chase another definition to
+  check a capstone. Tie the two ends together with one explicit censused bridge equation
+  (`actionCircuit.domainExponent = 11`), so the literal cannot drift from the model and the
+  correspondence has a single place to check. No raised `maxHeartbeats` — seal the concrete def
+  (`irreducible` / opaque) instead.
+- Never suppress the unused-section-variable lint file-wide
+  (`set_option linter.unusedSectionVars false`); `omit` the unused instances instead. The reason
+  is census-relevant rather than cosmetic: an unused instance argument is still a subterm that
+  axiom collection traverses, so a concrete consumer passing an axiom-carrying instance
+  propagates that axiom into its census footprint. `omit` removes the argument outright.
 - `@[simp]` only where the RHS is a genuine normal form wanted everywhere; otherwise consumers
   invoke the lemma explicitly.
-- No unearned wrappers or generality; prune a route the moment it is made redundant; check
-  Mathlib / CompPoly / CompElliptic before deriving anything that smells standard.
+- No unearned wrappers or generality; check Mathlib / CompPoly / CompElliptic before deriving
+  anything that smells standard. A superseded route is removed in the same PR that supersedes
+  it, or kept only with a stated reason and a tracking issue for its removal — naming one
+  "legacy" is how redundant routes outlive their pruning deadline. Durable comments must not
+  describe the new route by comparison against the superseded one ("unlike the legacy X …"):
+  that inverts the present-state rule in §5, and goes stale exactly when the pruning happens.
 - Hypotheses that are general facts get proved, not assumed; write the result type on any def
   or theorem whose body is a partial application (Lean silently appends hypotheses otherwise).
 - Named structure fields over tuples and numeric accessors; no field defaults (an inherited
@@ -184,6 +231,9 @@ For every touched docstring, module doc, book sentence, and the PR body:
 ## Final sweep
 
 Before handing over: `scripts/check_endpoint_census.sh`, `scripts/check_csimp_census.sh`,
-`scripts/check_no_umbrella_imports.sh`, `typos`, `lake build Zcash` — then one pass over the
-full diff with the census, native, noncomputable, and claims questions above, reporting per
-file what was fixed, what is compliant, and what needs author judgment.
+`scripts/check_no_umbrella_imports.sh`, `scripts/check_build_coverage.sh`, `typos`, and
+`lake build --wfail` — the default-target build, not `lake build Zcash`, which touches none of
+the `FixtureCheck`, `CircuitCheck`, `MetaCheck`, or `SecurityCheck` cones and so elaborates less
+than the coverage property in §1 item 2 demands. Then one pass over the full diff with the
+census, trust-surface, noncomputable, and claims questions above, reporting per file what was
+fixed, what is compliant, and what needs author judgment.
