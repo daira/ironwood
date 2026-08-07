@@ -110,7 +110,7 @@ flowchart TD
 ```
 
 <p>
-<span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">➞</span> heavy purple edge: a reduction (or intended reduction) in the online-AGM — both endpoint games are algebraic<br/>
+<span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">➞</span> heavy purple edge: a reduction (or intended reduction) in the online-AGM — both endpoint games are <a href="security-models.html#the-algebraic-adversary-restriction">algebraic</a><br/>
 <span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">⇢</span> dashed purple edge: an AGM-scoped justification crossing named side conditions — a semantic bridge rather than a proved implication<br/>
 <span style="font-size: 1.9rem">➝</span> thin edge: depends on (a reduction, assumption, or model)<br/>
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
