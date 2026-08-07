@@ -257,7 +257,7 @@ weight. And enumerating, per game, the generators judged relevant leaves out fix
 from other protocol components that a deployed adversary can obtain; nothing known
 suggests they help, but "nothing known suggests" is itself a heuristic judgement, and it
 should be visible rather than implicit. Both are known limitations of the current
-modelling.
+modelling ([#188](https://github.com/zcash/ironwood/issues/188)).
 
 These models and their limitations are part of every statement in the development: a
 capstone's bound is no stronger than the adversary class it quantifies over. For the
