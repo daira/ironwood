@@ -76,7 +76,7 @@ At least one of the two is needed to defuse the hard-coded adversary, and either
 technically suffice:
 * Under 2, the bases are sampled inside the experiment; the adversary does not know
   them when it starts, and so a hard-coded constant is useless.
-* Under 1, no hardness definition is stated at all, and the reduction returning a
+* Under 1, no hardness claim is stated at all, and the reduction returning a
   nontrivial relation is a meaningful security argument whether or not a winning
   adversary hard-coded its discrete log.
 
