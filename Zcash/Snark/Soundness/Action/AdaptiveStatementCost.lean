@@ -20,10 +20,11 @@ the public bound retains conservative slack for quotient and terminal proof cons
 includes programmed-basis evaluation, canonical instance evaluation, verifier assembly, the
 identity/terminal path, and the final witness projection.  Equality tests,
 annotation/source-list scans, field operations, and direct-coordinate decode work are not DLOG
-group operations; the latter remains in its existing separate model.  Random-oracle queries are
-also kept separate: one adversary run plus the canonical `11 + k` challenge reads.  The certified
-profile exposes staging fidelity independently for the adversary and for both complete reduction
-programs; no host-language cost assumption is left implicit in the endpoint.
+group operations; the latter remains in its separate model and is derived at the capstone from a
+structural source-length cap. Random-oracle queries are also kept separate: one adversary run plus
+the canonical `11 + k` challenge reads. A private composition object carries the exact adversary
+program, oracle path, and complete reduction program, eliminating a second staging premise for
+joining their work. The external fidelity of the supplied adversary program remains explicit.
 -/
 
 namespace Zcash.Snark
@@ -76,6 +77,72 @@ theorem run_eq {pp : ProofParams}
     (certificate.program basis).run O = family.runOutput basis O := by
   unfold CostedLabeledOracleComp.run runOutput
   rw [certificate.erase_eq]
+
+/-- Materialize the one-execution cache from the exact erased costed program, including its
+annotation log.  This is the value-level bridge used by the composed reduction; it does not
+reinvoke `family.adversary` through a parallel host path. -/
+def certifiedCachedRun {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp} {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : CachedRun pp family basis :=
+  let execution := (certificate.program basis).erase.runWithAnnotations O
+  let output := execution.1
+  let pre := family.preIpaReadVectorOfOutput basis O output
+  let rounds := family.ipaReadVectorOfOutput basis O output
+  { output := output
+    annotations := execution.2
+    pre := fun i ↦ pre.get i
+    rounds := fun j ↦ rounds.get j }
+
+@[simp] theorem certifiedCachedRun_eq {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp} {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    certificate.certifiedCachedRun basis O = family.cachedRun basis O := by
+  unfold certifiedCachedRun ComputedAdaptiveActionStatementFSFamily.cachedRun
+  rw [certificate.erase_eq]
+
+theorem certifiedCachedRun_pairCount_lt {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp} {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    let cache := certificate.certifiedCachedRun basis O
+    deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis cache.output.inputs)
+      cache.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) cache.pre cache.rounds) <
+        Zcash.Arithmetic.scalarFieldOrder := by
+  rw [certificate.certifiedCachedRun_eq]
+  exact family.cachedRun_pairCount_lt hchar basis O
+
+theorem certifiedCachedRun_semanticStageFacts {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp} {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    let cache := certificate.certifiedCachedRun basis O
+    family.provenanceRelationFinderOfCachedRun basis cache = none →
+      family.SemanticStageFacts basis cache.toRunView := by
+  rw [certificate.certifiedCachedRun_eq]
+  exact family.semanticStageFacts_of_cachedProvenance_none basis O
+
+theorem certifiedCachedRun_inputs_eq {pp : ProofParams}
+    {family : ComputedAdaptiveActionStatementFSFamily pp} {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    (certificate.certifiedCachedRun basis O).output.inputs =
+      (family.runOutput basis O).inputs := by
+  rw [certificate.certifiedCachedRun_eq]
+  exact congrArg AdaptiveActionStatementOutput.inputs
+    (family.cachedRun_output_eq basis O)
 
 end AdaptiveStatementAdversaryCostCertificate
 
@@ -907,41 +974,109 @@ cannot attach an unrelated work object to a value. -/
 private inductive AdaptiveStatementInstrumentationSeal where
   | seal
 
-private inductive AdaptiveStatementCostedExecutionCore (pp : ProofParams) (α : Type*) where
+private inductive AdaptiveStatementCostedExecutionCore (pp : ProofParams)
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (α : Type*) where
   | mk (marker : AdaptiveStatementInstrumentationSeal)
-      (reductionProgram : CostedVestaComp α) (proverGroupWork : Nat)
+      (adversaryProgram : CostedLabeledOracleComp (AdaptiveActionStatementTranscript pp) Fp
+        (AlgebraicTranscriptQuery (F := Fp) basis)
+        (AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)))
+      (oracle : family.Coins) (reductionProgram : CostedVestaComp α)
 
-/-- One cached execution whose value and work are projections of the same private reduction
-program. -/
-abbrev AdaptiveStatementCostedExecution (pp : ProofParams) (α : Type*) :=
-  AdaptiveStatementCostedExecutionCore pp α
+/-- One cached execution whose adversary call, oracle path, reduction program, value, and both
+work components are projections of a single private composition object. -/
+abbrev AdaptiveStatementCostedExecution {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (α : Type*) :=
+  AdaptiveStatementCostedExecutionCore pp family basis α
 
 namespace AdaptiveStatementCostedExecution
 
-variable {pp : ProofParams} {α : Type*}
+variable {pp : ProofParams} {family : ComputedAdaptiveActionStatementFSFamily pp}
+  {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG} {α : Type*}
 
-def reductionProgram : AdaptiveStatementCostedExecution pp α → CostedVestaComp α
-  | .mk _ program _ => program
+/-- The exact costed adversary invoked by this execution. -/
+def adversaryProgram : AdaptiveStatementCostedExecution family basis α →
+    CostedLabeledOracleComp (AdaptiveActionStatementTranscript pp) Fp
+      (AlgebraicTranscriptQuery (F := Fp) basis)
+      (AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis))
+  | .mk _ program _ _ => program
 
-def value (execution : AdaptiveStatementCostedExecution pp α) : α :=
+/-- The oracle table selecting both the adversary path and its group-work path. -/
+def oracle : AdaptiveStatementCostedExecution family basis α → family.Coins
+  | .mk _ _ O _ => O
+
+def reductionProgram : AdaptiveStatementCostedExecution family basis α → CostedVestaComp α
+  | .mk _ _ _ program => program
+
+/-- Output of the adversary program carried by this same composition object. -/
+def adversaryOutput (execution : AdaptiveStatementCostedExecution family basis α) :
+    AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis) :=
+  execution.adversaryProgram.run execution.oracle
+
+def value (execution : AdaptiveStatementCostedExecution family basis α) : α :=
   execution.reductionProgram.run
 
-def proverGroupWork : AdaptiveStatementCostedExecution pp α → Nat
-  | .mk _ _ work => work
+/-- Adversary work is evaluated from the carried syntax on the carried oracle path; it cannot be
+supplied as a detached natural number. -/
+def proverGroupWork (execution : AdaptiveStatementCostedExecution family basis α) : Nat :=
+  execution.adversaryProgram.groupWork execution.oracle
 
 /-- Reduction work is read from the single program that constructs the selected basis and then
 feeds that computed basis into postprocessing. -/
-def reductionGroupWork (execution : AdaptiveStatementCostedExecution pp α) : Nat :=
+def reductionGroupWork (execution : AdaptiveStatementCostedExecution family basis α) : Nat :=
   execution.reductionProgram.groupWork
 
 /-- Complete group work of one costed execution. -/
-def groupWork (execution : AdaptiveStatementCostedExecution pp α) : Nat :=
+def groupWork (execution : AdaptiveStatementCostedExecution family basis α) : Nat :=
   execution.proverGroupWork + execution.reductionGroupWork
 
 end AdaptiveStatementCostedExecution
 
-/-- Relation-finder postprocessing at a basis recovered from reified MSM values.  The result is
-transported only after the computed basis has selected the adversary run and every verifier call. -/
+/-- Relation-finder postprocessing over an explicitly supplied one-execution cache. Every
+executable branch consumes `cache` itself. -/
+def cachedRelationFinderReductionProgramAtReifiedBasisFromCache {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (reified : AdaptiveStatementBasisCache pp basis)
+    (cache : CachedRun pp family reified.basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp reified.basis)
+      (adaptiveActionStatementInstanceCommitment pp reified.basis cache.output.inputs)
+      cache.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) cache.pre cache.rounds) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (facts : family.provenanceRelationFinderOfCachedRun reified.basis cache = none →
+      family.SemanticStageFacts reified.basis cache.toRunView) :
+    CostedVestaComp (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
+  let plan := adaptiveStatementProvenancePlan family reified.basis cache facts
+  let program := CostedVestaComp.map AdaptiveStatementOperationalFinderResult.value
+    (adaptiveStatementFinderReductionProgram family reified.basis cache hcharV plan)
+  CostedVestaComp.map (fun value => reified.basis_eq ▸ value) program
+
+/-- Witness-extractor postprocessing over the same explicitly supplied cache. -/
+def cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (reified : AdaptiveStatementBasisCache pp basis) (O : family.Coins)
+    (cache : CachedRun pp family reified.basis)
+    (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp reified.basis)
+      (adaptiveActionStatementInstanceCommitment pp reified.basis cache.output.inputs)
+      cache.output.toAlgebraicWfProof.proof.1
+      (chRecord (k := (AdaptiveActionStatementShape pp).k) cache.pre cache.rounds) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (facts : family.provenanceRelationFinderOfCachedRun reified.basis cache = none →
+      family.SemanticStageFacts reified.basis cache.toRunView)
+    (hinputs : cache.output.inputs = (family.runOutput reified.basis O).inputs) :
+    CostedVestaComp
+      (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
+  let plan := adaptiveStatementProvenancePlan family reified.basis cache facts
+  let program := CostedVestaComp.map (fun value => hinputs ▸ value)
+    (adaptiveStatementExtractorReductionProgram family reified.basis cache hcharV plan)
+  CostedVestaComp.map (fun value => reified.basis_eq ▸ value) program
+
+/-- Relation-finder postprocessing at a basis recovered from reified MSM values. -/
 def cachedRelationFinderReductionProgramAtReifiedBasis {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -981,6 +1116,28 @@ def cachedKnowledgeExtractorReductionProgramAtReifiedBasis {pp : ProofParams}
     (adaptiveStatementExtractorReductionProgram family reified.basis cache hcharV plan)
   CostedVestaComp.map (fun value => reified.basis_eq ▸ value) program
 
+theorem cachedRelationFinderReductionProgramAtReifiedBasisFromCache_eq
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O)
+    (cache : CachedRun pp family reified.basis)
+    (hcache : cache = family.cachedRun reified.basis O) (hcharV) (facts) :
+    family.cachedRelationFinderReductionProgramAtReifiedBasisFromCache
+        basis reified cache hcharV facts =
+      family.cachedRelationFinderReductionProgramAtReifiedBasis hchar basis reified O := by
+  subst cache
+  rfl
+
+theorem cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache_eq
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O)
+    (cache : CachedRun pp family reified.basis)
+    (hcache : cache = family.cachedRun reified.basis O) (hcharV) (facts) (hinputs) :
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache
+        basis reified O cache hcharV facts hinputs =
+      family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar basis reified O := by
+  subst cache
+  rfl
+
 /-- Complete relation reduction: construct a basis through charged MSMs, then consume exactly the
 recovered function in the adversary and finder. -/
 def cachedRelationFinderReductionProgram {pp : ProofParams}
@@ -1008,6 +1165,96 @@ def cachedKnowledgeExtractorReductionProgram {pp : ProofParams}
       (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
   CostedVestaComp.bind (costedAdaptiveStatementSelectedBasisCache pp basis) fun reified =>
     family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar basis reified O
+
+/-- Compose any charged basis constructor with the exact cache produced by the erased certified
+adversary program. -/
+def certifiedRelationFinderReductionProgramWithBasis {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (basisProgram : CostedVestaComp (AdaptiveStatementBasisCache pp basis)) :
+    CostedVestaComp (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
+  CostedVestaComp.bind basisProgram fun reified =>
+    let cache := certificate.certifiedCachedRun reified.basis O
+    family.cachedRelationFinderReductionProgramAtReifiedBasisFromCache basis reified cache
+      (certificate.certifiedCachedRun_pairCount_lt hchar reified.basis O)
+      (certificate.certifiedCachedRun_semanticStageFacts reified.basis O)
+
+def certifiedKnowledgeExtractorReductionProgramWithBasis {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) (basisProgram : CostedVestaComp (AdaptiveStatementBasisCache pp basis)) :
+    CostedVestaComp
+      (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
+  CostedVestaComp.bind basisProgram fun reified =>
+    let cache := certificate.certifiedCachedRun reified.basis O
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache basis reified O cache
+      (certificate.certifiedCachedRun_pairCount_lt hchar reified.basis O)
+      (certificate.certifiedCachedRun_semanticStageFacts reified.basis O)
+      (certificate.certifiedCachedRun_inputs_eq reified.basis O)
+
+/-- Selected-basis specializations used by the public composed executions. -/
+def certifiedCachedRelationFinderReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    CostedVestaComp (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
+  family.certifiedRelationFinderReductionProgramWithBasis hchar certificate basis O
+    (costedAdaptiveStatementSelectedBasisCache pp basis)
+
+def certifiedCachedKnowledgeExtractorReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    CostedVestaComp
+      (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
+  family.certifiedKnowledgeExtractorReductionProgramWithBasis hchar certificate basis O
+    (costedAdaptiveStatementSelectedBasisCache pp basis)
+
+theorem certifiedCachedRelationFinderReductionProgram_eq {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    family.certifiedCachedRelationFinderReductionProgram hchar certificate basis O =
+      family.cachedRelationFinderReductionProgram hchar basis O := by
+  unfold certifiedCachedRelationFinderReductionProgram
+    certifiedRelationFinderReductionProgramWithBasis cachedRelationFinderReductionProgram
+  apply congrArg (CostedVestaComp.bind (costedAdaptiveStatementSelectedBasisCache pp basis))
+  funext reified
+  exact family.cachedRelationFinderReductionProgramAtReifiedBasisFromCache_eq hchar basis
+    reified O _ (certificate.certifiedCachedRun_eq reified.basis O) _ _
+
+theorem certifiedCachedKnowledgeExtractorReductionProgram_eq {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    family.certifiedCachedKnowledgeExtractorReductionProgram hchar certificate basis O =
+      family.cachedKnowledgeExtractorReductionProgram hchar basis O := by
+  unfold certifiedCachedKnowledgeExtractorReductionProgram
+    certifiedKnowledgeExtractorReductionProgramWithBasis cachedKnowledgeExtractorReductionProgram
+  apply congrArg (CostedVestaComp.bind (costedAdaptiveStatementSelectedBasisCache pp basis))
+  funext reified
+  exact family.cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache_eq hchar basis
+    reified O _ (certificate.certifiedCachedRun_eq reified.basis O) _ _ _
 
 @[simp] theorem cachedRelationFinderReductionProgramAtReifiedBasis_run
     {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
@@ -1107,6 +1354,76 @@ def programmedCachedKnowledgeExtractorReductionProgram {pp : ProofParams}
     family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar
       (fun i => x i • B + y i • C) reified O
 
+/-- The DLOG-programmed relation reduction fed by the cache obtained from the exact erased
+certified adversary program. -/
+def certifiedProgrammedCachedRelationFinderReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    CostedVestaComp
+      (Option (AlgebraicRelationWitness (F := Fp) (fun i => x i • B + y i • C))) :=
+  family.certifiedRelationFinderReductionProgramWithBasis hchar certificate
+    (fun i => x i • B + y i • C) O
+    (costedAdaptiveStatementProgrammedBasisCache pp B C x y)
+
+/-- The DLOG-programmed witness reduction fed by the cache obtained from the exact erased
+certified adversary program. -/
+def certifiedProgrammedCachedKnowledgeExtractorReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    CostedVestaComp (Option (ActionTerminal.ActionBundleWitness
+      (family.runOutput (fun i => x i • B + y i • C) O).inputs)) :=
+  family.certifiedKnowledgeExtractorReductionProgramWithBasis hchar certificate
+    (fun i => x i • B + y i • C) O
+    (costedAdaptiveStatementProgrammedBasisCache pp B C x y)
+
+theorem certifiedProgrammedCachedRelationFinderReductionProgram_eq
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG) (x y) (O) :
+    family.certifiedProgrammedCachedRelationFinderReductionProgram
+        hchar certificate B C x y O =
+      family.programmedCachedRelationFinderReductionProgram hchar B C x y O := by
+  unfold certifiedProgrammedCachedRelationFinderReductionProgram
+    certifiedRelationFinderReductionProgramWithBasis
+    programmedCachedRelationFinderReductionProgram
+  apply congrArg (CostedVestaComp.bind
+    (costedAdaptiveStatementProgrammedBasisCache pp B C x y))
+  funext reified
+  exact family.cachedRelationFinderReductionProgramAtReifiedBasisFromCache_eq hchar
+    (fun i => x i • B + y i • C) reified O _
+    (certificate.certifiedCachedRun_eq reified.basis O) _ _
+
+theorem certifiedProgrammedCachedKnowledgeExtractorReductionProgram_eq
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG) (x y) (O) :
+    family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+        hchar certificate B C x y O =
+      family.programmedCachedKnowledgeExtractorReductionProgram hchar B C x y O := by
+  unfold certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+    certifiedKnowledgeExtractorReductionProgramWithBasis
+    programmedCachedKnowledgeExtractorReductionProgram
+  apply congrArg (CostedVestaComp.bind
+    (costedAdaptiveStatementProgrammedBasisCache pp B C x y))
+  funext reified
+  exact family.cachedKnowledgeExtractorReductionProgramAtReifiedBasisFromCache_eq hchar
+    (fun i => x i • B + y i • C) reified O _
+    (certificate.certifiedCachedRun_eq reified.basis O) _ _ _
+
 @[simp] theorem programmedCachedRelationFinderReductionProgram_run
     {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
     (B C : VestaG) (x y) (O) :
@@ -1202,30 +1519,6 @@ theorem programmedCachedKnowledgeExtractorReductionProgram_run_heq_scalarBasis
   exact congr_arg_heq (fun basis => family.cachedKnowledgeExtractor hchar basis O)
     (adaptiveStatementProgrammedBasis_eq_scalarBasis B z x y)
 
-/-- Which complete adaptive-statement reduction is staged around the separately certified
-adversary call. -/
-inductive AdaptiveStatementProgrammedReductionKind where
-  | relation
-  | extractor
-
-/-- External fidelity judgment for composing the shallow cost languages.  It states that the
-runtime reduction (1) constructs the programmed basis with the reified basis program, (2) invokes
-the separately staged adversary program exactly once on those computed points, (3) feeds that
-run's cached data to the indicated reified postprocessor, and (4) performs no additional Vesta
-group-law work.  The numerical bound and all value equalities are proved in Lean; only this
-host-language staging correspondence is external. -/
-opaque AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful {pp : ProofParams}
-    (kind : AdaptiveStatementProgrammedReductionKind)
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
-      (family.runProof basis O).proof.1 (family.runRecord basis O) <
-        Zcash.Arithmetic.scalarFieldOrder)
-    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
-    (B : VestaG) (z : Fp)
-    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
-    (O : family.Coins) : Prop
-
 /-- Costed complete cached relation finder at one oracle table. -/
 def costedCachedRelationFinder {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -1236,11 +1529,11 @@ def costedCachedRelationFinder {pp : ProofParams}
     {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
-  AdaptiveStatementCostedExecution pp
+  AdaptiveStatementCostedExecution family basis
       (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
   AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
-    (family.cachedRelationFinderReductionProgram hchar basis O)
-    (certificate.proverGroupWork basis O)
+    (certificate.program basis) O
+    (family.certifiedCachedRelationFinderReductionProgram hchar certificate basis O)
 
 /-- Costed complete cached witness extractor at one oracle table. -/
 def costedCachedKnowledgeExtractor {pp : ProofParams}
@@ -1252,39 +1545,151 @@ def costedCachedKnowledgeExtractor {pp : ProofParams}
     {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
-    AdaptiveStatementCostedExecution pp
+    AdaptiveStatementCostedExecution family basis
       (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
   AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
-    (family.cachedKnowledgeExtractorReductionProgram hchar basis O)
-    (certificate.proverGroupWork basis O)
+    (certificate.program basis) O
+    (family.certifiedCachedKnowledgeExtractorReductionProgram hchar certificate basis O)
+
+/-- Complete DLOG-programmed relation execution.  The private composition carries the exact
+programmed-basis adversary call and the exact reified postprocessor, so total work is computed
+from those two programs rather than joined by an external staging assertion. -/
+def costedProgrammedCachedRelationFinder {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    AdaptiveStatementCostedExecution family (fun i ↦ x i • B + y i • C)
+      (Option (AlgebraicRelationWitness (F := Fp) (fun i ↦ x i • B + y i • C))) :=
+  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
+    (certificate.program (fun i ↦ x i • B + y i • C)) O
+    (family.certifiedProgrammedCachedRelationFinderReductionProgram
+      hchar certificate B C x y O)
+
+/-- Complete DLOG-programmed knowledge-extractor execution. -/
+def costedProgrammedCachedKnowledgeExtractor {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    AdaptiveStatementCostedExecution family (fun i ↦ x i • B + y i • C)
+      (Option (ActionTerminal.ActionBundleWitness
+        (family.runOutput (fun i ↦ x i • B + y i • C) O).inputs)) :=
+  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
+    (certificate.program (fun i ↦ x i • B + y i • C)) O
+    (family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+      hchar certificate B C x y O)
 
 @[simp] theorem costedCachedRelationFinder_value {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedRelationFinder hchar certificate basis O).value =
       family.cachedRelationFinder hchar basis O := by
-  simp [costedCachedRelationFinder, AdaptiveStatementCostedExecution.value,
-    AdaptiveStatementCostedExecution.reductionProgram]
+  change (family.certifiedCachedRelationFinderReductionProgram
+    hchar certificate basis O).run = _
+  rw [family.certifiedCachedRelationFinderReductionProgram_eq]
+  exact family.cachedRelationFinderReductionProgram_run hchar basis O
 
 @[simp] theorem costedCachedKnowledgeExtractor_value {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedKnowledgeExtractor hchar certificate basis O).value =
       family.cachedKnowledgeExtractor hchar basis O := by
-  simp [costedCachedKnowledgeExtractor, AdaptiveStatementCostedExecution.value,
-    AdaptiveStatementCostedExecution.reductionProgram]
+  change (family.certifiedCachedKnowledgeExtractorReductionProgram
+    hchar certificate basis O).run = _
+  rw [family.certifiedCachedKnowledgeExtractorReductionProgram_eq]
+  exact family.cachedKnowledgeExtractorReductionProgram_run hchar basis O
+
+@[simp] theorem costedCachedRelationFinder_adversaryProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedRelationFinder hchar certificate basis O).adversaryProgram =
+      certificate.program basis := rfl
+
+@[simp] theorem costedCachedKnowledgeExtractor_adversaryProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedKnowledgeExtractor hchar certificate basis O).adversaryProgram =
+      certificate.program basis := rfl
+
+@[simp] theorem costedCachedRelationFinder_adversaryOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedRelationFinder hchar certificate basis O).adversaryOutput =
+      family.runOutput basis O := by
+  exact certificate.run_eq basis O
+
+@[simp] theorem costedCachedKnowledgeExtractor_adversaryOutput {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedKnowledgeExtractor hchar certificate basis O).adversaryOutput =
+      family.runOutput basis O := by
+  exact certificate.run_eq basis O
+
+@[simp] theorem costedCachedRelationFinder_proverGroupWork {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedRelationFinder hchar certificate basis O).proverGroupWork =
+      certificate.proverGroupWork basis O := rfl
+
+@[simp] theorem costedCachedKnowledgeExtractor_proverGroupWork {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
+    (family.costedCachedKnowledgeExtractor hchar certificate basis O).proverGroupWork =
+      certificate.proverGroupWork basis O := rfl
+
+@[simp] theorem costedProgrammedCachedRelationFinder_value_isSome_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    (family.costedProgrammedCachedRelationFinder hchar certificate B (z • B) x y O).value.isSome =
+      (family.cachedRelationFinder hchar (scalarBasis B (programmedLogs z x y)) O).isSome := by
+  change (family.certifiedProgrammedCachedRelationFinderReductionProgram
+    hchar certificate B (z • B) x y O).run.isSome = _
+  rw [family.certifiedProgrammedCachedRelationFinderReductionProgram_eq]
+  exact family.programmedCachedRelationFinderReductionProgram_run_isSome_scalarBasis
+    hchar B z x y O
+
+@[simp] theorem costedProgrammedCachedKnowledgeExtractor_value_isSome_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    (family.costedProgrammedCachedKnowledgeExtractor hchar certificate B (z • B) x y O).value.isSome =
+      (family.cachedKnowledgeExtractor hchar
+        (scalarBasis B (programmedLogs z x y)) O).isSome := by
+  change (family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+    hchar certificate B (z • B) x y O).run.isSome = _
+  rw [family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram_eq]
+  exact family.programmedCachedKnowledgeExtractorReductionProgram_run_isSome_scalarBasis
+    hchar B z x y O
 
 @[simp] theorem costedCachedRelationFinder_reductionProgram {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedRelationFinder hchar certificate basis O).reductionProgram =
-      family.cachedRelationFinderReductionProgram hchar basis O := rfl
+      family.cachedRelationFinderReductionProgram hchar basis O := by
+  change family.certifiedCachedRelationFinderReductionProgram
+    hchar certificate basis O = _
+  exact family.certifiedCachedRelationFinderReductionProgram_eq hchar certificate basis O
 
 @[simp] theorem costedCachedKnowledgeExtractor_reductionProgram {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedKnowledgeExtractor hchar certificate basis O).reductionProgram =
-      family.cachedKnowledgeExtractorReductionProgram hchar basis O := rfl
+      family.cachedKnowledgeExtractorReductionProgram hchar basis O := by
+  change family.certifiedCachedKnowledgeExtractorReductionProgram
+    hchar certificate basis O = _
+  exact family.certifiedCachedKnowledgeExtractorReductionProgram_eq hchar certificate basis O
 
 theorem costedCachedRelationFinder_reductionGroupWork_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
@@ -1340,6 +1745,33 @@ theorem costedCachedKnowledgeExtractor_groupWork_le {pp : ProofParams}
   exact Nat.add_le_add (certificate.proverGroupWork_le basis O)
     (family.costedCachedKnowledgeExtractor_reductionGroupWork_le hchar certificate basis O)
 
+theorem costedProgrammedCachedRelationFinder_groupWork_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG) (x y) (O) :
+    (family.costedProgrammedCachedRelationFinder hchar certificate B C x y O).groupWork ≤
+      workLimit + adaptiveStatementReductionGroupWork pp := by
+  change certificate.proverGroupWork (fun i ↦ x i • B + y i • C) O +
+    (family.certifiedProgrammedCachedRelationFinderReductionProgram
+      hchar certificate B C x y O).groupWork ≤ _
+  rw [family.certifiedProgrammedCachedRelationFinderReductionProgram_eq]
+  exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
+    ((family.programmedCachedRelationFinderReductionProgram_groupWork_le
+      hchar B C x y O).trans (adaptiveStatementFinderReductionGroupWork_le pp))
+
+theorem costedProgrammedCachedKnowledgeExtractor_groupWork_le {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B C : VestaG) (x y) (O) :
+    (family.costedProgrammedCachedKnowledgeExtractor hchar certificate B C x y O).groupWork ≤
+      workLimit + adaptiveStatementReductionGroupWork pp := by
+  change certificate.proverGroupWork (fun i ↦ x i • B + y i • C) O +
+    (family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+      hchar certificate B C x y O).groupWork ≤ _
+  rw [family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram_eq]
+  exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
+    (family.programmedCachedKnowledgeExtractorReductionProgram_groupWork_le hchar B C x y O)
+
 /-- One adversary execution plus one materialization of the canonical challenge vectors. -/
 def adaptiveStatementCachedRandomOracleQueries {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) : Nat :=
@@ -1370,8 +1802,9 @@ theorem costedCachedKnowledgeExtractor_two_mul_bound {pp : ProofParams}
 /-- DLOG advantage interface for the conditionally certified one-execution finder. Unlike the
 legacy profile, there are no caller-selected prover or reduction group-work numbers: those come
 from the staged adversary and complete reified reduction programs. Here “certified” does not mean
-assumption-free: host-language staging fidelity remains explicit, and direct-coordinate/list work
-is a separate coverage obligation rather than part of the Vesta group-operation cost language. -/
+assumption-free: fidelity between an external adversary implementation and its supplied costed
+program remains explicit. Reduction composition and direct-decode coverage are derived outside
+this profile. -/
 structure CertifiedAdaptiveStatementDlogProfile {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -1383,26 +1816,14 @@ structure CertifiedAdaptiveStatementDlogProfile {pp : ProofParams}
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
-  relationReductionStaged : ∀ (z : Fp)
-      (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
-    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .relation family hchar
-      certificate B z x y O
-  extractorReductionStaged : ∀ (z : Fp)
-      (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
-    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .extractor family hchar
-      certificate B z x y O
-  /-- Coverage for three direct-coordinate decodes. The cost expression is computed from the
-  selected run, but the adversary/family-supplied assembly-source length has no structural bound
-  in this interface, so this inequality remains an explicit non-group-work premise. -/
-  directDecodeWorkBound : ∀ basis O,
-    adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
-      adaptiveStatementDirectDecodeOps family basis O ≤ workLimit
   finderAdvantageLE : TextbookDLWithCoinsAdvantageLE B (family.cachedRelationFinder hchar)
     (advantage (adaptiveStatementCachedRandomOracleQueries family)
       (workLimit + adaptiveStatementReductionGroupWork pp))
 
-/-- The complete textbook-DLOG programs have explicit staging judgments, consume the programmed
-basis they compute, and fit the work label used by the certified hardness premise. -/
+/-- The complete textbook-DLOG executions carry the exact adversary program and oracle path,
+consume the programmed basis they compute, return the original reduction values, and fit the work
+label used by the certified hardness premise.  Every conjunct is proved from the composition
+object; there is no opaque reduction-staging premise. -/
 def AdaptiveStatementProgrammedReductionCoverage {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -1412,43 +1833,60 @@ def AdaptiveStatementProgrammedReductionCoverage {pp : ProofParams}
     (B : VestaG) (workLimit : Nat)
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) : Prop :=
   ∀ (z : Fp) (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
-    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .relation family hchar
-        certificate B z x y O ∧
-      AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .extractor family hchar
-        certificate B z x y O ∧
-      (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O).run.isSome =
+    (family.costedProgrammedCachedRelationFinder hchar certificate B (z • B) x y O).adversaryProgram =
+        certificate.program (fun i ↦ x i • B + y i • (z • B)) ∧
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).adversaryProgram =
+        certificate.program (fun i ↦ x i • B + y i • (z • B)) ∧
+      (family.costedProgrammedCachedRelationFinder
+        hchar certificate B (z • B) x y O).oracle = O ∧
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).oracle = O ∧
+      (family.costedProgrammedCachedRelationFinder
+        hchar certificate B (z • B) x y O).reductionProgram =
+        family.certifiedProgrammedCachedRelationFinderReductionProgram
+          hchar certificate B (z • B) x y O ∧
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).reductionProgram =
+        family.certifiedProgrammedCachedKnowledgeExtractorReductionProgram
+          hchar certificate B (z • B) x y O ∧
+      (family.costedProgrammedCachedRelationFinder
+        hchar certificate B (z • B) x y O).adversaryOutput =
+        family.runOutput (fun i ↦ x i • B + y i • (z • B)) O ∧
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).adversaryOutput =
+        family.runOutput (fun i ↦ x i • B + y i • (z • B)) O ∧
+      (family.costedProgrammedCachedRelationFinder
+        hchar certificate B (z • B) x y O).value.isSome =
         (family.cachedRelationFinder hchar (scalarBasis B (programmedLogs z x y)) O).isSome ∧
-      (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O).run.isSome =
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).value.isSome =
         (family.cachedKnowledgeExtractor hchar
           (scalarBasis B (programmedLogs z x y)) O).isSome ∧
-      certificate.proverGroupWork (fun i => x i • B + y i • (z • B)) O +
-          CostedVestaComp.groupWork
-            (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O) ≤
+      (family.costedProgrammedCachedRelationFinder
+        hchar certificate B (z • B) x y O).groupWork ≤
         workLimit + adaptiveStatementReductionGroupWork pp ∧
-      certificate.proverGroupWork (fun i => x i • B + y i • (z • B)) O +
-          CostedVestaComp.groupWork
-            (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O) ≤
+      (family.costedProgrammedCachedKnowledgeExtractor
+        hchar certificate B (z • B) x y O).groupWork ≤
         workLimit + adaptiveStatementReductionGroupWork pp
 
 theorem CertifiedAdaptiveStatementDlogProfile.programmedReductionCoverage
     {pp : ProofParams} {family : ComputedAdaptiveActionStatementFSFamily pp} {hchar}
     {B : VestaG} {workLimit : Nat}
     {certificate : AdaptiveStatementAdversaryCostCertificate family workLimit}
-    (profile : CertifiedAdaptiveStatementDlogProfile family hchar B workLimit certificate) :
-    AdaptiveStatementProgrammedReductionCoverage family hchar B workLimit certificate := by
+    (_profile : CertifiedAdaptiveStatementDlogProfile family hchar B workLimit certificate) :
+  AdaptiveStatementProgrammedReductionCoverage family hchar B workLimit certificate := by
   intro z x y O
-  refine ⟨profile.relationReductionStaged z x y O,
-    profile.extractorReductionStaged z x y O,
-    family.programmedCachedRelationFinderReductionProgram_run_isSome_scalarBasis
-      hchar B z x y O,
-    family.programmedCachedKnowledgeExtractorReductionProgram_run_isSome_scalarBasis
-      hchar B z x y O, ?_, ?_⟩
-  · exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
-      ((family.programmedCachedRelationFinderReductionProgram_groupWork_le
-        hchar B (z • B) x y O).trans (adaptiveStatementFinderReductionGroupWork_le pp))
-  · exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
-      (family.programmedCachedKnowledgeExtractorReductionProgram_groupWork_le
-        hchar B (z • B) x y O)
+  refine ⟨rfl, rfl, rfl, rfl, rfl, rfl,
+    certificate.run_eq _ O, certificate.run_eq _ O,
+    family.costedProgrammedCachedRelationFinder_value_isSome_scalarBasis
+      hchar certificate B z x y O,
+    family.costedProgrammedCachedKnowledgeExtractor_value_isSome_scalarBasis
+      hchar certificate B z x y O,
+    family.costedProgrammedCachedRelationFinder_groupWork_le
+      hchar certificate B (z • B) x y O,
+    family.costedProgrammedCachedKnowledgeExtractor_groupWork_le
+      hchar certificate B (z • B) x y O⟩
 
 theorem CertifiedAdaptiveStatementDlogProfile.finderAdvantageLE_current {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp} {hchar} {B : VestaG}

@@ -47,8 +47,17 @@ namespace Zcash.Snark
 #guard_msgs (whitespace := lax) in
 #check CostedVestaComp.repeatAudit
 
-/- The certified endpoint now has a named coverage predicate for both staged reduction programs. -/
+/- The certified endpoint has a named, mechanically derived coverage predicate for both composed
+adversary/reduction executions. -/
 #check ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
+
+/-- error: Unknown constant `Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful` -/
+#guard_msgs (whitespace := lax) in
+#check ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful
+
+/- Total execution work is exposed, but its private constructor remains inaccessible. -/
+#check ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementCostedExecution.groupWork
+#check ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementCostedExecution.adversaryProgram
 
 /-- An executable MSM node must carry its terms; an arbitrary numeric price no longer typechecks. -/
 example : VestaGroupOperation := by

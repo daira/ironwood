@@ -43,19 +43,19 @@ checked by the Halo2 verifier.  Accordingly the endpoints are AGM-and-random-ora
 finite-security Vesta DLOG advantage.  The conditionally staged-certified adaptive-statement profiles use a
 costed adversary whose erasure is the original game, a single cached execution, and a
 branch-selected executable group-operation program.  Programmed-basis MSM results feed the
-adversary, and canonical instance MSM results feed verifier assembly.  The profile explicitly
-retains staging obligations for both the adversary and reduction, recording that host-language
-`pure` payloads and continuations contain no hidden group work.
-Equality/list work, direct-coordinate work, and random-oracle queries are separate from the DLOG
-group-operation budget.  The older declared-resource endpoint remains pinned alongside the
-`2^123` and `2^125` staged forms.
+adversary, and canonical instance MSM results feed verifier assembly.  Each private composed
+execution carries the exact adversary program, oracle path, and reified reduction program; only
+the external implementation-to-adversary-program fidelity obligation remains.  Equality/list
+work and random-oracle queries are separate from the DLOG group-operation budget. Direct-coordinate
+work is derived from the family's structural fixed-representation cap.  The older
+declared-resource endpoint remains pinned alongside the `2^123` and `2^125` staged forms.
 -/
 
 -- The adaptive lane's live breaks and witnesses must remain computed data. The two complete
 -- programmed reductions transitively cover their single-cache finder/extractor stages; changing
 -- any live stage to `noncomputable`, `partial`, or `unsafe` makes these definitions stop being
 -- safe computable definitions and fails this census.
-assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.programmedCachedRelationFinderReductionProgram +choice +native(
+assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedRelationFinder +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -80,7 +80,7 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.programmed
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.programmedCachedKnowledgeExtractorReductionProgram +choice +native(
+assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedKnowledgeExtractor +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,

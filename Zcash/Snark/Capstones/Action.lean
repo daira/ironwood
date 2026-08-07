@@ -105,9 +105,8 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
 /-- Consensus-generic adaptive-statement knowledge soundness with conditional staged work
 accounting. The adversary program erases to the original game. Its staged group work and the
 cached reduction's group-law work are derived from syntax and the captured verifier shape.
-Host-language staging fidelity and the separately modeled direct-decode bound remain explicit
-profile premises; “certified” here therefore describes the checked group-operation accounting,
-not an assumption-free closed theorem. -/
+External implementation-to-program fidelity remains explicit; “certified” here therefore
+describes the checked group-operation accounting, not an assumption-free closed theorem. -/
 theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
     (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -227,8 +226,6 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
       adaptiveStatementKnowledgeExtractorRandomOracleQueries family ≤ 8 * 2 ^ 123 :=
         hcost.1
       _ = 2 ^ 126 := by norm_num
-  have hqueriesDlog : adaptiveStatementDlogRandomOracleQueries family ≤ 2 ^ 126 := by
-    exact (adaptiveStatementDlogRandomOracleQueries_le_knowledgeExtractor family).trans hqueries
   have hgroup :
       adaptiveStatementKnowledgeExtractorGroupWork profile.proverGroupWork
           profile.reductionGroupWork ≤ 2 ^ 126 := by
@@ -266,7 +263,9 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
       ring
     rw [hsum]
     refine le_trans ?_
-      (add_le_add (profile.advantage_mono hqueriesDlog hgroupDlog)
+      (add_le_add (profile.advantage_mono
+          ((adaptiveStatementDlogRandomOracleQueries_le_knowledgeExtractor family).trans hqueries)
+          hgroupDlog)
         (actionStatisticalModelFor_at_2pow123 hn profile.queryBound))
     refine le_trans ?_ (add_le_add le_rfl
       (adaptiveStatementStatisticalModelFor_le_action numProofs family.Q))
@@ -286,6 +285,86 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
           (adaptiveStatement_pairCount_lt numProofs family) h⟩, ?_⟩
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
+
+/-- The selected proof's direct-decode source fits the deployed `2^90` envelope.  All
+proof-controlled and instance entries have shape-indexed lengths; the sole list-valued family
+input is bounded by `ComputedAdaptiveActionStatementFSFamily` itself. -/
+theorem adaptiveStatementDirectDecodeSourceLength_le_two_pow_90
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (basis) (O : family.Coins) :
+    adaptiveStatementDirectDecodeSourceLength family basis O ≤ 2 ^ 90 := by
+  have hfixed := family.fixedRepresentations_length_le basis
+  unfold adaptiveStatementFixedRepresentationLimit at hfixed
+  unfold adaptiveStatementDirectDecodeSourceLength
+  dsimp only
+  rw [AlgebraicProofString.preX1AssemblySource_length,
+    AlgebraicProofString.preX1Points_length]
+  simp only [List.length_append, adaptiveStatementInstanceRepresentationList_length]
+  simp only [AdaptiveActionStatementShape]
+  have hshape := actionProofShape_eq_maxShape numProofs
+  have hproofs := congrArg (fun shape : Shape => shape.numProofs) hshape
+  have hadvice := congrArg (fun shape : Shape => shape.numAdviceColumns) hshape
+  have hlookups := congrArg (fun shape : Shape => shape.numLookups) hshape
+  have hpermutation := congrArg (fun shape : Shape => shape.numPermutationSets) hshape
+  have hquotient := congrArg (fun shape : Shape => shape.numQuotientPieces) hshape
+  have hinstance := congrArg (fun shape : Shape => shape.numInstanceColumns) hshape
+  dsimp only [Zcash.Snark.FixtureMax.shape] at hproofs hadvice hlookups hpermutation hquotient hinstance
+  rw [hproofs, hadvice, hlookups, hpermutation, hquotient, hinstance]
+  have hn' : numProofs ≤ 2 ^ 16 - 1 := hn
+  omega
+
+/-- Three executions of the actual direct decoder fit the `2^123` endpoint budget.  This is
+derived from the structural source cap and the captured-shape cost formula, not supplied by the
+DLOG profile. -/
+theorem adaptiveStatementThreeDirectDecodes_le_two_pow_123
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (basis) (O : family.Coins) :
+    adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+        adaptiveStatementDirectDecodeOps family basis O ≤ 2 ^ 123 := by
+  have hsource := adaptiveStatementDirectDecodeSourceLength_le_two_pow_90
+    numProofs hn family basis O
+  unfold adaptiveStatementKnowledgeExtractorDirectDecodeSlots
+  unfold adaptiveStatementDirectDecodeOps
+  dsimp only
+  have hdecode := deployedDirectDecodeOps_le
+    (adaptiveActionStatementVk (actionProofParamsFor numProofs) basis)
+    (adaptiveActionStatementInstanceCommitment (actionProofParamsFor numProofs) basis
+      (family.runOutput basis O).inputs)
+    (family.runProof basis O).proof.1 (family.runRecord basis O)
+    (adaptiveStatementDirectDecodeSourceLength family basis O)
+  have hdecode' :
+      deployedDirectDecodeOps
+          (adaptiveActionStatementVk (actionProofParamsFor numProofs) basis)
+          (adaptiveActionStatementInstanceCommitment (actionProofParamsFor numProofs) basis
+            (family.runOutput basis O).inputs)
+          (family.runProof basis O).proof.1 (family.runRecord basis O)
+          (adaptiveStatementDirectDecodeSourceLength family basis O) ≤
+        6 * ((50 * numProofs + 46) *
+          (adaptiveStatementDirectDecodeSourceLength family basis O + 4101) + 2050) := by
+    refine hdecode.trans ?_
+    have hquery : queryBudget
+        (AdaptiveActionStatementShape (actionProofParamsFor numProofs)) =
+          50 * numProofs + 46 := by
+      change queryBudget
+        (actionCircuit.shape.withProofParams (actionProofParamsFor numProofs)) = _
+      rw [actionProofShape_eq_maxShape]
+      exact Zcash.Snark.FixtureMax.queryBudget_at_captured_shape numProofs
+    have hshape := actionProofShape_eq_maxShape numProofs
+    have hpointSets := congrArg (fun shape : Shape => shape.numPointSets) hshape
+    have hk := congrArg (fun shape : Shape => shape.k) hshape
+    dsimp only [Zcash.Snark.FixtureMax.shape] at hpointSets hk
+    rw [hquery, hpointSets, hk]
+    norm_num
+  refine le_trans (Nat.mul_le_mul_left 3 hdecode') ?_
+  have hn' : numProofs ≤ 2 ^ 16 - 1 := hn
+  calc
+    3 * (6 * ((50 * numProofs + 46) *
+          (adaptiveStatementDirectDecodeSourceLength family basis O + 4101) + 2050)) ≤
+        3 * (6 * ((50 * (2 ^ 16 - 1) + 46) * (2 ^ 90 + 4101) + 2050)) := by
+      gcongr
+    _ ≤ 2 ^ 123 := by norm_num
 
 /-- Shared arithmetic and transfer proof for the two certified work ceilings below. -/
 private theorem adaptiveStatementCertifiedEndpoint
@@ -383,7 +462,9 @@ private theorem adaptiveStatementCertifiedEndpoint
     exact le_rfl
   refine ⟨hprob, hqueries, ?_, hreduction, certificate.erase_eq, certificate.staged,
     profile.programmedReductionCoverage, certificate.proverGroupWork_le,
-    profile.directDecodeWorkBound, ?_⟩
+    (fun basis O ↦
+      (adaptiveStatementThreeDirectDecodes_le_two_pow_123
+        numProofs hn family basis O).trans hworkLower), ?_⟩
   · intro basis O
     exact (profile.queryCoverage basis O).trans hqueries
   intro basis O
@@ -396,10 +477,11 @@ private theorem adaptiveStatementCertifiedEndpoint
   exact family.cachedKnowledgeExtractor_isSome_eq
     (adaptiveStatement_pairCount_lt numProofs family) basis O
 
-/-- **Conditionally staged-certified `2^123` adaptive-statement endpoint.** The random-oracle and
-direct-decode budgets are separate premises. The costed program erases to the original algebraic
-adversary, its staging fidelity is explicit, the programmed reduction is data-coupled and staged,
-and the cached extractor costs at most `2^124` group operations. -/
+/-- **Conditionally staged-certified `2^123` adaptive-statement endpoint.** The costed program
+erases to the original algebraic adversary and its external staging fidelity remains explicit.
+Programmed reductions are mechanically composed with that exact program, the three direct-decode
+executions are derived from the structural source cap, and the cached extractor costs at most
+`2^124` group operations. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -445,9 +527,9 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
       B hB query hquery family hQ certificate profile)
 
 /-- **Conditionally staged-certified `2^125` adaptive-statement endpoint.** A faithfully staged
-adversary and data-coupled, faithfully staged reduction fit a `2^126` DLOG group-work envelope when
-adversary work is bounded by `2^125`. The random-oracle budget remains independently bounded by
-`Q ≤ 2^123`; direct-decode coverage also remains an explicit, separate profile premise. -/
+adversary and its mechanically composed, data-coupled reduction fit a `2^126` DLOG group-work
+envelope when adversary work is bounded by `2^125`. The random-oracle budget remains independently
+bounded by `Q ≤ 2^123`, and direct-decode coverage is derived from the structural source cap. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]

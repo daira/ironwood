@@ -483,7 +483,7 @@
         "The adaptive-statement finder and witness extractor reuse one adversary output, annotation log, and challenge vectors; the cached finder is pointwise equal to the original finder and extraction succeeds on exactly the same oracle tables.",
         "The Action knowledge extractors are executable and return the actual private witnesses for every proof in the bundle together with proofs that they satisfy the compiled Action specification; both the adaptive-statement and straight-line/sequential relation projections share their route's data-bearing outcome.",
         "The resource model keeps random-oracle queries, Vesta group operations, and direct-coordinate work separate. The DLOG advantage term is the conclusion of the programmed-basis reduction; the theorem does not take a DLOG-hardness proposition as a premise.",
-        "For every Action count at or below Orchard's consensus maximum, the conditionally staged-certified adaptive-statement endpoints bound verifier acceptance with failed executable witness extraction by <code>Adv_DLOG(2^124,2^126) + 2^-83</code>. They cover represented online-AGM adversaries with random-oracle challenge derivation. At the separate <code>Q ≤ 2^123</code> oracle parameter, both <code>2^123</code> and <code>2^125</code> adversary group-work budgets are covered; the latter's adversary-plus-reduction group work is at most <code>2^126</code>. Programmed-basis results feed the adversary and reified canonical commitments feed verifier assembly. The theorem remains conditional on adversary/reduction staging fidelity and a direct-decode bound; those premises and the executable read-set bound are exposed rather than folded into the DLOG group budget."
+        "For every Action count at or below Orchard's consensus maximum, the conditionally staged-certified adaptive-statement endpoints bound verifier acceptance with failed executable witness extraction by <code>Adv_DLOG(2^124,2^126) + 2^-83</code>. They cover represented online-AGM adversaries with random-oracle challenge derivation. At the separate <code>Q ≤ 2^123</code> oracle parameter, both <code>2^123</code> and <code>2^125</code> adversary group-work budgets are covered; the latter's adversary-plus-reduction group work is at most <code>2^126</code>. Programmed-basis results feed the adversary and reified canonical commitments feed verifier assembly. A private composition carries the exact adversary program, oracle path, and reduction program, eliminating the reduction-staging premise; the three-decode bound is derived from a structural source cap. External adversary implementation-to-program fidelity and the executable read-set bound remain exposed rather than folded into the DLOG group budget."
       ],
       "residuals": [
         "Identify Blake2b and halo2's concrete hash-to-curve with their modeled random oracles, relate a concrete implementation to the costed algebraic program, choose a concrete interpretation of the resulting finite-resource Vesta DLOG advantage, and identify the extracted circuit witnesses with the ledger-level Orchard witness relation. The theorem covers represented online-AGM adversaries, not arbitrary non-algebraic random-oracle adversaries."
@@ -656,7 +656,7 @@
       "chapter": "Trust boundary",
       "title": "Stop at the exact formal boundary",
       "claim": "The formal chain reaches executable Action witnesses or explicit relation data and states every remaining model boundary as a premise or documented interpretation step.",
-      "summary": "The strongest adaptive capstones cover represented online algebraic adversaries in the random-oracle model at explicit query and group-work parameters; their staging and direct-decode premises remain visible. Legacy rewind rungs remain conditional on supplied accepting trees. Neither route identifies concrete hashes, the captured verifier artifact, or the compiled circuit witness with the ledger-level Orchard relation inside Lean.",
+      "summary": "The strongest adaptive capstones cover represented online algebraic adversaries in the random-oracle model at explicit query and group-work parameters. Reduction composition and the direct-decode bound are derived; external adversary implementation-to-program fidelity remains visible. Legacy rewind rungs remain conditional on supplied accepting trees. Neither route identifies concrete hashes, the captured verifier artifact, or the compiled circuit witness with the ledger-level Orchard relation inside Lean.",
       "nodes": [
         "capstones",
         "structural",
@@ -707,7 +707,7 @@
       ],
       "residuals": [
         "High-level relation, VK derivation, Rust-capture trust, Blake2b-as-RO, generator hash-to-curve-as-RO, the AGM idealization, and a concrete interpretation of the finite-resource DLOG advantage.",
-        "The adaptive group-work result is conditional on adversary/reduction staging fidelity and direct-decode coverage; the legacy rewind capstones still require their named execution and probability premises."
+        "The adaptive group-work result remains conditional on external adversary implementation-to-program fidelity; reduction composition and direct-decode coverage are derived. The legacy rewind capstones still require their named execution and probability premises."
       ],
       "durationMs": 11000
     }
