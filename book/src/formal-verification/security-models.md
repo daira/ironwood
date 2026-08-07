@@ -33,8 +33,10 @@ adversary is restricted to be [algebraic](#the-algebraic-adversary-restriction).
 A theorem of this kind says: an *algebraic adversary in the random-oracle model* that
 wins the protocol game, under the stated conditions, would need to be able to compute
 a nontrivial discrete-log relation —tightly equivalent to computing a discrete log
-(Jaeger–Tessaro, [2020/1213](https://eprint.iacr.org/2020/1213), Lemma 3)— with an
-advantage and resource cost that is related in terms of concrete efficiency. The same
+(Jaeger–Tessaro,
+[Expected-Time Cryptography: Generic Techniques and Applications to Concrete Soundness](https://eprint.iacr.org/2020/1213),
+Lemma 3)— with an advantage and resource cost that is related in terms of concrete
+efficiency. The same
 content is sometimes stated as: an adversary that wins the game either exhibits a
 discrete-log break *or* falls outside the modelled class — an inclusive or, since an
 adversary that wins the game by non-algebraic means could potentially do so by breaking
@@ -109,12 +111,14 @@ Rogaway's "human ignorance" approach
 ([Formalizing Human Ignorance](https://eprint.iacr.org/2006/281), Vietcrypt 2006). Even
 outside formalization, time-bounded universal hardness claims for a fixed primitive are
 subtle: free precomputation converts memory into online speed at a quantified exchange
-rate (Corrigan-Gibbs–Kogan, [2017/1113](https://eprint.iacr.org/2017/1113), Eurocrypt
-2018: generic preprocessing attacks with advice $S$ and online time $T$ achieve success
-$ε$ with $S \cdot T^2$ on the order of $ε \cdot N$, and this is tight); non-uniform
-definitions admit unrealistic counterexample algorithms, as discussed above
+rate (Corrigan-Gibbs–Kogan,
+[The Discrete-Logarithm Problem with Preprocessing](https://eprint.iacr.org/2017/1113),
+Eurocrypt 2018: generic preprocessing attacks with advice $S$ and online time $T$
+achieve success $ε$ with $S \cdot T^2$ on the order of $ε \cdot N$, and this is
+tight); non-uniform definitions admit unrealistic counterexample algorithms, as
+discussed above
 (Bernstein–Lange); and whether the non-uniform model is the right one at all is itself
-debated (Koblitz–Menezes, [2012/359](https://eprint.iacr.org/2012/359)).
+debated (Koblitz–Menezes, [Another look at non-uniformity](https://eprint.iacr.org/2012/359)).
 
 The Lean interface encodes this division of labour — the mathematics exhibits the
 reduction, and the reader supplies the hardness judgement. `TextbookDLAdvantageLE` and
@@ -153,7 +157,9 @@ single thresholds— follows Bernstein,
 
 An algebraic adversary is one that, whenever it outputs a group element, also supplies a
 representation: coefficients expressing that element over the elements it has received
-(Fuchsbauer–Kiltz–Loss, [2017/620](https://eprint.iacr.org/2017/620), Crypto 2018). Only
+(Fuchsbauer–Kiltz–Loss,
+[The Algebraic Group Model and its Applications](https://eprint.iacr.org/2017/620),
+Crypto 2018). Only
 the provenance of output group elements is restricted. The computation deciding the
 coefficients is unrestricted — the adversary may inspect encodings, branch on bits, and
 use any structure it can see. In this development the restriction is part of the
@@ -164,7 +170,8 @@ load-bearing as named hypotheses, and less visible in theorem statements.
 Like the random-oracle model, this is a heuristic restriction of the adversary's
 strategy class, not an assumption that could be true or false of Pallas or Vesta.
 Random-oracle non-instantiability (Canetti–Goldreich–Halevi,
-[2003/077](https://eprint.iacr.org/2003/077)) is the standing warning against reading
+[The Random Oracle Methodology, Revisited](https://eprint.iacr.org/1998/011)) is the
+standing warning against reading
 in-model theorems as instantiated guarantees. The heuristic earns its keep only if two
 supporting claims hold. First, re-expression: an adversary that is only *incidentally*
 non-algebraic must be re-expressible as an algebraic one at similar cost. Every generic

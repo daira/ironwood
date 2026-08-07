@@ -123,11 +123,11 @@ flowchart TD
 This picture is a deliberate approximation, and is likely to change as the formalization
 proceeds. The RedDSA node is a named hypothesis rather than a terminal assumption: its
 discharge edge names the reduction for security of signatures with re-randomizable keys
-[<a href="https://eprint.iacr.org/2015/395">FKMSSS2016</a>, section 3], adapted to the
-±-randomized variant, together with the same straight-line AGM+ROM extraction of
-Fuchsbauer–Plouviez–Seurin
-[<a href="https://eprint.iacr.org/2019/877">2019/877</a>, Theorem 1] that discharges
-the binding-signature extractability node at
+([Efficient Unlinkable Sanitizable Signatures from Signatures with Re-Randomizable Keys](https://eprint.iacr.org/2015/395),
+section 3), adapted to the ±-randomized variant, together with the same straight-line
+AGM+ROM extraction of Fuchsbauer–Plouviez–Seurin
+([Blind Schnorr Signatures and Signed ElGamal Encryption in the Algebraic Group Model](https://eprint.iacr.org/2019/877),
+Theorem 1) that discharges the binding-signature extractability node at
 $(q_H + 2)/|\mathbb{F}| + \varepsilon_{\mathrm{DL}}$. The two arms differ in the signing
 oracle: the binding-signature extraction has none to simulate, because the signature
 extracted from is the adversary's own, while the RedDSA unforgeability game has one.
