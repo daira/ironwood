@@ -30,7 +30,8 @@ directory level, naming the notable modules as entry points.
   [Formal Verification](../formal-verification.md) page). `AlgebraicRelation` carries the same
   relation over an arbitrary indexed basis (`AlgebraicRelationWitness`) and turns one into a
   discrete log, either against known slot logs or against a basis programmed from the DL challenge
-  (Jaeger–Tessaro, [2020/1213](https://eprint.iacr.org/2020/1213), Lemma 3); `RelationProbability`
+  (Jaeger–Tessaro, [Expected-Time Cryptography: Generic Techniques and Applications to Concrete
+  Soundness](https://eprint.iacr.org/2020/1213), Lemma 3); `RelationProbability`
   and `RelationProbabilityCoins` price that reduction's single miss hyperplane at `1/|F|`, and
   `UniformMeasure` holds the distribution facts they count with. None of these restrict the
   adversary — they consume relation coefficients from any source, and what scopes them is how the

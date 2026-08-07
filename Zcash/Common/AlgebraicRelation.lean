@@ -19,10 +19,11 @@ Both turn a computed relation into a discrete log; they differ in what is known 
   multiple of `B`, a relation with a nonzero coefficient at the remaining slot yields that slot's
   log. Its augmented-basis forms `discreteLogOfU_of_augmentedRelation` and
   `discreteLogOfW_of_augmentedRelation` serve the binding-signature reduction.
-* **Programmed bases.** `discreteLogOfChallenge_of_relation`, following Jaeger–Tessaro Lemma 3
-  (<https://eprint.iacr.org/2020/1213>): every slot presents `x i • B + y i • C`, so a returned
-  relation reads `0 = (∑ i, aᵢ·xᵢ) • B + (∑ i, aᵢ·yᵢ) • C` and the reduction divides by
-  `∑ i, aᵢ·yᵢ`. `programmedExtractOrMiss` is its extract-or-miss form, and
+* **Programmed bases.** `discreteLogOfChallenge_of_relation` (Jaeger–Tessaro,
+  [Expected-Time Cryptography: Generic Techniques and Applications to Concrete
+  Soundness](https://eprint.iacr.org/2020/1213), Lemma 3): every slot presents `x i • B + y i • C`,
+  so a returned relation reads `0 = (∑ i, aᵢ·xᵢ) • B + (∑ i, aᵢ·yᵢ) • C` and the reduction divides
+  by `∑ i, aᵢ·yᵢ`. `programmedExtractOrMiss` is its extract-or-miss form, and
   `Zcash.Common.RelationProbability` prices its one failing hyperplane at `1/|F|`.
 
 ## Why this is not scoped to an adversary model
@@ -65,6 +66,11 @@ def coeffs {ι : Type*} [Fintype ι] {basis : ι → G}
     (P : AlgebraicPoint (F := F) basis) : ι → F :=
   P.repr.coeffs
 
+/-- An algebraic point's coefficients evaluate back to the point itself:
+`representationEval basis P.coeffs = P.point`.
+
+This is the bundled `GroupRepresentation.hEq` restated through the `coeffs` projection, as `simp`,
+so a consumer holding an `AlgebraicPoint` can rewrite its MSM away without unfolding `repr`. -/
 @[simp] theorem hEq {ι : Type*} [Fintype ι] {basis : ι → G}
     (P : AlgebraicPoint (F := F) basis) :
     representationEval basis P.coeffs = P.point :=
