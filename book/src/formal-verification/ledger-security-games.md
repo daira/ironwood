@@ -56,20 +56,20 @@ flowchart TD
   NFB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>distinct derive-inputs +<br/>equal nullifier<br/>computes</a>"| NFC["NullifierCollision"]
   SPENDAUTH --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean'>verified signature over<br/>unsigned sighash computes</a>"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
-  STMT -. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor;<br/>circuit-correctness<br/>conditions</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
+  STMT STMTtoKS@-. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
-  KERR ==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
+  KERR KERRtoNDLR@==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
   KERR --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/KnowledgeError.lean'>challenge hash as random<br/>oracle; query-time labels<br/>pin the bad challenge</a>"| ROM
   NDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
   SDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/AGM/BindingSignature.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  KS ===>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>independent<br/>hash-to-curve bases</a>"| DL
+  KS KStoDL@===>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>independent<br/>hash-to-curve bases</a>"| DL
   KS -->|"<a target='_blank' href='https://github.com/zcash/ironwood/tree/main/Zcash/Snark/Soundness/FiatShamir'>Fiat–Shamir<br/>heuristic</a>"| ROM
   MC --> SDLR
   CUS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/Birthday.lean'>birthday counting<br/>q(q-1)/|𝔽|,<br/>no assumption</a>"| ROM
   NFC -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Nullifier.lean'>distinct-note openings<br/>compute</a>"| SDLR
   SAF ---> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
-  RDSA -->|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/>forking extraction"| DL
+  RDSA RDSAtoDL@==>|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/><a target='_blank' href='https://eprint.iacr.org/2019/877'>straight-line AGM extraction</a>"| DL
   RDSA -->|"challenge hash<br/>as random oracle"| ROM
 
   click BAL "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Balance.lean" _blank
@@ -103,13 +103,16 @@ flowchart TD
   class NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR checked
   class RDSA hyp
   class DL,ROM assumed
-  %% linkStyle selects edges by definition order above; recount when adding or removing edges
-  linkStyle 26,30 stroke:#8250df,stroke-width:4px
+  classDef agmEdge stroke:#8858c8,stroke-width:4.2px
+  classDef agmBridge stroke:#8858c8,stroke-width:3.5px,stroke-dasharray: 7.5 3.2
+  class KERRtoNDLR,KStoDL,RDSAtoDL agmEdge
+  class STMTtoKS agmBridge
 ```
 
 <p>
-<span style="color:#8250df; font-weight: 700; font-size: 1.9rem">➞</span> thick purple edge: a reduction in the online-AGM — both endpoint games are algebraic<br/>
-<span style="font-size: 1.9rem">➝</span> thin black edge: depends on (a reduction, assumption, or model)<br/>
+<span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">➞</span> heavy purple edge: a reduction (or intended reduction) in the online-AGM — both endpoint games are algebraic<br/>
+<span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">⇢</span> dashed purple edge: an AGM-scoped justification crossing named side conditions — a semantic bridge rather than a proved implication<br/>
+<span style="font-size: 1.9rem">➝</span> thin edge: depends on (a reduction, assumption, or model)<br/>
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
 <span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
 <span style="color:#9a6700"> ■ </span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end: composing the per-arm oracle-model discharges into one experiment, RedDSA unforgeability; knowledge soundness's circuit-correctness conditions)<br/>
@@ -121,20 +124,24 @@ This picture is a deliberate approximation, and is likely to change as the forma
 proceeds. The RedDSA node is a named hypothesis rather than a terminal assumption: its
 discharge edge names the reduction for security of signatures with re-randomizable keys
 [<a href="https://eprint.iacr.org/2015/395">FKMSSS2016</a>, section 3], adapted to the
-±-randomized variant, together with forking extraction of the Schnorr witness. The
-binding-signature extractability node, by contrast, is discharged via the straight-line
-AGM+ROM extraction of Fuchsbauer–Plouviez–Seurin
-[<a href="https://eprint.iacr.org/2019/877">2019/877</a>, Theorem 1], at
-$(q_H + 2)/|\mathbb{F}| + \varepsilon_{\mathrm{DL}}$. In that setting there is
-no signing oracle to simulate, because the signature extracted from is the adversary's
-own.
+±-randomized variant, together with the same straight-line AGM+ROM extraction of
+Fuchsbauer–Plouviez–Seurin
+[<a href="https://eprint.iacr.org/2019/877">2019/877</a>, Theorem 1] that discharges
+the binding-signature extractability node at
+$(q_H + 2)/|\mathbb{F}| + \varepsilon_{\mathrm{DL}}$. The two arms differ in the signing
+oracle: the binding-signature extraction has none to simulate, because the signature
+extracted from is the adversary's own, while the RedDSA unforgeability game has one.
+The planned discharge is to simulate the signing oracle by programming the challenge
+oracle at the re-randomized key; the randomizer, carried by the forgery, enters the
+extraction as a known coefficient.
 
 Every solid arrow reads "rests on"; where an edge carries a label, the label names the
 computed break object flowing along it, or the side condition under which the reduction
-holds (base independence from hash-to-curve, the birthday count). Thick purple arrows
-mark reductions stated for algebraic adversaries: both the source and the target of such an
-edge are interpreted as games against online-AGM adversaries, so the model scopes the
-whole reduction rather than being one more assumption it rests on — see
+holds (base independence from hash-to-curve, the birthday count). Heavy purple arrows
+mark reductions (or intended reductions) stated for algebraic adversaries: both the
+source and the target of such an edge are interpreted as games against online-AGM
+adversaries, so the model scopes the whole reduction rather than being one more
+assumption it rests on — see
 [Security Models](security-definitions.md#the-algebraic-adversary-restriction). The
 random-oracle node remains a terminal because some error terms genuinely bottom out
 there: they are counting arguments over the oracle table, with no computational
@@ -144,10 +151,11 @@ statement (`ActionSatisfied`) — in the replay case the ledger oracle can produ
 previously supplied witness. Each component argument consumes the statement's satisfaction
 *on that witness*. Knowledge soundness is what justifies the modelling: whenever the ledger
 layer needs a witness, the extractor computes one —or computes break data— from the accepting
-proof. The dashed edge marks that justification, which crosses the remaining semantic bridge:
-the Clean/Ironwood circuit-correctness conditions (`TopLevelCircuitCorrectness`) — named
-component conditions rather than a proved implication. Discharging them is the subject of
-the circuit soundness proof.
+proof. The justification is AGM-scoped —the extractor consumes the adversary's
+representations— so its edge is heavy purple; the dashing marks that it crosses the
+remaining semantic bridge: the Clean/Ironwood circuit-correctness conditions
+(`TopLevelCircuitCorrectness`) — named component conditions rather than a proved
+implication. Discharging them is the subject of the circuit soundness proof.
 
 ## The definitions
 
