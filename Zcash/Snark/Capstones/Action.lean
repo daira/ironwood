@@ -105,7 +105,7 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
 /-- Consensus-generic adaptive-statement knowledge soundness with staged work accounting.
 The adversary program erases to the original game.  Its staged group work and the cached
 reduction's group-law work are derived from syntax and the captured verifier shape; host-language
-staging fidelity remains explicit in the certificate. -/
+staging fidelity remains explicit in the adversary certificate and reduction profile. -/
 theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
     (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -311,6 +311,8 @@ private theorem adaptiveStatementCertifiedEndpoint
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B workLimit certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ workLimit) ∧
       (∀ basis O,
         adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
@@ -380,7 +382,8 @@ private theorem adaptiveStatementCertifiedEndpoint
     ring_nf
     exact le_rfl
   refine ⟨hprob, hqueries, ?_, hreduction, certificate.erase_eq, certificate.staged,
-    certificate.proverGroupWork_le, profile.directDecodeWorkBound, ?_⟩
+    profile.programmedReductionCoverage, certificate.proverGroupWork_le,
+    profile.directDecodeWorkBound, ?_⟩
   · intro basis O
     exact (profile.queryCoverage basis O).trans hqueries
   intro basis O
@@ -395,7 +398,8 @@ private theorem adaptiveStatementCertifiedEndpoint
 
 /-- **Staged-certified `2^123` adaptive-statement endpoint.**  The random-oracle budget is a
 separate premise.  The costed program erases to the original algebraic adversary, its staging
-fidelity is explicit, and the cached extractor costs at most `2^124` group operations. -/
+fidelity is explicit, the programmed reduction is data-coupled and staged, and the cached
+extractor costs at most `2^124` group operations. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -420,6 +424,8 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 123) certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 123) ∧
       (∀ basis O,
         adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
@@ -438,9 +444,10 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
     (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 123) hn le_rfl (by norm_num)
       B hB query hquery family hQ certificate profile)
 
-/-- **Staged-certified `2^125` adaptive-statement endpoint.**  A faithfully staged adversary
-bounded by `2^125` group operations and the cached reduction fit a `2^126` DLOG-work envelope.
-The random-oracle budget remains independently bounded by `Q ≤ 2^123` and is not inflated. -/
+/-- **Staged-certified `2^125` adaptive-statement endpoint.**  A faithfully staged adversary and
+data-coupled, faithfully staged reduction fit a `2^126` DLOG-work envelope when adversary work is
+bounded by `2^125`.  The random-oracle budget remains independently bounded by `Q ≤ 2^123` and is
+not inflated. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -465,6 +472,8 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 125) certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 125) ∧
       (∀ basis O,
         adaptiveStatementKnowledgeExtractorDirectDecodeSlots *

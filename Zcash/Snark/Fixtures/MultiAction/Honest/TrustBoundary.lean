@@ -42,8 +42,10 @@ endpoints.  Their representations are ghost extractor data: they are neither tra
 checked by the Halo2 verifier.  Accordingly the endpoints are AGM-and-random-oracle reductions to
 finite-security Vesta DLOG advantage.  The staged-certified adaptive-statement profiles use a
 costed adversary whose erasure is the original game, a single cached execution, and a
-branch-selected executable group-operation program.  The certificate explicitly retains the
-external staging obligation that host-language `pure` payloads contain no hidden group work.
+branch-selected executable group-operation program.  Programmed-basis MSM results feed the
+adversary, and canonical instance MSM results feed verifier assembly.  The profile explicitly
+retains staging obligations for both the adversary and reduction, recording that host-language
+`pure` payloads and continuations contain no hidden group work.
 Equality/list work, direct-coordinate work, and random-oracle queries are separate from the DLOG
 group-operation budget.  The older declared-resource endpoint remains pinned alongside the
 `2^123` and `2^125` staged forms.

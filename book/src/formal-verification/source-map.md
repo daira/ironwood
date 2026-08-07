@@ -175,7 +175,9 @@ to the ones derived end to end from the ported `configure`. The multi-action cap
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the exact straight-line false-statement endpoint and the
 adaptive-statement knowledge-failure endpoints with staged-certified `2^123` and `2^125`
-adversary-work instantiations and a separate oracle-query budget, and `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
+adversary-work instantiations, data-coupled programmed-basis and verifier-commitment accounting,
+explicit adversary/reduction staging obligations, and a separate oracle-query budget, and
+`CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
 Each family's `Random/` subfolder holds the random match-only
@@ -221,9 +223,11 @@ root, IPA, and semantic surfaces under the single `(Q + 1)` query factor; `Prove
 executable resolver stages; `Event` unions the priced events and `Capstone` discharges the
 statistical residual against them; `Knowledge` ends at the executable knowledge extractor and
 its failure bound; `Cached` proves that one retained execution gives the same finder and extraction
-event; and `Cost` executes branch-selected reduction group work through reified Vesta operations
-and derives the staged-certified `2×` bound. Its explicit staging obligation records that relating
-host-language code to the cost DSL is still external. `Profile` retains the older declared-resource
+event; and `Cost` constructs the programmed basis through reified Vesta operations, feeds those
+computed points into the adversary, threads reified canonical commitments into verifier assembly,
+and derives the staged-certified `2×` bound. Its explicit adversary and reduction staging
+obligations record that relating host-language code to the cost DSL is still external. `Profile`
+retains the older declared-resource
 compatibility theorem. The shared
 `AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment
 activity predicates, challenge surfaces, and pointwise semantic terminal both Action routes

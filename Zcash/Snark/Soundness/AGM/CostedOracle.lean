@@ -384,6 +384,33 @@ def evalMsms : List (List (Fp × VestaG)) → CostedVestaComp (List VestaG)
       bind (vestaMsm terms) fun value =>
         map (List.cons value) (evalMsms rest)
 
+/-- Execute a list of MSMs while retaining a proof that every returned point is the evaluation of
+its corresponding term list.  This dependent result is the value-coupling interface used by
+reduction code that must feed the computed points into later verifier stages. -/
+def evalMsmsCertified (termSets : List (List (Fp × VestaG))) :
+    CostedVestaComp
+      {values : List VestaG //
+        values = termSets.map fun terms => (terms.map fun term => term.1 • term.2).sum} :=
+  match termSets with
+  | [] => pure ⟨[], rfl⟩
+  | terms :: rest =>
+      bind (vestaMsmCertified terms) fun value =>
+        bind (evalMsmsCertified rest) fun values =>
+          pure ⟨value.1 :: values.1, by rw [value.2, values.2]; rfl⟩
+
+/-- Execute a matrix of MSMs, retaining both its row shape and the equation for every result. -/
+def evalMsmMatrixCertified (matrix : List (List (List (Fp × VestaG)))) :
+    CostedVestaComp
+      {values : List (List VestaG) //
+        values = matrix.map fun row =>
+          row.map fun terms => (terms.map fun term => term.1 • term.2).sum} :=
+  match matrix with
+  | [] => pure ⟨[], rfl⟩
+  | row :: rest =>
+      bind (evalMsmsCertified row) fun values =>
+        bind (evalMsmMatrixCertified rest) fun rows =>
+          pure ⟨values.1 :: rows.1, by rw [values.2, rows.2]; rfl⟩
+
 /-- Execute a list of concrete MSMs for their audited effects. -/
 def auditMsms (termSets : List (List (Fp × VestaG))) : CostedVestaComp Unit :=
   map (fun _ => ()) (evalMsms termSets)
@@ -428,6 +455,18 @@ def repeatAudit (count : Nat) (A : CostedVestaComp α) : CostedVestaComp Unit :=
   induction termSets with
   | nil => rfl
   | cons terms rest ih => simp [evalMsms, ih]
+
+@[simp] theorem run_evalMsmsCertified (termSets : List (List (Fp × VestaG))) :
+    (run (evalMsmsCertified termSets)).1 =
+      termSets.map fun terms => (terms.map fun term => term.1 • term.2).sum :=
+  (run (evalMsmsCertified termSets)).2
+
+@[simp] theorem run_evalMsmMatrixCertified
+    (matrix : List (List (List (Fp × VestaG)))) :
+    (run (evalMsmMatrixCertified matrix)).1 =
+      matrix.map fun row =>
+        row.map fun terms => (terms.map fun term => term.1 • term.2).sum :=
+  (run (evalMsmMatrixCertified matrix)).2
 
 @[simp] theorem run_auditMsms (termSets : List (List (Fp × VestaG))) :
     run (auditMsms termSets) = () := by
@@ -477,6 +516,20 @@ def repeatAudit (count : Nat) (A : CostedVestaComp α) : CostedVestaComp Unit :=
   induction termSets with
   | nil => rfl
   | cons terms rest ih => simp [evalMsms, ih]
+
+@[simp] theorem groupWork_evalMsmsCertified (termSets : List (List (Fp × VestaG))) :
+    groupWork (evalMsmsCertified termSets) = (termSets.map List.length).sum := by
+  induction termSets with
+  | nil => rfl
+  | cons terms rest ih => simp [evalMsmsCertified, ih]
+
+@[simp] theorem groupWork_evalMsmMatrixCertified
+    (matrix : List (List (List (Fp × VestaG)))) :
+    groupWork (evalMsmMatrixCertified matrix) =
+      (matrix.map fun row => (row.map List.length).sum).sum := by
+  induction matrix with
+  | nil => rfl
+  | cons row rest ih => simp [evalMsmMatrixCertified, ih]
 
 @[simp] theorem groupWork_auditMsms (termSets : List (List (Fp × VestaG))) :
     groupWork (auditMsms termSets) = (termSets.map List.length).sum := by

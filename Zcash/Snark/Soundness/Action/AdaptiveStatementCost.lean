@@ -21,7 +21,9 @@ includes programmed-basis evaluation, canonical instance evaluation, verifier as
 identity/terminal path, and the final witness projection.  Equality tests,
 annotation/source-list scans, field operations, and direct-coordinate decode work are not DLOG
 group operations; the latter remains in its existing separate model.  Random-oracle queries are
-also kept separate: one adversary run plus the canonical `11 + k` challenge reads.
+also kept separate: one adversary run plus the canonical `11 + k` challenge reads.  The certified
+profile exposes staging fidelity independently for the adversary and for both complete reduction
+programs; no host-language cost assumption is left implicit in the endpoint.
 -/
 
 namespace Zcash.Snark
@@ -147,122 +149,126 @@ theorem vestaAssembledMsmTerms_sum (urs : Zcash.Arithmetic.URS VestaG)
     List.sum_ofFn]
   abel
 
-/-- Canonical enumeration of the augmented public-basis slots. -/
-def adaptiveStatementAugmentedIndices (pp : ProofParams) :
-    List (AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k)) :=
-  List.ofFn (fun i => AugmentedIndex.gen i) ++
-    [AugmentedIndex.u, AugmentedIndex.w]
+/-- A basis function recovered from reified MSM results, together with the equation identifying
+it with the basis expected by the surrounding reduction. -/
+structure AdaptiveStatementBasisCache (pp : ProofParams)
+    (expected : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) where
+  basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG
+  basis_eq : basis = expected
 
-@[simp] theorem adaptiveStatementAugmentedIndices_length (pp : ProofParams) :
-    (adaptiveStatementAugmentedIndices pp).length = adaptiveStatementBasisWidth pp := by
-  simp [adaptiveStatementAugmentedIndices, adaptiveStatementBasisWidth]
+/-- Reify every slot of an augmented basis.  The returned function is assembled from the actual
+MSM results, so a continuation consuming `cache.basis` is data-dependent on every charged node. -/
+def costedAdaptiveStatementBasisCache (pp : ProofParams)
+    (expected : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (terms : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) →
+      List (Fp × VestaG))
+    (heval : ∀ i, (terms i |>.map fun term => term.1 • term.2).sum = expected i) :
+    CostedVestaComp (AdaptiveStatementBasisCache pp expected) :=
+  CostedVestaComp.bind
+    (CostedVestaComp.evalMsmsCertified
+      (List.ofFn fun i => terms (AugmentedIndex.gen i))) fun generators =>
+  CostedVestaComp.bind
+    (CostedVestaComp.vestaMsmCertified (terms AugmentedIndex.u)) fun u =>
+  CostedVestaComp.bind
+    (CostedVestaComp.vestaMsmCertified (terms AugmentedIndex.w)) fun w =>
+  CostedVestaComp.pure
+    { basis := fun i =>
+        match i with
+        | Sum.inl j => generators.1.getD j 0
+        | Sum.inr j => if j = 0 then u.1 else w.1
+      basis_eq := by
+        funext i
+        rcases i with i | j
+        · rw [generators.2]
+          have hi := i.isLt
+          change i.val < 2 ^ (Zcash.Circuits.Action.actionCircuit).domainExponent at hi
+          simp [List.getD, heval, hi]
+          apply congrArg expected
+          congr 1
+        · fin_cases j <;>
+            simp [u.2, w.2, heval, AugmentedIndex.u, AugmentedIndex.w] }
 
-private theorem sum_mapped_lengths_of_constant {α : Type*} (lists : List (List α)) (n : Nat)
-    (hlength : ∀ list ∈ lists, list.length = n) :
-    (lists.map List.length).sum = n * lists.length := by
-  induction lists with
-  | nil => simp
-  | cons head tail ih =>
-      have hhead := hlength head (by simp)
-      have htail : ∀ list ∈ tail, list.length = n := by
-        intro list hmem
-        exact hlength list (by simp [hmem])
-      simp [hhead, ih htail, Nat.mul_add]
-      omega
+@[simp] theorem costedAdaptiveStatementBasisCache_run
+    (pp : ProofParams)
+    (expected : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (terms : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) →
+      List (Fp × VestaG))
+    (heval : ∀ i, (terms i |>.map fun term => term.1 • term.2).sum = expected i) :
+    (costedAdaptiveStatementBasisCache pp expected terms heval).run =
+      { basis := expected, basis_eq := rfl } := by
+  generalize (costedAdaptiveStatementBasisCache pp expected terms heval).run = result
+  rcases result with ⟨actual, hactual⟩
+  subst actual
+  rfl
 
-/-- Actual two-term MSM operands used to program every public-basis slot from a DLOG challenge. -/
-def adaptiveStatementProgrammedBasisTermSets (pp : ProofParams) (B C : VestaG)
-    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
-    List (List (Fp × VestaG)) :=
-  (adaptiveStatementAugmentedIndices pp).map fun i => [(x i, B), (y i, C)]
-
-/-- Operational programmed-basis construction. -/
-def costedAdaptiveStatementProgrammedBasis (pp : ProofParams) (B C : VestaG)
-    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
-    CostedVestaComp (List VestaG) :=
-  CostedVestaComp.evalMsms (adaptiveStatementProgrammedBasisTermSets pp B C x y)
-
-@[simp] theorem costedAdaptiveStatementProgrammedBasis_run (pp : ProofParams) (B C : VestaG)
-    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
-    (costedAdaptiveStatementProgrammedBasis pp B C x y).run =
-      (adaptiveStatementAugmentedIndices pp).map fun i => x i • B + y i • C := by
-  simp [costedAdaptiveStatementProgrammedBasis,
-    adaptiveStatementProgrammedBasisTermSets]
-
-@[simp] theorem costedAdaptiveStatementProgrammedBasis_groupWork (pp : ProofParams)
-    (B C : VestaG)
-    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
-    (costedAdaptiveStatementProgrammedBasis pp B C x y).groupWork =
+@[simp] theorem costedAdaptiveStatementBasisCache_groupWork
+    (pp : ProofParams)
+    (expected : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (terms : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) →
+      List (Fp × VestaG))
+    (heval : ∀ i, (terms i |>.map fun term => term.1 • term.2).sum = expected i)
+    (hlength : ∀ i, (terms i).length = 2) :
+    (costedAdaptiveStatementBasisCache pp expected terms heval).groupWork =
       2 * adaptiveStatementBasisWidth pp := by
-  rw [costedAdaptiveStatementProgrammedBasis,
-    CostedVestaComp.groupWork_evalMsms]
-  have hlength : ∀ terms ∈ adaptiveStatementProgrammedBasisTermSets pp B C x y,
-      terms.length = 2 := by
-    intro terms hterms
-    obtain ⟨i, -, rfl⟩ := List.mem_map.mp hterms
-    rfl
-  rw [sum_mapped_lengths_of_constant _ 2 hlength]
-  simp [adaptiveStatementProgrammedBasisTermSets]
+  simp [costedAdaptiveStatementBasisCache, hlength, adaptiveStatementBasisWidth,
+    List.sum_ofFn, Nat.mul_add, Nat.mul_comm]
 
-/-- Actual augmented-basis operands of every canonical selected-instance commitment. -/
-def adaptiveStatementCanonicalInstanceTermSets {pp : ProofParams}
+/-- Proof-carrying programmed-basis construction used by the DLOG reduction. -/
+def costedAdaptiveStatementProgrammedBasisCache (pp : ProofParams) (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
+    CostedVestaComp (AdaptiveStatementBasisCache pp (fun i => x i • B + y i • C)) :=
+  costedAdaptiveStatementBasisCache pp (fun i => x i • B + y i • C)
+    (fun i => [(x i, B), (y i, C)]) (by intro i; simp)
+
+@[simp] theorem costedAdaptiveStatementProgrammedBasisCache_groupWork
+    (pp : ProofParams) (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
+    (costedAdaptiveStatementProgrammedBasisCache pp B C x y).groupWork =
+      2 * adaptiveStatementBasisWidth pp := by
+  apply costedAdaptiveStatementBasisCache_groupWork
+  intro i
+  rfl
+
+/-- Canonical two-term materialization of an already-selected basis.  This gives the generic
+basis-indexed execution the same data-coupled interface as the programmed DLOG execution. -/
+def costedAdaptiveStatementSelectedBasisCache (pp : ProofParams)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
+    CostedVestaComp (AdaptiveStatementBasisCache pp basis) :=
+  costedAdaptiveStatementBasisCache pp basis
+    (fun i => [(1, basis i), (0, basis i)]) (by intro i; simp)
+
+@[simp] theorem costedAdaptiveStatementSelectedBasisCache_groupWork
+    (pp : ProofParams)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
+    (costedAdaptiveStatementSelectedBasisCache pp basis).groupWork =
+      2 * adaptiveStatementBasisWidth pp := by
+  apply costedAdaptiveStatementBasisCache_groupWork
+  intro i
+  rfl
+
+/-- The canonical instance MSM operands before flattening.  Retaining this matrix shape lets the
+costed reduction turn the reified results back into the exact proof/column commitment function
+consumed by verifier assembly. -/
+def adaptiveStatementCanonicalInstanceTermMatrix {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    List (List (Fp × VestaG)) :=
-  (List.ofFn fun p => List.ofFn fun column =>
+    List (List (List (Fp × VestaG))) :=
+  List.ofFn fun p => List.ofFn fun column =>
     vestaAugmentedRepresentationTerms basis
       (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).coeffs
-  ).flatten
 
-theorem adaptiveStatementCanonicalInstanceTermSets_work {pp : ProofParams}
+theorem adaptiveStatementCanonicalInstanceTermMatrix_eval {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    ((adaptiveStatementCanonicalInstanceTermSets family basis output).map List.length).sum =
-      (AdaptiveActionStatementShape pp).numProofs *
-        (AdaptiveActionStatementShape pp).numInstanceColumns *
-          adaptiveStatementBasisWidth pp := by
-  have hlength : ∀ terms ∈ adaptiveStatementCanonicalInstanceTermSets family basis output,
-      terms.length = adaptiveStatementBasisWidth pp := by
-    intro terms hterms
-    obtain ⟨row, hrow, hterms⟩ := List.mem_flatten.mp hterms
-    obtain ⟨p, rfl⟩ := List.mem_ofFn.mp hrow
-    obtain ⟨column, rfl⟩ := List.mem_ofFn.mp hterms
-    simp [adaptiveStatementBasisWidth]
-  have hcount : (adaptiveStatementCanonicalInstanceTermSets family basis output).length =
-      (AdaptiveActionStatementShape pp).numProofs *
-        (AdaptiveActionStatementShape pp).numInstanceColumns := by
-    simp [adaptiveStatementCanonicalInstanceTermSets, List.sum_ofFn,
-      Finset.sum_const]
-  rw [sum_mapped_lengths_of_constant _ _ hlength]
-  rw [hcount]
-  rw [Nat.mul_comm]
-
-/-- Execute all canonical instance commitment evaluations through the reified MSM primitive and
-retain the resulting points in proof-major, column-major order. -/
-def costedAdaptiveStatementCanonicalInstanceValues {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    CostedVestaComp (List VestaG) :=
-  CostedVestaComp.evalMsms
-    (adaptiveStatementCanonicalInstanceTermSets family basis output)
-
-@[simp] theorem costedAdaptiveStatementCanonicalInstanceValues_run {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    (costedAdaptiveStatementCanonicalInstanceValues family basis output).run =
-      (List.ofFn fun p => List.ofFn fun column =>
-        (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).point
-      ).flatten := by
-  rw [costedAdaptiveStatementCanonicalInstanceValues,
-    CostedVestaComp.run_evalMsms]
-  unfold adaptiveStatementCanonicalInstanceTermSets
-  rw [List.map_flatten]
-  apply congrArg List.flatten
-  rw [List.map_ofFn, List.ofFn_inj]
+    (adaptiveStatementCanonicalInstanceTermMatrix family basis output).map (fun row =>
+      row.map fun terms => (terms.map fun term => term.1 • term.2).sum) =
+      List.ofFn fun p => List.ofFn fun column =>
+        (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).point := by
+  unfold adaptiveStatementCanonicalInstanceTermMatrix
+  simp only [List.map_ofFn]
+  rw [List.ofFn_inj]
   funext p
   simp only [Function.comp_apply, List.map_ofFn]
   rw [List.ofFn_inj]
@@ -271,33 +277,90 @@ def costedAdaptiveStatementCanonicalInstanceValues {pp : ProofParams}
     (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).coeffs
   ).trans (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).hEq
 
-/-- Execute all canonical instance commitment evaluations for their audited effects. -/
-def costedAdaptiveStatementCanonicalInstances {pp : ProofParams}
+/-- Reified canonical commitment values in the same matrix shape expected by the verifier. -/
+structure AdaptiveStatementCanonicalInstanceCache {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    CostedVestaComp Unit :=
-  CostedVestaComp.map (fun _ => ())
-    (costedAdaptiveStatementCanonicalInstanceValues family basis output)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) where
+  values : List (List VestaG)
+  values_eq : values = List.ofFn fun p => List.ofFn fun column =>
+    (canonicalAdaptiveStatementInstanceRepresentation pp basis output.inputs p column).point
 
-@[simp] theorem costedAdaptiveStatementCanonicalInstances_run {pp : ProofParams}
-    (family : ComputedAdaptiveActionStatementFSFamily pp)
-    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    (costedAdaptiveStatementCanonicalInstances family basis output).run = () := by
-  simp [costedAdaptiveStatementCanonicalInstances]
+namespace AdaptiveStatementCanonicalInstanceCache
 
-@[simp] theorem costedAdaptiveStatementCanonicalInstances_groupWork {pp : ProofParams}
+/-- Total verifier-facing commitment function recovered from the reified matrix.  Configured
+columns read the computed values; unconfigured columns use the protocol's canonical blind point. -/
+def commitment {pp : ProofParams} {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)}
+    (cache : AdaptiveStatementCanonicalInstanceCache family basis output) :
+    Fin (AdaptiveActionStatementShape pp).numProofs → Nat → VestaG :=
+  fun p column => (cache.values.getD p []).getD column (basis AugmentedIndex.w)
+
+theorem commitment_eq {pp : ProofParams} {family : ComputedAdaptiveActionStatementFSFamily pp}
+    {basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG}
+    {output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)}
+    (cache : AdaptiveStatementCanonicalInstanceCache family basis output) :
+    cache.commitment = adaptiveActionStatementInstanceCommitment pp basis output.inputs := by
+  funext p column
+  unfold commitment
+  rw [cache.values_eq]
+  have hp : p.val < pp.numProofs := by
+    simpa [AdaptiveActionStatementShape] using p.isLt
+  by_cases hcolumn : column < (AdaptiveActionStatementShape pp).numInstanceColumns
+  · simp only [AdaptiveActionStatementShape,
+      CircuitShape.withProofParams_numInstanceColumns,
+      Halo2.TopLevelCircuit.shape_numInstanceColumns] at hcolumn
+    simp [List.getD, hp, hcolumn,
+      canonicalAdaptiveStatementInstanceRepresentation]
+    apply congrArg (fun q =>
+      adaptiveActionStatementInstanceCommitment pp basis output.inputs q column)
+    apply Fin.ext
+    rfl
+  · have hbounded := congrFun
+      (congrFun (adaptiveActionStatementInstanceCommitment_eq_bounded pp basis output.inputs) p)
+      column
+    simp only [AdaptiveActionStatementShape,
+      CircuitShape.withProofParams_numInstanceColumns,
+      Halo2.TopLevelCircuit.shape_numInstanceColumns] at hcolumn
+    rw [hbounded]
+    simp [boundedAdaptiveStatementInstanceCommitment, List.getD, hp, hcolumn,
+      ursOfAugmentedBasis]
+
+end AdaptiveStatementCanonicalInstanceCache
+
+/-- Compute the canonical instance commitment cache through certified MSM nodes. -/
+def costedAdaptiveStatementCanonicalInstanceCache {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
-    (costedAdaptiveStatementCanonicalInstances family basis output).groupWork =
+    CostedVestaComp (AdaptiveStatementCanonicalInstanceCache family basis output) :=
+  CostedVestaComp.map (fun evaluated =>
+    { values := evaluated.1
+      values_eq := evaluated.2.trans
+        (adaptiveStatementCanonicalInstanceTermMatrix_eval family basis output) })
+    (CostedVestaComp.evalMsmMatrixCertified
+      (adaptiveStatementCanonicalInstanceTermMatrix family basis output))
+
+@[simp] theorem costedAdaptiveStatementCanonicalInstanceCache_run_commitment
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    (costedAdaptiveStatementCanonicalInstanceCache family basis output).run.commitment =
+      adaptiveActionStatementInstanceCommitment pp basis output.inputs :=
+  (costedAdaptiveStatementCanonicalInstanceCache family basis output).run.commitment_eq
+
+@[simp] theorem costedAdaptiveStatementCanonicalInstanceCache_groupWork
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (output : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis)) :
+    (costedAdaptiveStatementCanonicalInstanceCache family basis output).groupWork =
       (AdaptiveActionStatementShape pp).numProofs *
         (AdaptiveActionStatementShape pp).numInstanceColumns *
           adaptiveStatementBasisWidth pp := by
-  simp [costedAdaptiveStatementCanonicalInstances,
-    costedAdaptiveStatementCanonicalInstanceValues,
-    adaptiveStatementCanonicalInstanceTermSets_work]
+  simp [costedAdaptiveStatementCanonicalInstanceCache,
+    adaptiveStatementCanonicalInstanceTermMatrix, adaptiveStatementBasisWidth,
+    List.sum_ofFn, Nat.mul_assoc]
 
 /-- Acceptance driven by the same reified MSM, with an intrinsic equation to the ordinary
 executable check.  The equation lets later costed branches consume the reified verdict without
@@ -305,42 +368,58 @@ re-running `accepts?V` in a host-language `pure` payload. -/
 def costedAcceptsVCertified {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
     CostedVestaComp
       {result : Option (PLift (family.acceptsV basis view)) //
         result = family.accepts?V basis view} :=
   let shape := AdaptiveActionStatementShape pp
   let urs := ursOfAugmentedBasis shape.k basis
   match hassemble : assemble? (adaptiveActionStatementVk pp basis)
-      (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+      instanceCache.commitment
       view.output.toAlgebraicWfProof.proof.1
       (chRecord (k := shape.k) view.pre view.rounds) with
   | none => CostedVestaComp.pure ⟨none, by
+      have hassembleOriginal : assemble? (adaptiveActionStatementVk pp basis)
+          (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+          view.output.toAlgebraicWfProof.proof.1
+          (chRecord (k := shape.k) view.pre view.rounds) = none := by
+        simpa only [instanceCache.commitment_eq] using hassemble
       have hreject : ¬family.acceptsV basis view := by
         unfold acceptsV DeployedAccepts
-        rw [hassemble]
+        rw [hassembleOriginal]
         simp
       simp [accepts?V, hreject]⟩
   | some msm =>
       CostedVestaComp.bind
         (CostedVestaComp.vestaMsmCertified (vestaAssembledMsmTerms urs msm)) fun evaluated =>
       if hzero : evaluated.1 = 0 then
+        let hassembleOriginal : assemble? (adaptiveActionStatementVk pp basis)
+            (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+            view.output.toAlgebraicWfProof.proof.1
+            (chRecord (k := shape.k) view.pre view.rounds) = some msm := by
+          simpa only [instanceCache.commitment_eq] using hassemble
         let haccepts : family.acceptsV basis view := by
           unfold acceptsV DeployedAccepts
-          rw [hassemble]
+          rw [hassembleOriginal]
           rw [evaluated.2, vestaAssembledMsmTerms_sum] at hzero
           exact hzero
         CostedVestaComp.pure ⟨some ⟨haccepts⟩, by
           simp [accepts?V, haccepts]⟩
       else
         CostedVestaComp.pure ⟨none, by
+          have hassembleOriginal : assemble? (adaptiveActionStatementVk pp basis)
+              (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+              view.output.toAlgebraicWfProof.proof.1
+              (chRecord (k := shape.k) view.pre view.rounds) = some msm := by
+            simpa only [instanceCache.commitment_eq] using hassemble
           have heval : msm.eval urs ≠ 0 := by
             intro hz
             apply hzero
             rw [evaluated.2, vestaAssembledMsmTerms_sum, hz]
           have hreject : ¬family.acceptsV basis view := by
             unfold acceptsV DeployedAccepts
-            rw [hassemble]
+            rw [hassembleOriginal]
             exact heval
           simp [accepts?V, hreject]⟩
 
@@ -348,26 +427,29 @@ def costedAcceptsVCertified {pp : ProofParams}
 def costedAcceptsV {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
     CostedVestaComp (Option (PLift (family.acceptsV basis view))) :=
-  CostedVestaComp.map Subtype.val (family.costedAcceptsVCertified basis view)
+  CostedVestaComp.map Subtype.val (family.costedAcceptsVCertified basis view instanceCache)
 
 @[simp] theorem costedAcceptsVCertified_run {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsVCertified basis view).run =
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsVCertified basis view instanceCache).run =
       ⟨family.accepts?V basis view, rfl⟩ := by
   apply Subtype.ext
-  exact (family.costedAcceptsVCertified basis view).run.property
+  exact (family.costedAcceptsVCertified basis view instanceCache).run.property
 
 @[simp] theorem costedAcceptsVCertified_groupWork {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsVCertified basis view).groupWork =
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsVCertified basis view instanceCache).groupWork =
       deployedAssembleGroupOps (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        instanceCache.commitment
         view.output.toAlgebraicWfProof.proof.1
         (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) := by
   unfold costedAcceptsVCertified deployedAssembleGroupOps
@@ -385,38 +467,42 @@ def costedAcceptsV {pp : ProofParams}
 theorem costedAcceptsVCertified_groupWork_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsVCertified basis view).groupWork ≤
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsVCertified basis view instanceCache).groupWork ≤
       assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
-  rw [family.costedAcceptsVCertified_groupWork basis view]
+  rw [family.costedAcceptsVCertified_groupWork basis view instanceCache]
   exact deployedAssembleGroupOps_le _ _ _ _
 
 @[simp] theorem costedAcceptsV_run {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsV basis view).run = family.accepts?V basis view := by
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsV basis view instanceCache).run = family.accepts?V basis view := by
   simp [costedAcceptsV]
 
 /-- Operational acceptance work is the term count of the actual assembled MSM. -/
 theorem costedAcceptsV_groupWork {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsV basis view).groupWork =
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsV basis view instanceCache).groupWork =
       deployedAssembleGroupOps (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
+        instanceCache.commitment
         view.output.toAlgebraicWfProof.proof.1
         (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds) := by
-  simp [costedAcceptsV, family.costedAcceptsVCertified_groupWork basis view]
+  simp [costedAcceptsV, family.costedAcceptsVCertified_groupWork basis view instanceCache]
 
 theorem costedAcceptsV_groupWork_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (view : RunView pp family basis) :
-    (family.costedAcceptsV basis view).groupWork ≤
+    (view : RunView pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis view.output) :
+    (family.costedAcceptsV basis view instanceCache).groupWork ≤
       assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
-  rw [family.costedAcceptsV_groupWork basis view]
+  rw [family.costedAcceptsV_groupWork basis view instanceCache]
   exact deployedAssembleGroupOps_le _ _ _ _
 
 /-- Result of the operational four-stage finder.  The retained implication is group-free proof
@@ -427,6 +513,7 @@ structure AdaptiveStatementOperationalFinderResult {pp : ProofParams}
     (cache : CachedRun pp family basis) where
   value : Option (AlgebraicRelationWitness (F := Fp) basis)
   calls : Nat
+  instanceCache : AdaptiveStatementCanonicalInstanceCache family basis cache.output
   provenance_none : value = none →
     family.provenanceRelationFinderOfCachedRun basis cache = none
 
@@ -467,6 +554,7 @@ def adaptiveStatementFinderAfterProvenanceProgram {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (cache : CachedRun pp family basis)
+    (instanceCache : AdaptiveStatementCanonicalInstanceCache family basis cache.output)
     (hcharV : deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis cache.output.inputs)
       cache.output.toAlgebraicWfProof.proof.1
@@ -479,29 +567,34 @@ def adaptiveStatementFinderAfterProvenanceProgram {pp : ProofParams}
   | some relation => CostedVestaComp.pure
       { value := some relation
         calls := 2
+        instanceCache := instanceCache
         provenance_none := fun _ => hprovenance }
   | none =>
-      CostedVestaComp.bind (family.costedAcceptsVCertified basis cache.toRunView)
+      CostedVestaComp.bind
+        (family.costedAcceptsVCertified basis cache.toRunView instanceCache)
         fun acceptance =>
       match family.identityRelationFinderWithAcceptanceV basis cache.toRunView hcharV
           acceptance.1 none (fun _ => facts) with
       | some relation => CostedVestaComp.pure
           { value := some relation
             calls := 3
+            instanceCache := instanceCache
             provenance_none := fun _ => hprovenance }
       | none =>
-          CostedVestaComp.bind (family.costedAcceptsVCertified basis cache.toRunView)
+          CostedVestaComp.bind
+            (family.costedAcceptsVCertified basis cache.toRunView instanceCache)
             fun acceptance =>
           CostedVestaComp.pure
-            { value := family.terminalRelationFinderWithAcceptanceV basis cache.toRunView
-                hcharV acceptance.1
+            { value := (family.terminalRelationFinderWithAcceptanceV basis cache.toRunView
+                hcharV acceptance.1)
               calls := 4
+              instanceCache := instanceCache
               provenance_none := fun _ => hprovenance }
 
 @[simp] theorem adaptiveStatementFinderAfterProvenanceProgram_run_pair {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (basis) (cache) (hcharV)
-    (facts) (hprovenance) :
-    let result := (adaptiveStatementFinderAfterProvenanceProgram family basis cache hcharV
+    (instanceCache) (facts) (hprovenance) :
+    let result := (adaptiveStatementFinderAfterProvenanceProgram family basis cache instanceCache hcharV
       facts hprovenance).run
     (result.value, result.calls) =
       family.relationFinderAfterCachedProvenance basis cache hcharV facts := by
@@ -523,8 +616,8 @@ def adaptiveStatementFinderAfterProvenanceProgram {pp : ProofParams}
 
 theorem adaptiveStatementFinderAfterProvenanceProgram_groupWork_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (basis) (cache) (hcharV)
-    (facts) (hprovenance) :
-    (adaptiveStatementFinderAfterProvenanceProgram family basis cache hcharV facts
+    (instanceCache) (facts) (hprovenance) :
+    (adaptiveStatementFinderAfterProvenanceProgram family basis cache instanceCache hcharV facts
       hprovenance).groupWork ≤
         2 * assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
   unfold adaptiveStatementFinderAfterProvenanceProgram
@@ -536,25 +629,25 @@ theorem adaptiveStatementFinderAfterProvenanceProgram_groupWork_le {pp : ProofPa
     · simp
       have haccept : deployedAssembleGroupOps
           (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis cache.toRunView.output.inputs)
+          instanceCache.commitment
           cache.toRunView.output.toAlgebraicWfProof.proof.1
           (chRecord (k := (AdaptiveActionStatementShape pp).k)
             cache.toRunView.pre cache.toRunView.rounds) ≤
             assembleGroupOpsBudget (AdaptiveActionStatementShape pp) :=
         deployedAssembleGroupOps_le _ _ _ _
-      omega
+      exact haccept.trans (by omega)
     · rw [CostedVestaComp.groupWork_bind, costedAcceptsVCertified_groupWork,
         costedAcceptsVCertified_run]
       simp
       have haccept : deployedAssembleGroupOps
           (adaptiveActionStatementVk pp basis)
-          (adaptiveActionStatementInstanceCommitment pp basis cache.toRunView.output.inputs)
+          instanceCache.commitment
           cache.toRunView.output.toAlgebraicWfProof.proof.1
           (chRecord (k := (AdaptiveActionStatementShape pp).k)
             cache.toRunView.pre cache.toRunView.rounds) ≤
             assembleGroupOpsBudget (AdaptiveActionStatementShape pp) :=
         deployedAssembleGroupOps_le _ _ _ _
-      omega
+      exact (Nat.add_le_add haccept haccept).trans (by omega)
 
 /-- Operational four-stage finder over one cached run.  Canonical instance commitments and each
 verifier equation are executed through reified MSM nodes; the verifier result itself selects the
@@ -572,14 +665,15 @@ def adaptiveStatementFinderReductionProgram {pp : ProofParams}
     (plan : AdaptiveStatementProvenancePlan family basis cache) :
     CostedVestaComp (AdaptiveStatementOperationalFinderResult family basis cache) :=
   CostedVestaComp.bind
-    (costedAdaptiveStatementCanonicalInstances family basis cache.output) fun _ =>
+    (costedAdaptiveStatementCanonicalInstanceCache family basis cache.output) fun instanceCache =>
   match plan.verdict with
   | .found relation _ => CostedVestaComp.pure
       { value := some relation
         calls := 1
+        instanceCache := instanceCache
         provenance_none := by simp }
   | .clear hprovenance =>
-      adaptiveStatementFinderAfterProvenanceProgram family basis cache hcharV
+      adaptiveStatementFinderAfterProvenanceProgram family basis cache instanceCache hcharV
         (plan.facts hprovenance) hprovenance
 
 @[simp] theorem adaptiveStatementFinderReductionProgram_run_pair {pp : ProofParams}
@@ -670,7 +764,8 @@ def adaptiveStatementExtractorReductionProgram {pp : ProofParams}
       match finder.value with
       | some _ => CostedVestaComp.pure none
       | none =>
-          CostedVestaComp.bind (family.costedAcceptsVCertified basis cache.toRunView)
+          CostedVestaComp.bind
+            (family.costedAcceptsVCertified basis cache.toRunView finder.instanceCache)
             fun acceptance =>
           CostedVestaComp.pure
             (family.adaptiveStatementKnowledgeExtractorWithAcceptanceV basis cache.toRunView
@@ -726,12 +821,13 @@ theorem adaptiveStatementFinderReductionProgram_groupWork_le {pp : ProofParams}
         2 * assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
   unfold adaptiveStatementFinderReductionProgram
   rw [CostedVestaComp.groupWork_bind,
-    costedAdaptiveStatementCanonicalInstances_groupWork]
+    costedAdaptiveStatementCanonicalInstanceCache_groupWork]
   cases plan.verdict with
   | found => simp
   | clear hprovenance =>
       exact Nat.add_le_add_left
         (adaptiveStatementFinderAfterProvenanceProgram_groupWork_le family basis cache hcharV
+          (costedAdaptiveStatementCanonicalInstanceCache family basis cache.output).run
           (plan.facts hprovenance) hprovenance) _
 
 theorem adaptiveStatementExtractorReductionProgram_groupWork_le {pp : ProofParams}
@@ -763,7 +859,7 @@ theorem adaptiveStatementExtractorReductionProgram_groupWork_le {pp : ProofParam
       simp only [CostedVestaComp.groupWork_pure, Nat.add_zero]
       have haccept := deployedAssembleGroupOps_le
         (adaptiveActionStatementVk pp basis)
-        (adaptiveActionStatementInstanceCommitment pp basis cache.toRunView.output.inputs)
+        ((adaptiveStatementFinderReductionProgram family basis cache hcharV plan).run).instanceCache.commitment
         cache.toRunView.output.toAlgebraicWfProof.proof.1
         (chRecord (k := (AdaptiveActionStatementShape pp).k)
           cache.toRunView.pre cache.toRunView.rounds)
@@ -833,16 +929,302 @@ def value (execution : AdaptiveStatementCostedExecution pp α) : α :=
 def proverGroupWork : AdaptiveStatementCostedExecution pp α → Nat
   | .mk _ _ work => work
 
-/-- Reduction work is the universally certified two-term programmed-basis construction plus the
-work read from the concrete postprocessing program. -/
+/-- Reduction work is read from the single program that constructs the selected basis and then
+feeds that computed basis into postprocessing. -/
 def reductionGroupWork (execution : AdaptiveStatementCostedExecution pp α) : Nat :=
-  2 * adaptiveStatementBasisWidth pp + execution.reductionProgram.groupWork
+  execution.reductionProgram.groupWork
 
 /-- Complete group work of one costed execution. -/
 def groupWork (execution : AdaptiveStatementCostedExecution pp α) : Nat :=
   execution.proverGroupWork + execution.reductionGroupWork
 
 end AdaptiveStatementCostedExecution
+
+/-- Relation-finder postprocessing at a basis recovered from reified MSM values.  The result is
+transported only after the computed basis has selected the adversary run and every verifier call. -/
+def cachedRelationFinderReductionProgramAtReifiedBasis {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (reified : AdaptiveStatementBasisCache pp basis) (O : family.Coins) :
+    CostedVestaComp (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
+  let cache := family.cachedRun reified.basis O
+  let hcharV := family.cachedRun_pairCount_lt hchar reified.basis O
+  let facts := family.semanticStageFacts_of_cachedProvenance_none reified.basis O
+  let plan := adaptiveStatementProvenancePlan family reified.basis cache facts
+  let program := CostedVestaComp.map AdaptiveStatementOperationalFinderResult.value
+    (adaptiveStatementFinderReductionProgram family reified.basis cache hcharV plan)
+  CostedVestaComp.map (fun value => reified.basis_eq ▸ value) program
+
+/-- Witness-extractor postprocessing at a basis recovered from reified MSM values. -/
+def cachedKnowledgeExtractorReductionProgramAtReifiedBasis {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (reified : AdaptiveStatementBasisCache pp basis) (O : family.Coins) :
+    CostedVestaComp
+      (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
+  let cache := family.cachedRun reified.basis O
+  let hcharV := family.cachedRun_pairCount_lt hchar reified.basis O
+  let facts := family.semanticStageFacts_of_cachedProvenance_none reified.basis O
+  let plan := adaptiveStatementProvenancePlan family reified.basis cache facts
+  let hinputs : cache.output.inputs = (family.runOutput reified.basis O).inputs :=
+    congrArg AdaptiveActionStatementOutput.inputs
+      (family.cachedRun_output_eq reified.basis O)
+  let program := CostedVestaComp.map (fun value => hinputs ▸ value)
+    (adaptiveStatementExtractorReductionProgram family reified.basis cache hcharV plan)
+  CostedVestaComp.map (fun value => reified.basis_eq ▸ value) program
+
+/-- Complete relation reduction: construct a basis through charged MSMs, then consume exactly the
+recovered function in the adversary and finder. -/
+def cachedRelationFinderReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    CostedVestaComp (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
+  CostedVestaComp.bind (costedAdaptiveStatementSelectedBasisCache pp basis) fun reified =>
+    family.cachedRelationFinderReductionProgramAtReifiedBasis hchar basis reified O
+
+/-- Complete witness reduction with the same charged, data-coupled basis construction. -/
+def cachedKnowledgeExtractorReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    CostedVestaComp
+      (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
+  CostedVestaComp.bind (costedAdaptiveStatementSelectedBasisCache pp basis) fun reified =>
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar basis reified O
+
+@[simp] theorem cachedRelationFinderReductionProgramAtReifiedBasis_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O) :
+    (family.cachedRelationFinderReductionProgramAtReifiedBasis hchar basis reified O).run =
+      family.cachedRelationFinder hchar basis O := by
+  rcases reified with ⟨reifiedBasis, hbasis⟩
+  subst reifiedBasis
+  simp [cachedRelationFinderReductionProgramAtReifiedBasis,
+    cachedRelationFinder, cachedRelationFinderWithCalls]
+
+@[simp] theorem cachedKnowledgeExtractorReductionProgramAtReifiedBasis_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O) :
+    (family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar basis reified O).run =
+      family.cachedKnowledgeExtractor hchar basis O := by
+  rcases reified with ⟨reifiedBasis, hbasis⟩
+  subst reifiedBasis
+  unfold cachedKnowledgeExtractorReductionProgramAtReifiedBasis cachedKnowledgeExtractor
+    cachedKnowledgeExecution
+  dsimp only
+  rw [CostedVestaComp.run_map, CostedVestaComp.run_map,
+    adaptiveStatementExtractorReductionProgram_run_provenancePlan]
+
+@[simp] theorem cachedRelationFinderReductionProgram_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (O) :
+    (family.cachedRelationFinderReductionProgram hchar basis O).run =
+      family.cachedRelationFinder hchar basis O := by
+  simp [cachedRelationFinderReductionProgram]
+
+@[simp] theorem cachedKnowledgeExtractorReductionProgram_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (O) :
+    (family.cachedKnowledgeExtractorReductionProgram hchar basis O).run =
+      family.cachedKnowledgeExtractor hchar basis O := by
+  simp [cachedKnowledgeExtractorReductionProgram]
+
+theorem cachedRelationFinderReductionProgramAtReifiedBasis_groupWork_le
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O) :
+    (family.cachedRelationFinderReductionProgramAtReifiedBasis hchar basis reified O).groupWork ≤
+      (AdaptiveActionStatementShape pp).numProofs *
+          (AdaptiveActionStatementShape pp).numInstanceColumns * adaptiveStatementBasisWidth pp +
+        2 * assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
+  unfold cachedRelationFinderReductionProgramAtReifiedBasis
+  simp only [CostedVestaComp.groupWork_map]
+  exact adaptiveStatementFinderReductionProgram_groupWork_le family reified.basis
+    (family.cachedRun reified.basis O) (family.cachedRun_pairCount_lt hchar reified.basis O)
+    (adaptiveStatementProvenancePlan family reified.basis (family.cachedRun reified.basis O)
+      (family.semanticStageFacts_of_cachedProvenance_none reified.basis O))
+
+theorem cachedKnowledgeExtractorReductionProgramAtReifiedBasis_groupWork_le
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis) (reified : AdaptiveStatementBasisCache pp basis) (O) :
+    (family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar basis reified O).groupWork ≤
+      (AdaptiveActionStatementShape pp).numProofs *
+          (AdaptiveActionStatementShape pp).numInstanceColumns * adaptiveStatementBasisWidth pp +
+        3 * assembleGroupOpsBudget (AdaptiveActionStatementShape pp) := by
+  unfold cachedKnowledgeExtractorReductionProgramAtReifiedBasis
+  simp only [CostedVestaComp.groupWork_map]
+  exact adaptiveStatementExtractorReductionProgram_groupWork_le family reified.basis
+    (family.cachedRun reified.basis O) (family.cachedRun_pairCount_lt hchar reified.basis O)
+    (adaptiveStatementProvenancePlan family reified.basis (family.cachedRun reified.basis O)
+      (family.semanticStageFacts_of_cachedProvenance_none reified.basis O))
+
+/-- The exact DLOG-programmed relation reduction.  Unlike the generic selected-basis wrapper, its
+charged MSM operands are the reduction coins `(x,y)` and challenge points `(B,C)`. -/
+def programmedCachedRelationFinderReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    CostedVestaComp
+      (Option (AlgebraicRelationWitness (F := Fp) (fun i => x i • B + y i • C))) :=
+  CostedVestaComp.bind (costedAdaptiveStatementProgrammedBasisCache pp B C x y) fun reified =>
+    family.cachedRelationFinderReductionProgramAtReifiedBasis hchar
+      (fun i => x i • B + y i • C) reified O
+
+/-- The exact DLOG-programmed witness reduction. -/
+def programmedCachedKnowledgeExtractorReductionProgram {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (B C : VestaG)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) :
+    CostedVestaComp (Option (ActionTerminal.ActionBundleWitness
+      (family.runOutput (fun i => x i • B + y i • C) O).inputs)) :=
+  CostedVestaComp.bind (costedAdaptiveStatementProgrammedBasisCache pp B C x y) fun reified =>
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis hchar
+      (fun i => x i • B + y i • C) reified O
+
+@[simp] theorem programmedCachedRelationFinderReductionProgram_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B C : VestaG) (x y) (O) :
+    (family.programmedCachedRelationFinderReductionProgram hchar B C x y O).run =
+      family.cachedRelationFinder hchar (fun i => x i • B + y i • C) O := by
+  simp [programmedCachedRelationFinderReductionProgram]
+
+@[simp] theorem programmedCachedKnowledgeExtractorReductionProgram_run
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B C : VestaG) (x y) (O) :
+    (family.programmedCachedKnowledgeExtractorReductionProgram hchar B C x y O).run =
+      family.cachedKnowledgeExtractor hchar (fun i => x i • B + y i • C) O := by
+  simp [programmedCachedKnowledgeExtractorReductionProgram]
+
+theorem programmedCachedRelationFinderReductionProgram_groupWork_le
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B C : VestaG) (x y) (O) :
+    (family.programmedCachedRelationFinderReductionProgram hchar B C x y O).groupWork ≤
+      adaptiveStatementFinderReductionGroupWork pp := by
+  unfold programmedCachedRelationFinderReductionProgram
+  rw [CostedVestaComp.groupWork_bind,
+    costedAdaptiveStatementProgrammedBasisCache_groupWork]
+  have hprogram :=
+    family.cachedRelationFinderReductionProgramAtReifiedBasis_groupWork_le hchar
+      (fun i => x i • B + y i • C)
+      (costedAdaptiveStatementProgrammedBasisCache pp B C x y).run O
+  refine (Nat.add_le_add_left hprogram _).trans ?_
+  simp only [adaptiveStatementFinderReductionGroupWork]
+  omega
+
+theorem programmedCachedKnowledgeExtractorReductionProgram_groupWork_le
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B C : VestaG) (x y) (O) :
+    (family.programmedCachedKnowledgeExtractorReductionProgram hchar B C x y O).groupWork ≤
+      adaptiveStatementReductionGroupWork pp := by
+  unfold programmedCachedKnowledgeExtractorReductionProgram
+  rw [CostedVestaComp.groupWork_bind,
+    costedAdaptiveStatementProgrammedBasisCache_groupWork]
+  have hprogram :=
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis_groupWork_le hchar
+      (fun i => x i • B + y i • C)
+      (costedAdaptiveStatementProgrammedBasisCache pp B C x y).run O
+  refine (Nat.add_le_add_left hprogram _).trans ?_
+  simp only [adaptiveStatementReductionGroupWork,
+    adaptiveStatementFinderReductionGroupWork]
+  omega
+
+/-- The points produced by textbook DLOG programming are exactly the scalar basis used by the
+probability reduction. -/
+theorem adaptiveStatementProgrammedBasis_eq_scalarBasis {pp : ProofParams}
+    (B : VestaG) (z : Fp)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) :
+    (fun i => x i • B + y i • (z • B)) =
+      scalarBasis B (programmedLogs z x y) := by
+  funext i
+  exact (programmedEmbedding B z x y).programmed i |>.symm
+
+theorem programmedCachedRelationFinderReductionProgram_run_isSome_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O).run.isSome =
+      (family.cachedRelationFinder hchar (scalarBasis B (programmedLogs z x y)) O).isSome := by
+  rw [programmedCachedRelationFinderReductionProgram_run]
+  exact congrArg (fun basis => (family.cachedRelationFinder hchar basis O).isSome)
+    (adaptiveStatementProgrammedBasis_eq_scalarBasis B z x y)
+
+theorem programmedCachedRelationFinderReductionProgram_run_heq_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    HEq (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O).run
+      (family.cachedRelationFinder hchar (scalarBasis B (programmedLogs z x y)) O) := by
+  rw [programmedCachedRelationFinderReductionProgram_run]
+  exact congr_arg_heq (fun basis => family.cachedRelationFinder hchar basis O)
+    (adaptiveStatementProgrammedBasis_eq_scalarBasis B z x y)
+
+theorem programmedCachedKnowledgeExtractorReductionProgram_run_isSome_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O).run.isSome =
+      (family.cachedKnowledgeExtractor hchar
+        (scalarBasis B (programmedLogs z x y)) O).isSome := by
+  rw [programmedCachedKnowledgeExtractorReductionProgram_run]
+  exact congrArg (fun basis => (family.cachedKnowledgeExtractor hchar basis O).isSome)
+    (adaptiveStatementProgrammedBasis_eq_scalarBasis B z x y)
+
+theorem programmedCachedKnowledgeExtractorReductionProgram_run_heq_scalarBasis
+    {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (B : VestaG) (z : Fp) (x y) (O) :
+    HEq (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O).run
+      (family.cachedKnowledgeExtractor hchar
+        (scalarBasis B (programmedLogs z x y)) O) := by
+  rw [programmedCachedKnowledgeExtractorReductionProgram_run]
+  exact congr_arg_heq (fun basis => family.cachedKnowledgeExtractor hchar basis O)
+    (adaptiveStatementProgrammedBasis_eq_scalarBasis B z x y)
+
+/-- Which complete adaptive-statement reduction is staged around the separately certified
+adversary call. -/
+inductive AdaptiveStatementProgrammedReductionKind where
+  | relation
+  | extractor
+
+/-- External fidelity judgment for composing the shallow cost languages.  It states that the
+runtime reduction (1) constructs the programmed basis with the reified basis program, (2) invokes
+the separately staged adversary program exactly once on those computed points, (3) feeds that
+run's cached data to the indicated reified postprocessor, and (4) performs no additional Vesta
+group-law work.  The numerical bound and all value equalities are proved in Lean; only this
+host-language staging correspondence is external. -/
+opaque AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful {pp : ProofParams}
+    (kind : AdaptiveStatementProgrammedReductionKind)
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    {workLimit : Nat} (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit)
+    (B : VestaG) (z : Fp)
+    (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp)
+    (O : family.Coins) : Prop
 
 /-- Costed complete cached relation finder at one oracle table. -/
 def costedCachedRelationFinder {pp : ProofParams}
@@ -856,13 +1238,8 @@ def costedCachedRelationFinder {pp : ProofParams}
     (O : family.Coins) :
   AdaptiveStatementCostedExecution pp
       (Option (AlgebraicRelationWitness (F := Fp) basis)) :=
-  let cache := family.cachedRun basis O
-  let hcharV := family.cachedRun_pairCount_lt hchar basis O
-  let facts := family.semanticStageFacts_of_cachedProvenance_none basis O
-  let plan := adaptiveStatementProvenancePlan family basis cache facts
-  let program := CostedVestaComp.map AdaptiveStatementOperationalFinderResult.value
-    (adaptiveStatementFinderReductionProgram family basis cache hcharV plan)
-  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal program
+  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
+    (family.cachedRelationFinderReductionProgram hchar basis O)
     (certificate.proverGroupWork basis O)
 
 /-- Costed complete cached witness extractor at one oracle table. -/
@@ -877,15 +1254,8 @@ def costedCachedKnowledgeExtractor {pp : ProofParams}
     (O : family.Coins) :
     AdaptiveStatementCostedExecution pp
       (Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)) :=
-  let cache := family.cachedRun basis O
-  let hcharV := family.cachedRun_pairCount_lt hchar basis O
-  let facts := family.semanticStageFacts_of_cachedProvenance_none basis O
-  let plan := adaptiveStatementProvenancePlan family basis cache facts
-  let hinputs : cache.output.inputs = (family.runOutput basis O).inputs :=
-    congrArg AdaptiveActionStatementOutput.inputs (family.cachedRun_output_eq basis O)
-  let program := CostedVestaComp.map (fun value => hinputs ▸ value)
-    (adaptiveStatementExtractorReductionProgram family basis cache hcharV plan)
-  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal program
+  AdaptiveStatementCostedExecutionCore.mk AdaptiveStatementInstrumentationSeal.seal
+    (family.cachedKnowledgeExtractorReductionProgram hchar basis O)
     (certificate.proverGroupWork basis O)
 
 @[simp] theorem costedCachedRelationFinder_value {pp : ProofParams}
@@ -894,42 +1264,27 @@ def costedCachedKnowledgeExtractor {pp : ProofParams}
     (family.costedCachedRelationFinder hchar certificate basis O).value =
       family.cachedRelationFinder hchar basis O := by
   simp [costedCachedRelationFinder, AdaptiveStatementCostedExecution.value,
-    AdaptiveStatementCostedExecution.reductionProgram, cachedRelationFinder,
-    cachedRelationFinderWithCalls]
+    AdaptiveStatementCostedExecution.reductionProgram]
 
 @[simp] theorem costedCachedKnowledgeExtractor_value {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedKnowledgeExtractor hchar certificate basis O).value =
       family.cachedKnowledgeExtractor hchar basis O := by
-  unfold costedCachedKnowledgeExtractor AdaptiveStatementCostedExecution.value
-    AdaptiveStatementCostedExecution.reductionProgram cachedKnowledgeExtractor
-    cachedKnowledgeExecution
-  dsimp only
-  rw [CostedVestaComp.run_map,
-    adaptiveStatementExtractorReductionProgram_run_provenancePlan]
+  simp [costedCachedKnowledgeExtractor, AdaptiveStatementCostedExecution.value,
+    AdaptiveStatementCostedExecution.reductionProgram]
 
 @[simp] theorem costedCachedRelationFinder_reductionProgram {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedRelationFinder hchar certificate basis O).reductionProgram =
-      CostedVestaComp.map AdaptiveStatementOperationalFinderResult.value
-        (adaptiveStatementFinderReductionProgram family basis (family.cachedRun basis O)
-          (family.cachedRun_pairCount_lt hchar basis O)
-          (adaptiveStatementProvenancePlan family basis (family.cachedRun basis O)
-            (family.semanticStageFacts_of_cachedProvenance_none basis O))) := rfl
+      family.cachedRelationFinderReductionProgram hchar basis O := rfl
 
 @[simp] theorem costedCachedKnowledgeExtractor_reductionProgram {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
     (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) (basis) (O) :
     (family.costedCachedKnowledgeExtractor hchar certificate basis O).reductionProgram =
-      CostedVestaComp.map (fun value =>
-        congrArg AdaptiveActionStatementOutput.inputs
-          (family.cachedRun_output_eq basis O) ▸ value)
-        (adaptiveStatementExtractorReductionProgram family basis (family.cachedRun basis O)
-          (family.cachedRun_pairCount_lt hchar basis O)
-          (adaptiveStatementProvenancePlan family basis (family.cachedRun basis O)
-            (family.semanticStageFacts_of_cachedProvenance_none basis O))) := rfl
+      family.cachedKnowledgeExtractorReductionProgram hchar basis O := rfl
 
 theorem costedCachedRelationFinder_reductionGroupWork_le {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar) {workLimit : Nat}
@@ -937,13 +1292,15 @@ theorem costedCachedRelationFinder_reductionGroupWork_le {pp : ProofParams}
     (family.costedCachedRelationFinder hchar certificate basis O).reductionGroupWork ≤
       adaptiveStatementFinderReductionGroupWork pp := by
   rw [AdaptiveStatementCostedExecution.reductionGroupWork,
-    costedCachedRelationFinder_reductionProgram,
-    CostedVestaComp.groupWork_map]
-  have hprogram := adaptiveStatementFinderReductionProgram_groupWork_le family basis
-    (family.cachedRun basis O) (family.cachedRun_pairCount_lt hchar basis O)
-    (adaptiveStatementProvenancePlan family basis (family.cachedRun basis O)
-      (family.semanticStageFacts_of_cachedProvenance_none basis O))
-  simp only [adaptiveStatementFinderReductionGroupWork] at *
+    costedCachedRelationFinder_reductionProgram]
+  unfold cachedRelationFinderReductionProgram
+  rw [CostedVestaComp.groupWork_bind,
+    costedAdaptiveStatementSelectedBasisCache_groupWork]
+  have hprogram :=
+    family.cachedRelationFinderReductionProgramAtReifiedBasis_groupWork_le hchar basis
+      (costedAdaptiveStatementSelectedBasisCache pp basis).run O
+  refine (Nat.add_le_add_left hprogram _).trans ?_
+  simp only [adaptiveStatementFinderReductionGroupWork]
   omega
 
 theorem costedCachedKnowledgeExtractor_reductionGroupWork_le {pp : ProofParams}
@@ -952,14 +1309,16 @@ theorem costedCachedKnowledgeExtractor_reductionGroupWork_le {pp : ProofParams}
     (family.costedCachedKnowledgeExtractor hchar certificate basis O).reductionGroupWork ≤
       adaptiveStatementReductionGroupWork pp := by
   rw [AdaptiveStatementCostedExecution.reductionGroupWork,
-    costedCachedKnowledgeExtractor_reductionProgram,
-    CostedVestaComp.groupWork_map]
-  have hprogram := adaptiveStatementExtractorReductionProgram_groupWork_le family basis
-    (family.cachedRun basis O) (family.cachedRun_pairCount_lt hchar basis O)
-    (adaptiveStatementProvenancePlan family basis (family.cachedRun basis O)
-      (family.semanticStageFacts_of_cachedProvenance_none basis O))
+    costedCachedKnowledgeExtractor_reductionProgram]
+  unfold cachedKnowledgeExtractorReductionProgram
+  rw [CostedVestaComp.groupWork_bind,
+    costedAdaptiveStatementSelectedBasisCache_groupWork]
+  have hprogram :=
+    family.cachedKnowledgeExtractorReductionProgramAtReifiedBasis_groupWork_le hchar basis
+      (costedAdaptiveStatementSelectedBasisCache pp basis).run O
+  refine (Nat.add_le_add_left hprogram _).trans ?_
   simp only [adaptiveStatementReductionGroupWork,
-    adaptiveStatementFinderReductionGroupWork] at *
+    adaptiveStatementFinderReductionGroupWork]
   omega
 
 theorem costedCachedRelationFinder_groupWork_le {pp : ProofParams}
@@ -1021,12 +1380,69 @@ structure CertifiedAdaptiveStatementDlogProfile {pp : ProofParams}
   advantage : Nat → Nat → ENNReal
   advantage_mono : ∀ {q q' g g'}, q ≤ q' → g ≤ g' →
     advantage q g ≤ advantage q' g'
+  relationReductionStaged : ∀ (z : Fp)
+      (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
+    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .relation family hchar
+      certificate B z x y O
+  extractorReductionStaged : ∀ (z : Fp)
+      (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
+    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .extractor family hchar
+      certificate B z x y O
   directDecodeWorkBound : ∀ basis O,
     adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
       adaptiveStatementDirectDecodeOps family basis O ≤ workLimit
   finderAdvantageLE : TextbookDLWithCoinsAdvantageLE B (family.cachedRelationFinder hchar)
     (advantage (adaptiveStatementCachedRandomOracleQueries family)
       (workLimit + adaptiveStatementReductionGroupWork pp))
+
+/-- The complete textbook-DLOG programs have explicit staging judgments, consume the programmed
+basis they compute, and fit the work label used by the certified hardness premise. -/
+def AdaptiveStatementProgrammedReductionCoverage {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (B : VestaG) (workLimit : Nat)
+    (certificate : AdaptiveStatementAdversaryCostCertificate family workLimit) : Prop :=
+  ∀ (z : Fp) (x y : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → Fp) O,
+    AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .relation family hchar
+        certificate B z x y O ∧
+      AdaptiveStatementProgrammedReductionStagedGroupWorkFaithful .extractor family hchar
+        certificate B z x y O ∧
+      (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O).run.isSome =
+        (family.cachedRelationFinder hchar (scalarBasis B (programmedLogs z x y)) O).isSome ∧
+      (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O).run.isSome =
+        (family.cachedKnowledgeExtractor hchar
+          (scalarBasis B (programmedLogs z x y)) O).isSome ∧
+      certificate.proverGroupWork (fun i => x i • B + y i • (z • B)) O +
+          CostedVestaComp.groupWork
+            (family.programmedCachedRelationFinderReductionProgram hchar B (z • B) x y O) ≤
+        workLimit + adaptiveStatementReductionGroupWork pp ∧
+      certificate.proverGroupWork (fun i => x i • B + y i • (z • B)) O +
+          CostedVestaComp.groupWork
+            (family.programmedCachedKnowledgeExtractorReductionProgram hchar B (z • B) x y O) ≤
+        workLimit + adaptiveStatementReductionGroupWork pp
+
+theorem CertifiedAdaptiveStatementDlogProfile.programmedReductionCoverage
+    {pp : ProofParams} {family : ComputedAdaptiveActionStatementFSFamily pp} {hchar}
+    {B : VestaG} {workLimit : Nat}
+    {certificate : AdaptiveStatementAdversaryCostCertificate family workLimit}
+    (profile : CertifiedAdaptiveStatementDlogProfile family hchar B workLimit certificate) :
+    AdaptiveStatementProgrammedReductionCoverage family hchar B workLimit certificate := by
+  intro z x y O
+  refine ⟨profile.relationReductionStaged z x y O,
+    profile.extractorReductionStaged z x y O,
+    family.programmedCachedRelationFinderReductionProgram_run_isSome_scalarBasis
+      hchar B z x y O,
+    family.programmedCachedKnowledgeExtractorReductionProgram_run_isSome_scalarBasis
+      hchar B z x y O, ?_, ?_⟩
+  · exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
+      ((family.programmedCachedRelationFinderReductionProgram_groupWork_le
+        hchar B (z • B) x y O).trans (adaptiveStatementFinderReductionGroupWork_le pp))
+  · exact Nat.add_le_add (certificate.proverGroupWork_le _ O)
+      (family.programmedCachedKnowledgeExtractorReductionProgram_groupWork_le
+        hchar B (z • B) x y O)
 
 theorem CertifiedAdaptiveStatementDlogProfile.finderAdvantageLE_current {pp : ProofParams}
     {family : ComputedAdaptiveActionStatementFSFamily pp} {hchar} {B : VestaG}
