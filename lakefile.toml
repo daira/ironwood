@@ -24,15 +24,28 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.30.0"
 
-# The root glob alone would build only what `Zcash.lean` transitively imports. Since
-# `Zcash/Snark.lean` stopped re-exporting `Soundness/` (issue #153: the byte-locked fixture
-# captures must `import Zcash.Snark`, and re-exporting the soundness argument there put the
-# whole subtree on every capture lane's build path), the Soundness modules reach the root
-# closure only through the census imports in `Zcash/TrustBoundary.lean` — real but fragile
-# coverage, gone the moment a census entry is refactored. The explicit glob pins the whole
-# subtree into the default build regardless of what the import graph does;
-# `scripts/check_build_coverage.sh` (CI) asserts the same end-to-end property for every
-# module in the package.
+# `Zcash.lean` is this library's only import root, so the root glob alone builds exactly its
+# transitive closure. Since `Zcash/Snark.lean` stopped re-exporting `Soundness/` (the
+# byte-locked fixture captures must `import Zcash.Snark`, and re-exporting the soundness
+# argument there put the whole subtree on every capture lane's build path), the `Soundness/`
+# modules reach that closure only through the census imports in `Zcash/TrustBoundary.lean`.
+#
+# That is real coverage, but incidental: `TrustBoundary` imports those modules in order to NAME
+# their declarations in `assert_axioms`/`assert_computable` pins, not to use their contents. So
+# retiring a pin or moving an endpoint to another module would change which files get elaborated
+# at all — a strange thing for an audit file to control, and silent when it happens.
+#
+# The `Soundness.+` glob is a backstop against precisely that, and it is honest to say it is not
+# what is doing the work today: at the time of writing every `Soundness/` module is already
+# reachable from the default targets without it, and dropping it leaves `lake build`'s job count
+# unchanged (it adds six jobs to a bare `lake build Zcash` — the capstone- and test-adjacent
+# modules that otherwise arrive only via `FixtureCheck` and `MetaCheck`).
+#
+# Listing those modules in `Zcash.lean` instead would put coverage back on imports, but at the
+# cost of a hand-maintained list that every new `Soundness/` module must be added to — the
+# maintenance the globs on `FixtureCheck`, `MetaCheck`, and `CircuitCheck` exist to avoid.
+# Either way `scripts/check_build_coverage.sh` (CI) asserts the end-to-end property: every
+# module file in the package is reachable from some default target.
 [[lean_lib]]
 name = "Zcash"
 globs = ["Zcash", "Zcash.Snark.Soundness.+"]

@@ -140,8 +140,9 @@ boundary theorems, documenting precisely *which*
 compiler-trust axiom `native_decide` adds — on this toolchain a per-declaration axiom
 (`…_native.native_decide.ax_1_1`), where older Lean versions used the global `Lean.ofReduceBool` —
 because for a captured fingerprint match the exact axiom set *is* the claim, the case
-`Zcash.Meta.AxiomCheck` reserves the pinned form for. CI builds `Zcash` and `FixtureCheck` as
-default targets, and each `fingerprint_matches`'s `native_decide` compiles and runs
+`Zcash.Meta.AxiomCheck` reserves the pinned form for. CI builds all five default targets —
+`Zcash`, `FixtureCheck`, `CircuitCheck`, `MetaCheck`, and `SecurityCheck` — and each
+`fingerprint_matches`'s `native_decide` compiles and runs
 the verifier, so anything `noncomputable` on the assembled-verifier path fails the build.
 
 What the fixture captures actually *check* is the statement of record in each family's
