@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Check that every `@[csimp]` declaration in the library is covered by an
-# `assert_axioms` entry in Zcash/TrustBoundary.lean. The compiler applies a
+# `assert_axioms` entry in some census file. The compiler applies a
 # csimp substitution in all downstream compiled code, but the axioms of the lemma's
 # own proof are not propagated into downstream `native_decide` axiom tracking (
 # lean4#7463), so a csimp lemma whose axioms go unchecked would be an
@@ -23,6 +23,22 @@ cd "$(dirname "$0")/.."
 # quoting rule).
 matches=$(grep -rn "csimp" Zcash/ --include="*.lean" || true)
 
+# Census entries that actually run, by final name component. Any census file counts, not just
+# Zcash/TrustBoundary.lean: entries are spread across the per-fixture boundaries and the test-only
+# libraries, and a lemma is pinned wherever its entry sits; requiring the main file would reject a
+# legitimate pin in a fixture boundary, and cannot be satisfied at all by a csimp lemma in a
+# test-only library that production must not import (`Zcash/Meta/Tests/`, the `MetaCheck` target).
+#
+# Widening the search to those files means excluding `#guard_msgs`-wrapped entries, which assert
+# that a census entry *fails* and so are the opposite of coverage. They sit at column 0 like real
+# entries -- the wrapper is the preceding line -- and `Zcash/Meta/Tests/` is full of them, so an
+# expected-to-fail entry would otherwise satisfy this check.
+censused=$(find Zcash -name "*.lean" -print0 | xargs -0 awk '
+  FNR == 1 { prev = "" }
+  /^assert_axioms / && prev !~ /^#guard_msgs/ { sub(/.*\./, "", $2); print $2 }
+  { prev = $0 }
+')
+
 status=0
 count=0
 while IFS=: read -r file lineno line; do
@@ -41,12 +57,9 @@ while IFS=: read -r file lineno line; do
     continue
   fi
   count=$((count + 1))
-  # Any census file counts, not just Zcash/TrustBoundary.lean. Census entries are spread across
-  # the per-fixture boundaries and the test-only libraries, and a lemma is pinned wherever its
-  # entry sits; requiring the main file would reject a legitimate pin in a fixture boundary, and
-  # cannot be satisfied at all by a csimp lemma in a test-only library that production must not
-  # import (`Zcash/Meta/Tests/`, the `MetaCheck` target).
-  if ! grep -rqE "^assert_axioms .*\.${name}( |\$)|^assert_axioms ${name}( |\$)" Zcash/ --include="*.lean"; then
+  # Herestring rather than a pipe: `grep -q` exits at the first match, which under `pipefail` would
+  # make a *successful* lookup fail the pipeline on the writer's SIGPIPE.
+  if ! grep -qxF "${name##*.}" <<< "$censused"; then
     echo "VIOLATION: csimp declaration ${name} ($file:$lineno) has no assert_axioms entry in any census file" >&2
     status=1
   fi

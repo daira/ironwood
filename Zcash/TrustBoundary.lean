@@ -101,6 +101,13 @@ proven-equality `@[csimp]` is used instead (`Zcash.Arithmetic.FastMsm`). The amb
 boundary is the compiler trust every `native_decide` carries, including the `@[extern]` `Task.spawn`
 / `Task.get` that `List.parMap` reaches, discussed under `@[csimp]` below.
 
+That bound reaches as far as the census entries do, which is not the same as every module built. The
+compiled-body sweep is stated over an entry's whole import closure rather than its dependency cone,
+so one entry covers far more than it depends on — but it still runs *from* entries, and a module that
+neither holds one nor is imported by one is outside every closure the sweep is stated over.
+`Zcash.Circuits.Tests` (the `CircuitCheck` target) is where that currently bites: its `#eval` VK and
+layout comparisons run compiled code, and no census entry reaches them.
+
 Both commands are built on `Lean.collectAxioms`, which walks a declaration's transitive
 *dependencies*. Coverage therefore flows downwards only: a declaration that nothing censused
 depends on is checked by nothing, however prominent it is. Deliverable endpoints are exactly the
