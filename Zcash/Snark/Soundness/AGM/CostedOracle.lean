@@ -314,6 +314,69 @@ theorem erase_surjective (A : LabeledOracleComp T F Label α) :
     ∃ costed : CostedLabeledOracleComp T F Label α, costed.erase = A :=
   ⟨erasePreimage A, erase_erasePreimage A⟩
 
+/-! ## Closing one selected oracle path
+
+The complete reduction runs at a fixed oracle table.  The operation below specializes an
+adaptive costed program to that table while retaining both the selected group nodes and the
+query annotations accumulated on that same traversal.  It is deliberately implemented over the
+private syntax: rebuilding only the returned value would lose the adversary's group-work trace.
+-/
+
+private def mapCore (f : α → β) : CostedLabeledOracleCompCore T F Label α →
+    CostedLabeledOracleCompCore T F Label β
+  | .mkPure a => .mkPure (f a)
+  | .mkQuery t label k => .mkQuery t label (fun answer => mapCore f (k answer))
+  | .mkGroup op next => .mkGroup op (mapCore f next)
+
+private theorem groupWorkCore_mapCore (f : α → β)
+    (core : CostedLabeledOracleCompCore T F Label α) (O : T → F) :
+    groupWorkCore (mapCore f core) O = groupWorkCore core O := by
+  induction core with
+  | mkPure => rfl
+  | mkQuery t label k ih => simpa only [mapCore, groupWorkCore] using ih (O t)
+  | mkGroup op next ih => simp only [mapCore, groupWorkCore, ih]
+
+private def materializeWithAnnotationsCertifiedCore (O : T → F) :
+    (core : CostedLabeledOracleCompCore T F Label α) →
+      CostedLabeledOracleCompCore Unit Unit (fun _ => Unit)
+        {result : α × List (LabeledOracleComp.QueryAnnotation T Label) //
+          result = (eraseCore core).runWithAnnotations O}
+  | .mkPure a => .mkPure ⟨(a, []), rfl⟩
+  | .mkQuery t label k =>
+      mapCore (fun rest =>
+        ⟨(rest.1.1, ⟨t, label⟩ :: rest.1.2), by rw [rest.2]; rfl⟩)
+        (materializeWithAnnotationsCertifiedCore O (k (O t)))
+  | .mkGroup op next => .mkGroup op (materializeWithAnnotationsCertifiedCore O next)
+
+/-- Proof-carrying specialization of one oracle path.  The dependent result makes it possible for
+a later costed continuation to consume the exact output/log pair without appealing to a parallel
+host recomputation. -/
+def materializeWithAnnotationsCertified
+    (A : CostedLabeledOracleComp T F Label α) (O : T → F) :
+    CostedLabeledOracleComp Unit Unit (fun _ => Unit)
+      {result : α × List (LabeledOracleComp.QueryAnnotation T Label) //
+        result = A.erase.runWithAnnotations O} :=
+  ⟨materializeWithAnnotationsCertifiedCore O A.core⟩
+
+private theorem materializeWithAnnotationsCertifiedCore_groupWork
+    (core : CostedLabeledOracleCompCore T F Label α) (O : T → F) :
+    groupWorkCore (materializeWithAnnotationsCertifiedCore O core) (fun _ => ()) =
+      groupWorkCore core O := by
+  induction core with
+  | mkPure => rfl
+  | mkQuery t label k ih =>
+      simp only [materializeWithAnnotationsCertifiedCore, groupWorkCore_mapCore]
+      exact ih (O t)
+  | mkGroup op next ih =>
+      simp only [materializeWithAnnotationsCertifiedCore, groupWorkCore]
+      exact congrArg (op.cost + ·) ih
+
+@[simp] theorem groupWork_materializeWithAnnotationsCertified
+    (A : CostedLabeledOracleComp T F Label α) (O : T → F) :
+    (materializeWithAnnotationsCertified A O).groupWork (fun _ => ()) = A.groupWork O := by
+  rcases A with ⟨core⟩
+  exact materializeWithAnnotationsCertifiedCore_groupWork core O
+
 end CostedLabeledOracleComp
 
 /-! ## Closed costed Vesta computations

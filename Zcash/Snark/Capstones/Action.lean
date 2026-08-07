@@ -286,9 +286,11 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
 
-/-- The selected proof's direct-decode source fits the deployed `2^90` envelope.  All
-proof-controlled and instance entries have shape-indexed lengths; the sole list-valued family
-input is bounded by `ComputedAdaptiveActionStatementFSFamily` itself. -/
+/-- The selected proof's direct-decode source fits the `2^90` endpoint envelope.  All
+proof-controlled and instance entries have shape-indexed lengths; the sole list-valued input is
+bounded by the required `fixedRepresentations_length_le` family invariant.  Thus this theorem is
+uniform for every conforming family, but does not itself construct or validate a concrete deployed
+family's representation table. -/
 theorem adaptiveStatementDirectDecodeSourceLength_le_two_pow_90
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
@@ -315,8 +317,8 @@ theorem adaptiveStatementDirectDecodeSourceLength_le_two_pow_90
   omega
 
 /-- Three executions of the actual direct decoder fit the `2^123` endpoint budget.  This is
-derived from the structural source cap and the captured-shape cost formula, not supplied by the
-DLOG profile. -/
+derived from the required family source-length invariant and the captured-shape cost formula, not
+supplied as a free numeric field of the DLOG profile. -/
 theorem adaptiveStatementThreeDirectDecodes_le_two_pow_123
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
@@ -392,6 +394,8 @@ private theorem adaptiveStatementCertifiedEndpoint
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementExecutionStagingCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B workLimit certificate ∧
       ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
         family (adaptiveStatement_pairCount_lt numProofs family) B workLimit certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ workLimit) ∧
@@ -461,7 +465,7 @@ private theorem adaptiveStatementCertifiedEndpoint
     ring_nf
     exact le_rfl
   refine ⟨hprob, hqueries, ?_, hreduction, certificate.erase_eq, certificate.staged,
-    profile.programmedReductionCoverage, certificate.proverGroupWork_le,
+    profile.executionStaging, profile.programmedReductionCoverage, certificate.proverGroupWork_le,
     (fun basis O ↦
       (adaptiveStatementThreeDirectDecodes_le_two_pow_123
         numProofs hn family basis O).trans hworkLower), ?_⟩
@@ -478,10 +482,10 @@ private theorem adaptiveStatementCertifiedEndpoint
     (adaptiveStatement_pairCount_lt numProofs family) basis O
 
 /-- **Conditionally staged-certified `2^123` adaptive-statement endpoint.** The costed program
-erases to the original algebraic adversary and its external staging fidelity remains explicit.
-Programmed reductions are mechanically composed with that exact program, the three direct-decode
-executions are derived from the structural source cap, and the cached extractor costs at most
-`2^124` group operations. -/
+erases to the original algebraic adversary, and staging fidelity for both that adversary and each
+complete shallowly embedded execution remains explicit. Programmed reductions are mechanically
+composed with the exact selected path, the three direct-decode executions are derived from the
+required family cap, and the cached extractor costs at most `2^124` group operations. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -506,6 +510,8 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementExecutionStagingCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 123) certificate ∧
       ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
         family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 123) certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 123) ∧
@@ -526,10 +532,11 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
     (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 123) hn le_rfl (by norm_num)
       B hB query hquery family hQ certificate profile)
 
-/-- **Conditionally staged-certified `2^125` adaptive-statement endpoint.** A faithfully staged
-adversary and its mechanically composed, data-coupled reduction fit a `2^126` DLOG group-work
-envelope when adversary work is bounded by `2^125`. The random-oracle budget remains independently
-bounded by `Q ≤ 2^123`, and direct-decode coverage is derived from the structural source cap. -/
+/-- **Conditionally staged-certified `2^125` adaptive-statement endpoint.** Faithfully staged
+adversary and complete execution programs, with mechanically composed data flow and counters, fit
+a `2^126` DLOG group-work envelope when adversary work is bounded by `2^125`. The random-oracle
+budget remains independently bounded by `Q ≤ 2^123`, and direct-decode coverage is derived from
+the required family cap. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -554,6 +561,8 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
       (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementExecutionStagingCoverage
+        family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 125) certificate ∧
       ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementProgrammedReductionCoverage
         family (adaptiveStatement_pairCount_lt numProofs family) B (2 ^ 125) certificate ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 125) ∧

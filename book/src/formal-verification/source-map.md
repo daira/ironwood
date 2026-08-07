@@ -176,8 +176,9 @@ carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtu
 schedule and static-check modules, the exact straight-line false-statement endpoint and the
 adaptive-statement knowledge-failure endpoints with conditionally staged-certified `2^123` and `2^125`
 adversary-work instantiations, data-coupled programmed-basis and verifier-commitment accounting,
-an explicit external adversary implementation-fidelity obligation, mechanically composed
-reduction work, a structurally derived direct-decode bound, and a separate oracle-query budget, and
+explicit adversary and complete-program staging-fidelity obligations, mechanically composed
+reduction work, a direct-decode bound derived from a required family invariant, and a separate
+oracle-query budget, and
 `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
@@ -227,10 +228,14 @@ its failure bound; `Cached` proves that one retained execution gives the same fi
 event; and `Cost` constructs the programmed basis through reified Vesta operations, feeds those
 computed points into the adversary, threads reified canonical commitments into verifier assembly,
 and derives the conditional staged `2×` group-operation bound. Its private composition carries
-the exact adversary program, oracle path, and reified reduction program, so
-only fidelity between an external adversary implementation and its supplied cost program remains
-external. The separately modeled three-decode inequality is derived from the family's structural
-fixed-representation cap rather than retained as a certified-profile premise. `Profile` retains
+one closed program that constructs the charged basis, specializes the exact adversary path with
+its annotations and group nodes, constructs a proof-carrying cache from that result, and consumes
+that same cache in reified postprocessing. Lean proves the resulting counter equals adversary work
+plus reduction work. Since the cost language is shallow, fidelity of the supplied adversary and
+of generic host callbacks inside the complete program remains external and is stated separately.
+The modeled three-decode inequality is derived from the family's required fixed-representation
+cap rather than retained as a free certified-profile number; this generic development does not
+construct the concrete deployment family that must satisfy the cap. `Profile` retains
 the older declared-resource
 compatibility theorem. The shared
 `AdaptiveSurfaces` and `AdaptiveTerminal` supply the per-commitment

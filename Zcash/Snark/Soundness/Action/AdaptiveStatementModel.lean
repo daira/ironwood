@@ -483,6 +483,9 @@ structure ComputedAdaptiveActionStatementFSFamily (pp : ProofParams) where
   fixedRepresentations :
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
       List (AlgebraicPoint (F := Fp) basis)
+  /-- Family-construction obligation, not a theorem about an unspecified deployed table.  Once a
+  concrete family supplies this invariant, the capstone derives its direct-decode work bound
+  without accepting a separate numeric work premise. -/
   fixedRepresentations_length_le : ∀ basis,
     (fixedRepresentations basis).length ≤ adaptiveStatementFixedRepresentationLimit
   fixedRepresented : ∀ basis i,

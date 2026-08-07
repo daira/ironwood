@@ -30,11 +30,15 @@ structure CachedRun (pp : ProofParams) (family : ComputedAdaptiveActionStatement
   pre : Fin 11 → Fp
   rounds : Fin (AdaptiveActionStatementShape pp).k → Fp
 
-/-- Run the adversary and materialize all later random-oracle reads exactly once. -/
-def cachedRun {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+/-- Build the shared cache from one already-materialized adversary output and annotation log.
+This separates the single adversary traversal from the group-free challenge-vector reads that
+consume its result. -/
+def cachedRunOfExecution {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) : CachedRun pp family basis :=
-  let execution := (family.adversary basis).runWithAnnotations O
+    (O : family.Coins)
+    (execution : AdaptiveActionStatementOutput pp basis (family.fixedRepresentations basis) ×
+      AnnotationLog basis) : CachedRun pp family basis :=
   let output := execution.1
   let pre := family.preIpaReadVectorOfOutput basis O output
   let rounds := family.ipaReadVectorOfOutput basis O output
@@ -42,6 +46,12 @@ def cachedRun {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFami
     annotations := execution.2
     pre := fun i => pre.get i
     rounds := fun j => rounds.get j }
+
+/-- Run the adversary and materialize all later random-oracle reads exactly once. -/
+def cachedRun {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : CachedRun pp family basis :=
+  family.cachedRunOfExecution basis O ((family.adversary basis).runWithAnnotations O)
 
 /-- The non-provenance view of a shared execution. -/
 def CachedRun.toRunView {pp : ProofParams}
@@ -55,14 +65,14 @@ def CachedRun.toRunView {pp : ProofParams}
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
     (family.cachedRun basis O).output = family.runOutput basis O := by
-  simp [cachedRun, runOutput]
+  simp [cachedRun, cachedRunOfExecution, runOutput]
 
 @[simp] theorem cachedRun_annotations_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
     (O : family.Coins) :
     (family.cachedRun basis O).annotations = (family.adversary basis).annotations O := by
-  simp [cachedRun]
+  simp [cachedRun, cachedRunOfExecution]
 
 @[simp] theorem cachedRun_pre_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -70,7 +80,7 @@ def CachedRun.toRunView {pp : ProofParams}
     (O : family.Coins) :
     (family.cachedRun basis O).pre = family.runPreIpaReads basis O := by
   funext i
-  simp [cachedRun, runPreIpaReads, runOutput, preIpaReadsOfOutput]
+  simp [cachedRun, cachedRunOfExecution, runPreIpaReads, runOutput, preIpaReadsOfOutput]
 
 @[simp] theorem cachedRun_rounds_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
@@ -78,7 +88,7 @@ def CachedRun.toRunView {pp : ProofParams}
     (O : family.Coins) :
     (family.cachedRun basis O).rounds = family.runIpaReads basis O := by
   funext j
-  simp [cachedRun, runIpaReads, runOutput, ipaReadsOfOutput]
+  simp [cachedRun, cachedRunOfExecution, runIpaReads, runOutput, ipaReadsOfOutput]
 
 @[simp] theorem cachedRun_toRunView_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)

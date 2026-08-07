@@ -44,10 +44,14 @@ finite-security Vesta DLOG advantage.  The conditionally staged-certified adapti
 costed adversary whose erasure is the original game, a single cached execution, and a
 branch-selected executable group-operation program.  Programmed-basis MSM results feed the
 adversary, and canonical instance MSM results feed verifier assembly.  Each private composed
-execution carries the exact adversary program, oracle path, and reified reduction program; only
-the external implementation-to-adversary-program fidelity obligation remains.  Equality/list
-work and random-oracle queries are separate from the DLOG group-operation budget. Direct-coordinate
-work is derived from the family's structural fixed-representation cap.  The older
+execution contains one closed program that specializes the exact adversary path, retains its
+annotations and group nodes, builds a proof-carrying cache, and consumes that same cache in the
+reified reduction. Lean checks the value flow and counter decomposition. Because the embedding is
+shallow, fidelity remains external both for the supplied adversary and for generic host callbacks
+inside the complete program. Equality/list work and random-oracle queries are separate from the
+DLOG group-operation budget. Direct-coordinate work is derived from the family's required
+fixed-representation cap; this generic endpoint does not construct the concrete family instance
+that must satisfy it. The older
 declared-resource endpoint remains pinned alongside the `2^123` and `2^125` staged forms.
 -/
 
