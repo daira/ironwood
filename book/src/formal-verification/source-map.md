@@ -231,8 +231,9 @@ and derives the conditional staged `2×` group-operation bound. Its private comp
 one closed program that constructs the charged basis, specializes the exact adversary path with
 its annotations and group nodes, constructs a proof-carrying cache from that result, and consumes
 that same cache in reified postprocessing. Lean proves the resulting counter equals adversary work
-plus reduction work. Since the cost language is shallow, fidelity of the supplied adversary and
-of generic host callbacks inside the complete program remains external and is stated separately.
+plus reduction work. Since the cost language is [shallow](glossary.md), fidelity of the supplied
+adversary and of generic host callbacks inside the complete program remains external and is stated
+separately.
 The modeled three-decode inequality is derived from the family's required fixed-representation
 cap rather than retained as a free certified-profile number; this generic development does not
 construct the concrete deployment family that must satisfy the cap. `Profile` retains

@@ -1277,7 +1277,12 @@ theorem orchard_adaptiveActionStatementSurface_measure_le_for
       (chRecord (fun j => if hj : (j : ℕ) < 4 then earlier ⟨j, hj⟩ else 0)
         (fun _ => 0))
 
-/-! ## Certified adaptive-statement reduction work -/
+/-! ## Certified adaptive-statement reduction work
+
+The counts bounded here are read off the reified Vesta nodes of a staged program.  Those nodes,
+their cost rules, and the `StagedGroupWorkFaithful` judgment the endpoints carry as a premiss are
+defined in `Zcash/Snark/Soundness/AGM/CostedOracle.lean`.
+-/
 
 /-- At every consensus-valid Action bundle size, the cached relation-finder and witness-extraction
 group-operation program costs at most `2^123`.  Equality/list traversal and direct-coordinate work
@@ -1297,6 +1302,7 @@ theorem adaptiveStatementReductionGroupWork_at_consensus
     _ ≤
         30830 + 2050 * (2 ^ 16 - 1) + 27 * (50 * (2 ^ 16 - 1) + 46) ^ 2 := by
       gcongr
+    _ ≤ 289909719069212 := by norm_num
     _ ≤ 2 ^ 123 := by norm_num
 
 /-- The adaptive-statement remainder at an arbitrary Action count. It has the same four

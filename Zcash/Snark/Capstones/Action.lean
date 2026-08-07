@@ -22,7 +22,13 @@ open Zcash.Circuits Zcash.Circuits.Action
 open Zcash.Arithmetic (scalarFieldOrder URS)
 open scoped ENNReal
 
-/-! ## Adaptive-statement knowledge endpoints -/
+/-! ## Adaptive-statement knowledge endpoints
+
+The staged-certified endpoints below quantify over a costed adversary program and re-export its
+obligations as conclusion conjuncts.  Read `Zcash/Snark/Soundness/AGM/CostedOracle.lean` first: it
+defines the cost language, its erasure, the per-node cost rules, and the `StagedGroupWorkFaithful`
+judgment those conjuncts name.
+-/
 
 
 /-- Every adaptive-statement run's deployed pair count is below the scalar field order: the
@@ -103,10 +109,16 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
             profile.finderAdvantageLE hsurface)
 
 /-- Consensus-generic adaptive-statement knowledge soundness with conditional staged work
-accounting. The adversary program erases to the original game. Its staged group work and the
-cached reduction's group-law work are derived from syntax and the captured verifier shape.
-External implementation-to-program fidelity remains explicit; “certified” here therefore
-describes the checked group-operation accounting, not an assumption-free closed theorem. -/
+accounting.  Two halves meet here, and only one is checked.
+
+Lean checks the accounting: each node's cost is read off its own syntax rather than a caller's tag
+(an MSM costs its term-list length), composition across `bind` is proved, the program erases to the
+original algebraic adversary, and the cached route is pointwise equal to the original finder.
+
+Staging the computation through those nodes is manual, and nothing in Lean measures an arbitrary
+host term.  `CostedLabeledOracleComp.StagedGroupWorkFaithful` carries that half, as a premiss and
+a conclusion conjunct.  “Certified” names checked accounting over a hand-staged program, not an
+assumption-free theorem. -/
 theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
     (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)

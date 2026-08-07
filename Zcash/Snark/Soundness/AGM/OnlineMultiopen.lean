@@ -30,6 +30,9 @@ def AlgebraicProofString.preX1Points (aps : AlgebraicProofString shape basis) :
   (List.ofFn fun p => List.ofFn fun i => aps.lookupProduct p i).flatten ++
   [aps.vanishingRandom] ++ List.ofFn aps.hPieces
 
+/-- The pre-`x1` point list has the shape-determined length: the per-proof advice, lookup, and
+permutation commitments, plus the vanishing randomizer and the quotient pieces. The MSM over it is
+therefore priced by the shape, not the adversary. -/
 theorem AlgebraicProofString.preX1Points_length
     (aps : AlgebraicProofString shape basis) :
     aps.preX1Points.length =
@@ -50,6 +53,7 @@ def AlgebraicProofString.preX1AssemblySource
     List (AlgebraicPoint (F := Fp) basis) :=
   aps.preX1Points ++ fixed
 
+/-- Appending the verifier-known fixed representations adds their count and nothing else. -/
 theorem AlgebraicProofString.preX1AssemblySource_length
     (aps : AlgebraicProofString shape basis)
     (fixed : List (AlgebraicPoint (F := Fp) basis)) :

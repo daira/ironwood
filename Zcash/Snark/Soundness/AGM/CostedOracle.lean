@@ -14,6 +14,12 @@ and its fixed-generator sweep and accumulated terms are charged explicitly.  Equ
 field operations, and list traversal are kept outside the DLOG group-operation budget.  In
 particular, an adversary-sized scan must not be disguised as a shape-only group-work charge.
 
+Any new producer of `CostedLabeledOracleComp` / `CostedVestaComp` must route through the smart
+constructors.  Adding a lift from any uncosted computation type would allow bypassing the intended
+costing and would be a correctness bug.  `Zcash/Meta/Tests/CostedOracle.lean` pins the canonical
+forgery APIs absent by name, but that is a reminder of the convention, not a substitute: a
+promotion under a different name, or lifted from another `OracleComp` flavour, escapes it.
+
 The costed program is the source of the modeled computation: erasure forgets its audit events and
 produces the ordinary `LabeledOracleComp` used by the probability game.  In particular, this module
 does **not** provide a zero-cost promotion from an arbitrary existing `LabeledOracleComp`; such a
@@ -42,10 +48,14 @@ def cost : VestaGroupOperation → Nat
   | .add _ _ | .neg _ | .scalarMul _ _ => 1
   | .msm terms => terms.length
 
+/-- A reified addition costs one modeled group operation. -/
 @[simp] theorem cost_add (left right : VestaG) : cost (.add left right) = 1 := rfl
+/-- A reified negation costs one modeled group operation. -/
 @[simp] theorem cost_neg (point : VestaG) : cost (.neg point) = 1 := rfl
+/-- A reified scalar multiplication costs one modeled group operation. -/
 @[simp] theorem cost_scalarMul (scalar : Fp) (point : VestaG) :
     cost (.scalarMul scalar point) = 1 := rfl
+/-- An MSM costs one unit per term, so its price is fixed by the term list the node carries. -/
 @[simp] theorem cost_msm (terms : List (Fp × VestaG)) :
     cost (.msm terms) = terms.length := rfl
 
@@ -79,6 +89,8 @@ def query (t : T) (label : Label t) (k : F → CostedLabeledOracleComp T F Label
     CostedLabeledOracleComp T F Label α :=
   ⟨CostedLabeledOracleCompCore.mkQuery t label (fun answer => (k answer).core)⟩
 
+/-- Erasure on the private syntax: group nodes are dropped and the labeled query tree is left
+unchanged. -/
 private def eraseCore : CostedLabeledOracleCompCore T F Label α →
     LabeledOracleComp T F Label α
   | .mkPure a => .pure a
@@ -93,6 +105,8 @@ def erase (A : CostedLabeledOracleComp T F Label α) : LabeledOracleComp T F Lab
 def run (A : CostedLabeledOracleComp T F Label α) (O : T → F) : α :=
   A.erase.run O
 
+/-- Group work on the private syntax, summing node costs along the branch one oracle table
+selects. -/
 private def groupWorkCore : CostedLabeledOracleCompCore T F Label α → (T → F) → Nat
   | .mkPure _, _ => 0
   | .mkQuery t _ k, O => groupWorkCore (k (O t)) O
@@ -114,6 +128,8 @@ deeper embedded program must discharge it.  Keeping it in the certificate preven
 `pure` tree from being silently presented as an end-to-end mechanical work proof. -/
 opaque StagedGroupWorkFaithful (A : CostedLabeledOracleComp T F Label α) : Prop
 
+/-- Sequencing on the private syntax. The prefix's group nodes are retained, so binding cannot
+discard work already charged. -/
 private def bindCore : CostedLabeledOracleCompCore T F Label α →
     (α → CostedLabeledOracleComp T F Label β) →
       CostedLabeledOracleCompCore T F Label β
@@ -172,13 +188,16 @@ def vestaMsmCertified (terms : List (Fp × VestaG)) :
   ⟨.mkGroup (.msm terms)
     (.mkPure ⟨(terms.map fun term => term.1 • term.2).sum, rfl⟩)⟩
 
+/-- Erasing group-free data gives the corresponding pure oracle computation. -/
 @[simp] theorem erase_pure (a : α) :
     (pure a : CostedLabeledOracleComp T F Label α).erase = .pure a := rfl
 
+/-- Erasure passes through a query node, leaving its label and continuation in place. -/
 @[simp] theorem erase_query (t : T) (label : Label t)
     (k : F → CostedLabeledOracleComp T F Label α) :
     (query t label k).erase = .query t label (fun answer => (k answer).erase) := rfl
 
+/-- Erasure distributes over sequencing on the private syntax; the induction behind `erase_bind`. -/
 private theorem eraseCore_bindCore (core : CostedLabeledOracleCompCore T F Label α)
     (f : α → CostedLabeledOracleComp T F Label β) :
     eraseCore (bindCore core f) =
@@ -193,53 +212,68 @@ private theorem eraseCore_bindCore (core : CostedLabeledOracleCompCore T F Label
   | mkGroup op next ih =>
       simpa only [bindCore, eraseCore] using ih
 
+/-- Erasure distributes over sequencing, so a staged reduction erases to the original game one stage
+at a time. -/
 @[simp] theorem erase_bind (A : CostedLabeledOracleComp T F Label α)
     (f : α → CostedLabeledOracleComp T F Label β) :
     (A.bind f).erase = A.erase.bind (fun a => (f a).erase) := by
   rcases A with ⟨core⟩
   exact eraseCore_bindCore core f
 
+/-- Running group-free data returns it. -/
 @[simp] theorem run_pure (a : α) (O : T → F) :
     (pure a : CostedLabeledOracleComp T F Label α).run O = a := rfl
 
+/-- Running a query consults the table once and continues at the answer. -/
 @[simp] theorem run_query (t : T) (label : Label t)
     (k : F → CostedLabeledOracleComp T F Label α) (O : T → F) :
     (query t label k).run O = (k (O t)).run O := rfl
 
+/-- Running a bind runs the prefix, then the continuation at the prefix's value. -/
 @[simp] theorem run_bind (A : CostedLabeledOracleComp T F Label α)
     (f : α → CostedLabeledOracleComp T F Label β) (O : T → F) :
     (A.bind f).run O = (f (A.run O)).run O := by
   simp only [run, erase_bind, LabeledOracleComp.run_bind]
 
+/-- The reified addition node returns the sum it charges for. -/
 @[simp] theorem run_vestaAdd (left right : VestaG) (O : T → F) :
     (vestaAdd (T := T) (F := F) (Label := Label) left right).run O = left + right := rfl
 
+/-- The reified negation node returns the negation it charges for. -/
 @[simp] theorem run_vestaNeg (point : VestaG) (O : T → F) :
     (vestaNeg (T := T) (F := F) (Label := Label) point).run O = -point := rfl
 
+/-- The reified scalar multiplication returns the multiple it charges for. -/
 @[simp] theorem run_vestaScalarMul (scalar : Fp) (point : VestaG) (O : T → F) :
     (vestaScalarMul (T := T) (F := F) (Label := Label) scalar point).run O =
       scalar • point := rfl
 
+/-- Equality returns the decided comparison. It is a data test, so no group operation is charged. -/
 @[simp] theorem run_vestaEq (left right : VestaG) (O : T → F) :
     (vestaEq (T := T) (F := F) (Label := Label) left right).run O =
       decide (left = right) := rfl
 
+/-- The reified MSM returns the sum of its own terms: value and price come from the same list. -/
 @[simp] theorem run_vestaMsm (terms : List (Fp × VestaG)) (O : T → F) :
     (vestaMsm (T := T) (F := F) (Label := Label) terms).run O =
       (terms.map fun term => term.1 • term.2).sum := rfl
 
+/-- The proof-carrying MSM returns that same sum, together with the equation identifying it. -/
 @[simp] theorem run_vestaMsmCertified (terms : List (Fp × VestaG)) (O : T → F) :
     (vestaMsmCertified (T := T) (F := F) (Label := Label) terms).run O =
       ⟨(terms.map fun term => term.1 • term.2).sum, rfl⟩ := rfl
 
+/-- Group-free data costs nothing. -/
 @[simp] theorem groupWork_pure (a : α) (O : T → F) :
     (pure a : CostedLabeledOracleComp T F Label α).groupWork O = 0 := rfl
 
+/-- A query charges no group work; counting continues along the branch its answer selects. -/
 @[simp] theorem groupWork_query (t : T) (label : Label t)
     (k : F → CostedLabeledOracleComp T F Label α) (O : T → F) :
     (query t label k).groupWork O = (k (O t)).groupWork O := rfl
 
+/-- Group work adds across sequencing on the private syntax; the induction behind
+`groupWork_bind`. -/
 private theorem groupWorkCore_bindCore
     (core : CostedLabeledOracleCompCore T F Label α)
     (f : α → CostedLabeledOracleComp T F Label β) (O : T → F) :
@@ -252,38 +286,47 @@ private theorem groupWorkCore_bindCore
   | mkGroup op next ih =>
       simp only [bindCore, groupWorkCore, eraseCore, LabeledOracleComp.run, ih, Nat.add_assoc]
 
+/-- Group work adds across sequencing: prefix work plus the continuation's work at the prefix value.
+The rest of the accounting is built on this rule. -/
 @[simp] theorem groupWork_bind (A : CostedLabeledOracleComp T F Label α)
     (f : α → CostedLabeledOracleComp T F Label β) (O : T → F) :
     (A.bind f).groupWork O = A.groupWork O + (f (A.run O)).groupWork O := by
   rcases A with ⟨core⟩
   exact groupWorkCore_bindCore core f O
 
+/-- A reified addition charges one group operation. -/
 @[simp] theorem groupWork_vestaAdd (left right : VestaG) (O : T → F) :
     (vestaAdd (T := T) (F := F) (Label := Label) left right).groupWork O = 1 := by
   simp [vestaAdd, groupWork, groupWorkCore]
 
+/-- A reified negation charges one group operation. -/
 @[simp] theorem groupWork_vestaNeg (point : VestaG) (O : T → F) :
     (vestaNeg (T := T) (F := F) (Label := Label) point).groupWork O = 1 := by
   simp [vestaNeg, groupWork, groupWorkCore]
 
+/-- A reified scalar multiplication charges one group operation. -/
 @[simp] theorem groupWork_vestaScalarMul (scalar : Fp) (point : VestaG) (O : T → F) :
     (vestaScalarMul (T := T) (F := F) (Label := Label) scalar point).groupWork O = 1 := by
   simp [vestaScalarMul, groupWork, groupWorkCore]
 
+/-- An equality test charges nothing. -/
 @[simp] theorem groupWork_vestaEq (left right : VestaG) (O : T → F) :
     (vestaEq (T := T) (F := F) (Label := Label) left right).groupWork O = 0 := by
   simp [vestaEq]
 
+/-- An MSM charges one unit per term. -/
 @[simp] theorem groupWork_vestaMsm (terms : List (Fp × VestaG)) (O : T → F) :
     (vestaMsm (T := T) (F := F) (Label := Label) terms).groupWork O =
       vestaMsmCost terms := by
   simp [vestaMsm, vestaMsmCost, groupWork, groupWorkCore]
 
+/-- The proof-carrying MSM charges what the plain one does; carrying the equation is free. -/
 @[simp] theorem groupWork_vestaMsmCertified (terms : List (Fp × VestaG)) (O : T → F) :
     (vestaMsmCertified (T := T) (F := F) (Label := Label) terms).groupWork O =
       vestaMsmCost terms := by
   simp [vestaMsmCertified, vestaMsmCost, groupWork, groupWorkCore]
 
+/-- A nonempty MSM charges something, so a work bound cannot be met by pricing real work at zero. -/
 theorem groupWork_vestaMsm_pos (terms : List (Fp × VestaG)) (hterms : terms ≠ [])
     (O : T → F) :
     0 < (vestaMsm (T := T) (F := F) (Label := Label) terms).groupWork O := by
@@ -291,11 +334,14 @@ theorem groupWork_vestaMsm_pos (terms : List (Fp × VestaG)) (hterms : terms ≠
   | nil => exact False.elim (hterms rfl)
   | cons head tail => simp [vestaMsmCost]
 
+/-- One erasure preimage, replaying a labeled tree with no group nodes. Kept private: exposed, it
+would be the zero-cost promotion this module refuses. -/
 private def erasePreimage : LabeledOracleComp T F Label α →
     CostedLabeledOracleComp T F Label α
   | .pure a => pure a
   | .query t label k => query t label fun answer => erasePreimage (k answer)
 
+/-- The replayed tree erases back to the computation it came from. -/
 private theorem erase_erasePreimage (A : LabeledOracleComp T F Label α) :
     (erasePreimage A).erase = A := by
   induction A with
@@ -322,12 +368,14 @@ query annotations accumulated on that same traversal.  It is deliberately implem
 private syntax: rebuilding only the returned value would lose the adversary's group-work trace.
 -/
 
+/-- Post-composition on the private syntax, preserving both query and group nodes. -/
 private def mapCore (f : α → β) : CostedLabeledOracleCompCore T F Label α →
     CostedLabeledOracleCompCore T F Label β
   | .mkPure a => .mkPure (f a)
   | .mkQuery t label k => .mkQuery t label (fun answer => mapCore f (k answer))
   | .mkGroup op next => .mkGroup op (mapCore f next)
 
+/-- Rewriting a result leaves group work unchanged. -/
 private theorem groupWorkCore_mapCore (f : α → β)
     (core : CostedLabeledOracleCompCore T F Label α) (O : T → F) :
     groupWorkCore (mapCore f core) O = groupWorkCore core O := by
@@ -336,6 +384,8 @@ private theorem groupWorkCore_mapCore (f : α → β)
   | mkQuery t label k ih => simpa only [mapCore, groupWorkCore] using ih (O t)
   | mkGroup op next ih => simp only [mapCore, groupWorkCore, ih]
 
+/-- Specialization to one oracle path on the private syntax, accumulating the query annotations and
+keeping the group nodes that path selected. -/
 private def materializeWithAnnotationsCertifiedCore (O : T → F) :
     (core : CostedLabeledOracleCompCore T F Label α) →
       CostedLabeledOracleCompCore Unit Unit (fun _ => Unit)
@@ -358,6 +408,8 @@ def materializeWithAnnotationsCertified
         result = A.erase.runWithAnnotations O} :=
   ⟨materializeWithAnnotationsCertifiedCore O A.core⟩
 
+/-- Specializing a path preserves the work charged on it; the induction behind
+`groupWork_materializeWithAnnotationsCertified`. -/
 private theorem materializeWithAnnotationsCertifiedCore_groupWork
     (core : CostedLabeledOracleCompCore T F Label α) (O : T → F) :
     groupWorkCore (materializeWithAnnotationsCertifiedCore O core) (fun _ => ()) =
@@ -371,6 +423,8 @@ private theorem materializeWithAnnotationsCertifiedCore_groupWork
       simp only [materializeWithAnnotationsCertifiedCore, groupWorkCore]
       exact congrArg (op.cost + ·) ih
 
+/-- Closing a program at one oracle table charges exactly the work that path charged, so a reduction
+can consume a materialized run without recounting or dropping the adversary's cost. -/
 @[simp] theorem groupWork_materializeWithAnnotationsCertified
     (A : CostedLabeledOracleComp T F Label α) (O : T → F) :
     (materializeWithAnnotationsCertified A O).groupWork (fun _ => ()) = A.groupWork O := by
@@ -474,34 +528,44 @@ def evalMsmMatrixCertified (matrix : List (List (List (Fp × VestaG)))) :
         bind (evalMsmMatrixCertified rest) fun rows =>
           pure ⟨values.1 :: rows.1, by rw [values.2, rows.2]; rfl⟩
 
+/-- Running group-free data returns it. -/
 @[simp] theorem run_pure (a : α) : run (pure a) = a := rfl
 
+/-- Running a bind runs the prefix, then the continuation at the prefix's value. -/
 @[simp] theorem run_bind (A : CostedVestaComp α) (f : α → CostedVestaComp β) :
     run (bind A f) = run (f (run A)) := by
   simp [run, bind]
 
+/-- Group-free postprocessing applies to the result. -/
 @[simp] theorem run_map (f : α → β) (A : CostedVestaComp α) :
     run (map f A) = f (run A) := by
   rw [map, run_bind, run_pure]
 
+/-- The reified addition node returns the sum it charges for. -/
 @[simp] theorem run_vestaAdd (left right : VestaG) :
     run (vestaAdd left right) = left + right := rfl
 
+/-- The reified negation node returns the negation it charges for. -/
 @[simp] theorem run_vestaNeg (point : VestaG) : run (vestaNeg point) = -point := rfl
 
+/-- The reified scalar multiplication returns the multiple it charges for. -/
 @[simp] theorem run_vestaScalarMul (scalar : Fp) (point : VestaG) :
     run (vestaScalarMul scalar point) = scalar • point := rfl
 
+/-- Equality returns the decided comparison, with no group operation charged. -/
 @[simp] theorem run_vestaEq (left right : VestaG) :
     run (vestaEq left right) = decide (left = right) := rfl
 
+/-- The reified MSM returns the sum of its own terms. -/
 @[simp] theorem run_vestaMsm (terms : List (Fp × VestaG)) :
     run (vestaMsm terms) = (terms.map fun term => term.1 • term.2).sum := rfl
 
+/-- The proof-carrying MSM returns that same sum, together with the equation identifying it. -/
 @[simp] theorem run_vestaMsmCertified (terms : List (Fp × VestaG)) :
     run (vestaMsmCertified terms) =
       ⟨(terms.map fun term => term.1 • term.2).sum, rfl⟩ := rfl
 
+/-- Evaluating a list of MSMs returns their sums in order. -/
 @[simp] theorem run_evalMsms (termSets : List (List (Fp × VestaG))) :
     run (evalMsms termSets) =
       termSets.map fun terms => (terms.map fun term => term.1 • term.2).sum := by
@@ -509,11 +573,14 @@ def evalMsmMatrixCertified (matrix : List (List (List (Fp × VestaG)))) :
   | nil => rfl
   | cons terms rest ih => simp [evalMsms, ih]
 
+/-- The certified list evaluation returns those same sums; its subtype field is the equation
+identifying them. -/
 @[simp] theorem run_evalMsmsCertified (termSets : List (List (Fp × VestaG))) :
     (run (evalMsmsCertified termSets)).1 =
       termSets.map fun terms => (terms.map fun term => term.1 • term.2).sum :=
   (run (evalMsmsCertified termSets)).2
 
+/-- The certified matrix evaluation returns each row's sums and preserves the row shape. -/
 @[simp] theorem run_evalMsmMatrixCertified
     (matrix : List (List (List (Fp × VestaG)))) :
     (run (evalMsmMatrixCertified matrix)).1 =
@@ -521,51 +588,64 @@ def evalMsmMatrixCertified (matrix : List (List (List (Fp × VestaG)))) :
         row.map fun terms => (terms.map fun term => term.1 • term.2).sum :=
   (run (evalMsmMatrixCertified matrix)).2
 
+/-- Group-free data costs nothing. -/
 @[simp] theorem groupWork_pure (a : α) : groupWork (pure a) = 0 := rfl
 
+/-- Group work adds across sequencing: the prefix's work plus the continuation's work at the prefix
+value. -/
 @[simp] theorem groupWork_bind (A : CostedVestaComp α) (f : α → CostedVestaComp β) :
     groupWork (bind A f) = groupWork A + groupWork (f (run A)) := by
   simp [groupWork, run, bind]
 
+/-- Group-free postprocessing charges nothing. -/
 @[simp] theorem groupWork_map (f : α → β) (A : CostedVestaComp α) :
     groupWork (map f A) = groupWork A := by
   rw [map, groupWork_bind, groupWork_pure, Nat.add_zero]
 
+/-- A reified addition charges one group operation. -/
 @[simp] theorem groupWork_vestaAdd (left right : VestaG) :
     groupWork (vestaAdd left right) = 1 := by
   simp [groupWork, vestaAdd]
 
+/-- A reified negation charges one group operation. -/
 @[simp] theorem groupWork_vestaNeg (point : VestaG) : groupWork (vestaNeg point) = 1 := by
   simp [groupWork, vestaNeg]
 
+/-- A reified scalar multiplication charges one group operation. -/
 @[simp] theorem groupWork_vestaScalarMul (scalar : Fp) (point : VestaG) :
     groupWork (vestaScalarMul scalar point) = 1 := by
   simp [groupWork, vestaScalarMul]
 
+/-- An equality test charges nothing. -/
 @[simp] theorem groupWork_vestaEq (left right : VestaG) :
     groupWork (vestaEq left right) = 0 := by
   simp [groupWork, vestaEq]
 
+/-- An MSM charges one unit per term. -/
 @[simp] theorem groupWork_vestaMsm (terms : List (Fp × VestaG)) :
     groupWork (vestaMsm terms) = terms.length := by
   simp [groupWork, vestaMsm, CostedLabeledOracleComp.vestaMsmCost]
 
+/-- The proof-carrying MSM charges what the plain one does. -/
 @[simp] theorem groupWork_vestaMsmCertified (terms : List (Fp × VestaG)) :
     groupWork (vestaMsmCertified terms) = terms.length := by
   simp [groupWork, vestaMsmCertified, CostedLabeledOracleComp.vestaMsmCost]
 
+/-- A list of MSMs costs the total number of terms it contains. -/
 @[simp] theorem groupWork_evalMsms (termSets : List (List (Fp × VestaG))) :
     groupWork (evalMsms termSets) = (termSets.map List.length).sum := by
   induction termSets with
   | nil => rfl
   | cons terms rest ih => simp [evalMsms, ih]
 
+/-- The certified list evaluation costs the same total; carrying the equations is free. -/
 @[simp] theorem groupWork_evalMsmsCertified (termSets : List (List (Fp × VestaG))) :
     groupWork (evalMsmsCertified termSets) = (termSets.map List.length).sum := by
   induction termSets with
   | nil => rfl
   | cons terms rest ih => simp [evalMsmsCertified, ih]
 
+/-- A matrix of MSMs costs the total number of terms across all rows. -/
 @[simp] theorem groupWork_evalMsmMatrixCertified
     (matrix : List (List (List (Fp × VestaG)))) :
     groupWork (evalMsmMatrixCertified matrix) =

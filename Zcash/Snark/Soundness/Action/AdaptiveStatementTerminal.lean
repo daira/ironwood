@@ -409,6 +409,8 @@ def acceptsV {pp : ProofParams}
     (adaptiveActionStatementInstanceCommitment pp basis view.output.inputs)
     view.output.toAlgebraicWfProof.proof.1 (chRecord (k := (AdaptiveActionStatementShape pp).k) view.pre view.rounds)
 
+/-- Deployed acceptance over a run view is decidable, which is what lets `accepts?V` return an
+executable certificate. -/
 instance acceptsVDecidable {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -440,6 +442,8 @@ def bindingValueMismatchV {pp : ProofParams}
       nu 9 * innerProduct proof.s
         (evalVector (AdaptiveActionStatementShape pp).k (nu 7))
 
+/-- The field-valued half of the binding attack is decidable, so the terminal stage can branch on it
+without re-evaluating the group equation. -/
 instance bindingValueMismatchVDecidable {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)

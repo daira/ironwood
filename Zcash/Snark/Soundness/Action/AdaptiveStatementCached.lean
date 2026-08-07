@@ -12,6 +12,10 @@ The cached finder is proved pointwise equal to the existing finder, so all proba
 correctness theorems transfer without changing the adversary game.  Its operational shape has one
 adversary execution rather than four finder executions (or five for knowledge extraction); that
 is the reuse fact needed by the costed profile.
+
+Nothing here is costed.  `Zcash/Snark/Soundness/Action/AdaptiveStatementCost.lean` prices this
+one-execution shape, and the cost language it uses is defined in
+`Zcash/Snark/Soundness/AGM/CostedOracle.lean`.
 -/
 
 namespace Zcash.Snark
@@ -60,6 +64,8 @@ def CachedRun.toRunView {pp : ProofParams}
     (cache : CachedRun pp family basis) : RunView pp family basis :=
   { output := cache.output, pre := cache.pre, rounds := cache.rounds }
 
+/-- The retained output is the adversary's output at the same table: caching changes no observed
+value. -/
 @[simp] theorem cachedRun_output_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -67,6 +73,8 @@ def CachedRun.toRunView {pp : ProofParams}
     (family.cachedRun basis O).output = family.runOutput basis O := by
   simp [cachedRun, cachedRunOfExecution, runOutput]
 
+/-- The retained log is the annotation log of that same traversal; provenance stages read it instead
+of re-running the adversary. -/
 @[simp] theorem cachedRun_annotations_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -74,6 +82,7 @@ def CachedRun.toRunView {pp : ProofParams}
     (family.cachedRun basis O).annotations = (family.adversary basis).annotations O := by
   simp [cachedRun, cachedRunOfExecution]
 
+/-- The retained pre-IPA challenges are the ones the original stages read. -/
 @[simp] theorem cachedRun_pre_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -82,6 +91,7 @@ def CachedRun.toRunView {pp : ProofParams}
   funext i
   simp [cachedRun, cachedRunOfExecution, runPreIpaReads, runOutput, preIpaReadsOfOutput]
 
+/-- The retained round challenges are the ones the original stages read. -/
 @[simp] theorem cachedRun_rounds_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -90,6 +100,8 @@ def CachedRun.toRunView {pp : ProofParams}
   funext j
   simp [cachedRun, cachedRunOfExecution, runIpaReads, runOutput, ipaReadsOfOutput]
 
+/-- The cache's non-provenance view is the original run view. Every view-level stage below is reused
+unchanged on the strength of this equality. -/
 @[simp] theorem cachedRun_toRunView_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -122,6 +134,7 @@ def provenanceRelationFinderOfCachedRun {pp : ProofParams}
       cache.output,
      family.semanticSourceMismatchRelationFinderOfOutput basis cache.output]
 
+/-- Running the provenance pass over the cache gives the original provenance finder's result. -/
 @[simp] theorem provenanceRelationFinderOfCachedRun_eq {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -164,6 +177,7 @@ theorem semanticStageFacts_of_cachedProvenance_none {pp : ProofParams}
     simpa only [family.provenanceRelationFinderOfCachedRun_eq basis O] using hnone
   exact ((family.provenanceRelationFinder_eq_none_iff basis O).1 hprovenance).2.2.2.2
 
+/-- The quotient stage over the cached view agrees with the original quotient finder. -/
 @[simp] theorem statementQuotientRelationFinderV_cachedRun {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -172,6 +186,9 @@ theorem semanticStageFacts_of_cachedProvenance_none {pp : ProofParams}
       family.statementQuotientRelationFinder basis O := by
   rw [family.cachedRun_toRunView_eq basis O]
 
+/-- The terminal stage over the cached view agrees with the original terminal finder. Its pair-count
+premise transports along `cachedRun_toRunView_eq`; the body does that by showing the two subtype
+arguments equal. -/
 @[simp] theorem terminalRelationFinderV_cachedRun {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
@@ -292,6 +309,8 @@ def relationFinderWithCallsOfCachedRun {pp : ProofParams}
   | none => family.relationFinderAfterCachedProvenance basis cache hcharV
       (hfacts hprovenance)
 
+/-- When the shared provenance pass finds a relation, the cached finder returns it and reports one
+stage. -/
 theorem relationFinderWithCallsOfCachedRun_of_some {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -310,6 +329,7 @@ theorem relationFinderWithCallsOfCachedRun_of_some {pp : ProofParams}
     rw [hprovenance] at hnone
     cases hnone
 
+/-- When the shared provenance pass is empty, the cached finder continues into the later stages. -/
 theorem relationFinderWithCallsOfCachedRun_of_none {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -465,6 +485,7 @@ def cachedKnowledgeExtractor {pp : ProofParams}
     Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs) :=
   (family.cachedKnowledgeExecution hchar basis O).value
 
+/-- The execution object reports the cached finder's relation. -/
 @[simp] theorem cachedKnowledgeExecution_finderResult {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -473,6 +494,7 @@ def cachedKnowledgeExtractor {pp : ProofParams}
       (family.cachedRelationFinderWithCalls hchar basis O).1 := by
   rfl
 
+/-- The execution object reports the cached finder's stage count. -/
 @[simp] theorem cachedKnowledgeExecution_finderCalls {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
@@ -481,6 +503,8 @@ def cachedKnowledgeExtractor {pp : ProofParams}
       (family.cachedRelationFinderWithCalls hchar basis O).2 := by
   rfl
 
+/-- Transporting an option along an equality of index types preserves whether it is populated.
+Needed because the extractor's result type mentions the adversary's inputs. -/
 private theorem Option.isSome_transport {ι : Type} {α : ι → Type} {i j : ι}
     (h : i = j) (value : Option (α i)) :
     (h ▸ value : Option (α j)).isSome = value.isSome := by

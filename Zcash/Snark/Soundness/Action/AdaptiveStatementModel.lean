@@ -141,6 +141,8 @@ def adaptiveStatementInstanceRepresentationList {shape : Shape}
       AlgebraicPoint (F := Fp) basis) : List (AlgebraicPoint (F := Fp) basis) :=
   (List.ofFn fun p => List.ofFn fun column => representations p column).flatten
 
+/-- The flattened instance-representation list has one entry per proof and instance column, so its
+length is fixed by the shape. -/
 theorem adaptiveStatementInstanceRepresentationList_length {shape : Shape}
     {basis : AugmentedIndex (2 ^ shape.k) → VestaG}
     (representations : Fin shape.numProofs → Fin shape.numInstanceColumns →
