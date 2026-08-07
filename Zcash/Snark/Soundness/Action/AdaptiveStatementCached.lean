@@ -407,17 +407,28 @@ theorem cachedRelationFinder_fun_eq {pp : ProofParams}
   funext basis O
   exact family.cachedRelationFinder_eq hchar basis O
 
-/-- Witness extraction over the same cache used by the relation finder.  The final transport only
-changes the selected-input index along `cachedRun_output_eq`; it has no runtime content. -/
-def cachedKnowledgeExtractor {pp : ProofParams}
+/-- The shared execution consumed by both the cost model and the witness-only projection.  Keeping
+the finder result and its stage count in this object prevents the cost layer from re-running the
+finder or attaching an unrelated trace after the fact. -/
+structure CachedKnowledgeExecution {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) where
+  value : Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs)
+  finderResult : Option (AlgebraicRelationWitness (F := Fp) basis)
+  finderCalls : Nat
+
+/-- Witness extraction and its retained finder accounting over one shared cache.  The final
+transport only changes the selected-input index along `cachedRun_output_eq`; it has no runtime
+content. -/
+def cachedKnowledgeExecution {pp : ProofParams}
     (family : ComputedAdaptiveActionStatementFSFamily pp)
     (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
       (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
       (family.runProof basis O).proof.1 (family.runRecord basis O) <
         Zcash.Arithmetic.scalarFieldOrder)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
-    (O : family.Coins) :
-    Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs) := by
+    (O : family.Coins) : CachedKnowledgeExecution family basis O := by
   let cache := family.cachedRun basis O
   let hcharV := family.cachedRun_pairCount_lt hchar basis O
   let facts := family.semanticStageFacts_of_cachedProvenance_none basis O
@@ -427,7 +438,38 @@ def cachedKnowledgeExtractor {pp : ProofParams}
       (family.relationFinderWithCallsOfCachedRun_none_provenance basis cache hcharV facts hnone))
   have hinputs : cache.output.inputs = (family.runOutput basis O).inputs :=
     congrArg AdaptiveActionStatementOutput.inputs (family.cachedRun_output_eq basis O)
-  exact hinputs ▸ extracted
+  exact
+    { value := hinputs ▸ extracted
+      finderResult := finder.1
+      finderCalls := finder.2 }
+
+/-- Witness-only projection of the execution object used by the cost layer. -/
+def cachedKnowledgeExtractor {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp)
+    (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+      (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+      (family.runProof basis O).proof.1 (family.runRecord basis O) <
+        Zcash.Arithmetic.scalarFieldOrder)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    Option (ActionTerminal.ActionBundleWitness (family.runOutput basis O).inputs) :=
+  (family.cachedKnowledgeExecution hchar basis O).value
+
+@[simp] theorem cachedKnowledgeExecution_finderResult {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    (family.cachedKnowledgeExecution hchar basis O).finderResult =
+      (family.cachedRelationFinderWithCalls hchar basis O).1 := by
+  rfl
+
+@[simp] theorem cachedKnowledgeExecution_finderCalls {pp : ProofParams}
+    (family : ComputedAdaptiveActionStatementFSFamily pp) (hchar)
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    (family.cachedKnowledgeExecution hchar basis O).finderCalls =
+      (family.cachedRelationFinderWithCalls hchar basis O).2 := by
+  rfl
 
 private theorem Option.isSome_transport {ι : Type} {α : ι → Type} {i j : ι}
     (h : i = j) (value : Option (α i)) :
@@ -478,7 +520,7 @@ theorem cachedKnowledgeExtractor_isSome_eq {pp : ProofParams}
   have hsuccess := congrArg (fun ready =>
     (family.adaptiveStatementKnowledgeExtractorV basis ready.1.1 ready.2.1
       ready.1.2 ready.2.2).isSome) hready
-  unfold cachedKnowledgeExtractor
+  unfold cachedKnowledgeExtractor cachedKnowledgeExecution
   dsimp only
   rw [Option.isSome_transport]
   simpa only [left, right, cache, hcharV, facts, finder] using hsuccess

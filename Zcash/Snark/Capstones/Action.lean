@@ -102,9 +102,10 @@ theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for
           (adaptiveStatement_pairCount_lt numProofs family) B epsilon
             profile.finderAdvantageLE hsurface)
 
-/-- Consensus-generic adaptive-statement knowledge soundness with executable work accounting.
-The adversary program erases to the original game, while its group work and the complete cached
-reduction work are derived from syntax and the captured verifier shape. -/
+/-- Consensus-generic adaptive-statement knowledge soundness with staged work accounting.
+The adversary program erases to the original game.  Its staged group work and the cached
+reduction's group-law work are derived from syntax and the captured verifier shape; host-language
+staging fidelity remains explicit in the certificate. -/
 theorem orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
     (numProofs workLimit : ℕ) {T : Type*} [DecidableEq T]
     (B : VestaG) (hB : B ≠ 0)
@@ -304,11 +305,16 @@ private theorem adaptiveStatementCertifiedEndpoint
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.adaptiveStatementKnowledgeFailureEvent
             (adaptiveStatement_pairCount_lt numProofs family)) ≤
-      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      profile.advantage (2 ^ 124) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
       adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      (∀ basis O, (family.relationFinderReads basis O).card ≤ 2 ^ 124) ∧
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ workLimit) ∧
+      (∀ basis O,
+        adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+          adaptiveStatementDirectDecodeOps family basis O ≤ workLimit) ∧
       ∀ basis O,
         (family.costedCachedKnowledgeExtractor
           (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤
@@ -329,8 +335,8 @@ private theorem adaptiveStatementCertifiedEndpoint
     calc
       family.Q + 11 + 11 ≤ 2 ^ 123 + 22 := by omega
       _ ≤ 2 ^ 124 := by norm_num
-  have hqueriesDlog : adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 126 :=
-    hqueries.trans (by norm_num)
+  have hqueriesDlog : adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 :=
+    hqueries
   have hreduction := adaptiveStatementReductionGroupWork_at_consensus numProofs hn
   have hreductionLimit :
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ workLimit :=
@@ -348,7 +354,7 @@ private theorem adaptiveStatementCertifiedEndpoint
           ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
             family.adaptiveStatementKnowledgeFailureEvent
               (adaptiveStatement_pairCount_lt numProofs family)) ≤
-        profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
+        profile.advantage (2 ^ 124) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal) := by
     refine le_trans
       (orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for
         numProofs workLimit B hB query hquery family certificate profile) ?_
@@ -373,19 +379,23 @@ private theorem adaptiveStatementCertifiedEndpoint
     simp only [div_eq_mul_inv]
     ring_nf
     exact le_rfl
-  refine ⟨hprob, hqueries, hreduction, certificate.erase_eq,
-    certificate.proverGroupWork_le, ?_⟩
+  refine ⟨hprob, hqueries, ?_, hreduction, certificate.erase_eq, certificate.staged,
+    certificate.proverGroupWork_le, profile.directDecodeWorkBound, ?_⟩
+  · intro basis O
+    exact (profile.queryCoverage basis O).trans hqueries
   intro basis O
   refine ⟨family.costedCachedKnowledgeExtractor_two_mul_bound
       (adaptiveStatement_pairCount_lt numProofs family) certificate hreductionLimit basis O,
     ?_, family.cachedRelationFinder_eq
       (adaptiveStatement_pairCount_lt numProofs family) basis O⟩
+  rw [family.costedCachedKnowledgeExtractor_value
+    (adaptiveStatement_pairCount_lt numProofs family) certificate basis O]
   exact family.cachedKnowledgeExtractor_isSome_eq
     (adaptiveStatement_pairCount_lt numProofs family) basis O
 
-/-- **Certified `2^123` adaptive-statement endpoint.**  The random-oracle budget is a separate
-premise.  The adversary's costed program erases to the original algebraic adversary, the complete
-reduction trace is shape-derived, and the cached extractor costs at most `2^124` group operations. -/
+/-- **Staged-certified `2^123` adaptive-statement endpoint.**  The random-oracle budget is a
+separate premise.  The costed program erases to the original algebraic adversary, its staging
+fidelity is explicit, and the cached extractor costs at most `2^124` group operations. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -404,11 +414,16 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.adaptiveStatementKnowledgeFailureEvent
             (adaptiveStatement_pairCount_lt numProofs family)) ≤
-      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      profile.advantage (2 ^ 124) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
       adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      (∀ basis O, (family.relationFinderReads basis O).card ≤ 2 ^ 124) ∧
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 123) ∧
+      (∀ basis O,
+        adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+          adaptiveStatementDirectDecodeOps family basis O ≤ 2 ^ 123) ∧
       ∀ basis O,
         (family.costedCachedKnowledgeExtractor
           (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤
@@ -423,9 +438,9 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work
     (adaptiveStatementCertifiedEndpoint numProofs (2 ^ 123) hn le_rfl (by norm_num)
       B hB query hquery family hQ certificate profile)
 
-/-- **Certified `2^125` adaptive-statement endpoint.**  A costed adversary bounded by `2^125`
-group operations and the complete cached reduction fit a `2^126` DLOG-work envelope.  The
-random-oracle budget remains independently bounded by `Q ≤ 2^123` and is not inflated to match. -/
+/-- **Staged-certified `2^125` adaptive-statement endpoint.**  A faithfully staged adversary
+bounded by `2^125` group operations and the cached reduction fit a `2^126` DLOG-work envelope.
+The random-oracle budget remains independently bounded by `Q ≤ 2^123` and is not inflated. -/
 theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
@@ -444,11 +459,16 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work
         ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
           family.adaptiveStatementKnowledgeFailureEvent
             (adaptiveStatement_pairCount_lt numProofs family)) ≤
-      profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
+      profile.advantage (2 ^ 124) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) ∧
       adaptiveStatementCachedRandomOracleQueries family ≤ 2 ^ 124 ∧
+      (∀ basis O, (family.relationFinderReads basis O).card ≤ 2 ^ 124) ∧
       adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 ∧
       (∀ basis, (certificate.program basis).erase = family.adversary basis) ∧
+      (∀ basis, (certificate.program basis).StagedGroupWorkFaithful) ∧
       (∀ basis O, certificate.proverGroupWork basis O ≤ 2 ^ 125) ∧
+      (∀ basis O,
+        adaptiveStatementKnowledgeExtractorDirectDecodeSlots *
+          adaptiveStatementDirectDecodeOps family basis O ≤ 2 ^ 125) ∧
       ∀ basis O,
         (family.costedCachedKnowledgeExtractor
           (adaptiveStatement_pairCount_lt numProofs family) certificate basis O).groupWork ≤

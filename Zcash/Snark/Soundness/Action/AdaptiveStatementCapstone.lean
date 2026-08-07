@@ -66,7 +66,8 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
           (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
             family.runRecord_eq_chRecord] using haccepts)
         obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-        unfold terminalRelationFinder terminalRelationFinderV at hterminalNone
+        unfold terminalRelationFinder terminalRelationFinderV
+          terminalRelationFinderWithAcceptanceV at hterminalNone
         rw [hacceptsEq] at hterminalNone
         dsimp only at hterminalNone
         rw [dif_pos hz, dif_pos hattack, hsplit] at hterminalNone
@@ -78,7 +79,8 @@ theorem statisticalResidualEvent_subset_surfaceEvent {pp : ProofParams}
           (by simpa only [acceptsV, accepts, runView_output, runView_pre, runView_rounds,
             family.runRecord_eq_chRecord] using haccepts)
       obtain ⟨hacceptsProof, hacceptsEq⟩ := Option.isSome_iff_exists.mp hacceptsSome
-      unfold terminalRelationFinder terminalRelationFinderV at hterminalNone
+      unfold terminalRelationFinder terminalRelationFinderV
+        terminalRelationFinderWithAcceptanceV at hterminalNone
       rw [hacceptsEq] at hterminalNone
       dsimp only at hterminalNone
       rw [dif_pos hz, dif_neg hattack, hout] at hterminalNone

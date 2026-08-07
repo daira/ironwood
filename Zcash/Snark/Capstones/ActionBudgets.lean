@@ -1279,24 +1279,23 @@ theorem orchard_adaptiveActionStatementSurface_measure_le_for
 
 /-! ## Certified adaptive-statement reduction work -/
 
-/-- At every consensus-valid Action bundle size, the complete cached relation-finder and
-witness-extraction reduction trace costs at most `2^123` Vesta group operations.  This is a
-structural consequence of the captured Action shape; it is not a caller-supplied work premise. -/
+/-- At every consensus-valid Action bundle size, the cached relation-finder and witness-extraction
+group-operation program costs at most `2^123`.  Equality/list traversal and direct-coordinate work
+are separate resources; the group-law bound is a structural consequence of the captured shape. -/
 theorem adaptiveStatementReductionGroupWork_at_consensus
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs) :
     adaptiveStatementReductionGroupWork (actionProofParamsFor numProofs) ≤ 2 ^ 123 := by
   rw [adaptiveStatementReductionGroupWork_eq]
-  simp only [adaptiveStatementBasisWidth, adaptiveStatementProvenanceComparisons,
-    AdaptiveActionStatementShape]
+  simp only [adaptiveStatementBasisWidth, AdaptiveActionStatementShape]
   rw [actionShapeFor_eq_fixtureShape]
   simp only [assembleGroupOpsBudget, queryBudget, Zcash.Snark.Fixture.shape]
   have hn' : numProofs ≤ 2 ^ 16 - 1 := by
     simpa only [orchardConsensusMaxProofs] using hn
   calc
-    _ = 28880 + 2101 * numProofs + 27 * (50 * numProofs + 46) ^ 2 := by
+    _ = 30830 + 2050 * numProofs + 27 * (50 * numProofs + 46) ^ 2 := by
       ring
     _ ≤
-        28880 + 2101 * (2 ^ 16 - 1) + 27 * (50 * (2 ^ 16 - 1) + 46) ^ 2 := by
+        30830 + 2050 * (2 ^ 16 - 1) + 27 * (50 * (2 ^ 16 - 1) + 46) ^ 2 := by
       gcongr
     _ ≤ 2 ^ 123 := by norm_num
 
