@@ -93,7 +93,8 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 
 Axioms bound what the *kernel* was asked to believe; they say nothing about what compiled code runs,
 and the fixtures' faithfulness certificates are `native_decide` proofs that run it. Both commands
-therefore also bound the compiled surface: outside the Lean toolchain and the pinned mathlib stack,
+therefore also bound the compiled surface: outside the ambient roots
+(`Zcash.Meta.ambientPackageRoots`, the Lean toolchain and the pinned dependency stack),
 nothing may substitute a compiled body (`@[implemented_by]`, `@[extern]`) and no `partial`
 declaration may appear in what a `native_decide` certificate evaluated. There is no disclosure list
 for the first — a substitution in a declaration this repository owns is rejected outright, and the

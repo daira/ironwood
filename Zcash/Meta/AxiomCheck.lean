@@ -102,12 +102,13 @@ def compiledBodyOverride? (env : Environment) (decl : Name) : Option Name :=
 with the attribute responsible.
 
 There is deliberately no allowlist to sit alongside `ambientPackageRoots`, because the two would not
-be the same kind of thing. `ambientPackageRoots` is trust inherited by using Lean at all — no commit
-in this repository can add to it, since an attribute cannot be attached to an imported declaration —
-whereas an admitted override would be trust this repository chose to add, which is exactly what the
-prohibition is about. A substitution in a declaration this repository owns is therefore rejected
-outright rather than admitted with a disclosure, and `Zcash.Arithmetic.FastMsm` records the
-convention that the proven-equality `@[csimp]` is used instead.
+be the same kind of thing. `ambientPackageRoots` is trust inherited from the toolchain and the
+pinned dependency stack — no commit here can add to it, since an attribute cannot be attached to an
+imported declaration — whereas an admitted override would be trust this repository chose to add,
+which is exactly what the prohibition is about. A substitution in a declaration this repository owns
+is therefore rejected outright rather than admitted with a disclosure, and
+`Zcash.Arithmetic.FastMsm` records the convention that the proven-equality `@[csimp]` is used
+instead.
 
 Imported declarations are read off the two attribute extensions' per-module entry arrays — the same
 arrays `ParametricAttribute.getParam?`, and hence the compiler, reads, so an override the compiler

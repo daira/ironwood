@@ -37,12 +37,12 @@ assert_axioms Zcash.Meta.Tests.CompiledOverride.cleanTheorem
 
 /-! ## An ambient-package target
 
-The disclosure sweep exempts the toolchain's own overrides — `Nat.add` is `@[extern]`, as are most
-of the arithmetic and container primitives whose compiled code every `native_decide` runs
-regardless. Censusing one *directly* is a different claim, though: there the substitution is the
-entry's own subject rather than background compiler trust, and `assert_computable`'s "genuinely
-computed" would be asserted of a body that never runs. The per-declaration check therefore applies
-to any target. -/
+The disclosure sweep exempts the ambient roots — the toolchain and the pinned dependency stack, not
+the toolchain alone. `Nat.add` is `@[extern]`, as are most of the arithmetic and container
+primitives whose compiled code every `native_decide` runs regardless. Censusing one *directly* is a
+different claim, though: there the substitution is the entry's own subject rather than background
+compiler trust, and `assert_computable`'s "genuinely computed" would be asserted of a body that
+never runs. The per-declaration check therefore applies to any target. -/
 
 /-- error: Nat.add carries '@[extern]', so its compiled body is not the body the kernel reduces and Lean checks no relation between the two. Nothing this census verifies about the kernel term constrains what compiled code — a `native_decide` over it in particular — computes. -/
 #guard_msgs (whitespace := lax) in
