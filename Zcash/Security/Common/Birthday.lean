@@ -1,3 +1,8 @@
+import Mathlib.Algebra.Field.Defs
+import Mathlib.Data.Fintype.Card
+import Mathlib.Data.Fintype.Prod
+import Mathlib.Data.NNRat.Order
+import Mathlib.Data.Nat.Choose.Cast
 import Mathlib.Tactic.FieldSimp
 import Mathlib.Tactic.GCongr
 import Mathlib.Tactic.Linarith
