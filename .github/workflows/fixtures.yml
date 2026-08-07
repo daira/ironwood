@@ -55,6 +55,16 @@ jobs:
           persist-credentials: false
       # Regeneration is expensive (real k=11 Orchard proofs + verifier runs), so only run
       # it when a committed capture artifact or the pins change.
+      #
+      # Deliberately absent from the list: the captures' Lean-side import surface
+      # (`Zcash/Snark.lean`, `Zcash/Snark/Core/Vesta.lean`, the lakefile globs), which the
+      # cache and import restructuring moved. Regeneration cannot observe it — the
+      # `import Zcash.Snark` header and the data under it both come from the pinned Rust
+      # exporter, so a Lean-side move emits byte-identical output and the diff would be a
+      # guaranteed pass bought with a full k=11 proving run. The risk it does carry is that
+      # the emitted header stops resolving, and that is caught where the captures elaborate:
+      # `FixtureCheck`, in `lean.yml`. Anything that changes what the exporter emits must
+      # move the pinned script, which IS filtered.
       - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
         id: filter
         with:
