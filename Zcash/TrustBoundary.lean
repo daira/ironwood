@@ -91,6 +91,24 @@ Two commands from `Zcash.Meta.AxiomCheck`, per the breaks-as-computed-data disci
 * **Theorems** get `assert_axioms`, an upper bound at the standard tier
   (`propext` / `Classical.choice` / `Quot.sound`). Both commands reject `sorryAx`.
 
+Axioms bound what the *kernel* was asked to believe; they say nothing about what compiled code runs,
+and the fixtures' faithfulness certificates are `native_decide` proofs that run it. Both commands
+therefore also bound the compiled surface: outside the ambient roots
+(`Zcash.Meta.ambientPackageRoots`, the Lean toolchain and the pinned dependency stack),
+nothing may substitute a compiled body (`@[implemented_by]`, `@[extern]`) and no `partial`
+declaration may appear in what a `native_decide` certificate evaluated. There is no disclosure list
+for the first — a substitution in a declaration this repository owns is rejected outright, and the
+proven-equality `@[csimp]` is used instead (`Zcash.Arithmetic.FastMsm`). The ambient side of that
+boundary is the compiler trust every `native_decide` carries, including the `@[extern]` `Task.spawn`
+/ `Task.get` that `List.parMap` reaches, discussed under `@[csimp]` below.
+
+That bound reaches as far as the census entries do, which is not the same as every module built. The
+compiled-body sweep is stated over an entry's whole import closure rather than its dependency cone,
+so one entry covers far more than it depends on — but it still runs *from* entries, and a module that
+neither holds one nor is imported by one is outside every closure the sweep is stated over.
+`Zcash.Circuits.Tests` (the `CircuitCheck` target) is where that currently bites: its `#eval` VK and
+layout comparisons run compiled code, and no census entry reaches them.
+
 Both commands are built on `Lean.collectAxioms`, which walks a declaration's transitive
 *dependencies*. Coverage therefore flows downwards only: a declaration that nothing censused
 depends on is checked by nothing, however prominent it is. Deliverable endpoints are exactly the
