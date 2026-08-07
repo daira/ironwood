@@ -93,8 +93,8 @@ new uses of `@[csimp]`. Despite the restrictions that this development puts on u
 `@[csimp]` (checked in CI), it pulls in a
 [large trust surface](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md#appendix-a-extern-vs-implemented_by-vs-csimp),
 which is not worth the potential performance improvement. The equivalence proof it
-requires only a limited class of mistakes; it does not address this expansion of the
-trusted base.
+requires prevents only a limited class of mistakes; it does not address this expansion
+of the trusted base.
 
 ## 3. `noncomputable` — props for specs, defs for reductions
 
@@ -171,11 +171,9 @@ For every touched docstring, module doc, book sentence, and the PR body:
   you can't. Use this citation format:
   `(Author(s), linked title[, section/theorem][, venue year])`.
   For example:
-
   ```
   (Jaeger–Tessaro, <a href="https://eprint.iacr.org/2020/1213">Expected-Time Cryptography: Generic Techniques and Applications to Concrete Soundness</a>, Lemma 3)
   ```
-
   Link to full text if at all possible. Include the venue and year only if it is
   not an eprint and the version referenced is the one we want readers to look at;
   don't link to one version and then give the venue and year for another
