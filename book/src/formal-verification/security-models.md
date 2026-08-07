@@ -8,10 +8,10 @@ adversary models the theorems are stated in, and where hardness judgements actua
 Every argument has the same shape, the development-wide
 [*breaks as computed data*](../formal-verification.md#breaks-as-computed-data) convention:
 
-> A security property, if violated, **exhibits** a concrete break of an underlying
-> primitive —for example a discrete-log relation, a hash collision, or a
-> commitment-opening collision— computed as data. Hardness is assumed only at the
-> computational layer, against the exhibited break.
+> The security arguments are reduction-style: a theorem shows that a violation of a
+> protocol property *exhibits* a concrete break of an underlying primitive — for example
+> a discrete-log relation, a hash collision, or a commitment-opening collision. Hardness
+> assumptions are consumed only at the computational layer, against the exhibited break.
 
 So each definition sits on a three-layer stack:
 
