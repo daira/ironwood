@@ -9,7 +9,7 @@ protocol **security properties** under `Zcash/Security/`. It covers:
   exhibited break of a cryptographic primitive in a specified adversary model.
 
 Every argument here follows the *breaks as computed data* convention and the three-layer
-stack described in [Security Models](security-definitions.md).
+stack described in [Security Models](security-models.md).
 
 ## One connected picture
 
@@ -142,7 +142,7 @@ mark reductions (or intended reductions) stated for algebraic adversaries: both 
 source and the target of such an edge are interpreted as games against online-AGM
 adversaries, so the model scopes the whole reduction rather than being one more
 assumption it rests on — see
-[Security Models](security-definitions.md#the-algebraic-adversary-restriction). The
+[Security Models](security-models.md#the-algebraic-adversary-restriction). The
 random-oracle node remains a terminal because some error terms genuinely bottom out
 there: they are counting arguments over the oracle table, with no computational
 assumption. The games are the top-level capstones. The ledger model requires the adversary to
@@ -157,8 +157,6 @@ remaining semantic bridge: the Clean/Ironwood circuit-correctness conditions
 (`TopLevelCircuitCorrectness`) — named component conditions rather than a proved
 implication. Discharging them is the subject of the circuit soundness proof.
 
-## The definitions
-
 <style>
 /* "One connected picture" links: labels keep their ordinary colour at rest
    (blue is reserved for the status coding); hover underlines. */
@@ -172,71 +170,6 @@ implication. Discharging them is the subject of the circuit soundness proof.
   text-decoration-thickness: 0.12em;
   text-underline-offset: 0.12em;
 }
-.iw-glossary { margin: 1.3rem 0; display: grid; gap: 26px; }
-.iw-glossary section { display: grid; gap: 9px; }
-.iw-glossary .grp {
-  font-size: .92rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .06em; opacity: .78; margin: 0;
-}
-.iw-glossary .g {
-  border: 1px solid var(--table-border-color, rgba(128,140,170,.28));
-  border-left: 3px solid var(--links, #0e8fa3);
-  border-radius: 8px; padding: 9px 13px;
-  background: var(--quote-bg, rgba(128,140,170,.05));
-}
-.iw-glossary .g-head {
-  display: flex; justify-content: space-between; align-items: baseline;
-  gap: 6px 16px; flex-wrap: wrap;
-}
-.iw-glossary .term { font-weight: 650; }
-.iw-glossary .term code { font-weight: 650; }
-.iw-glossary .anchor {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: .78em; opacity: .6; white-space: nowrap;
-}
-.iw-glossary .def { margin-top: 3px; line-height: 1.5; opacity: .9; }
 </style>
 
-<div class="iw-glossary">
-
-<section>
-<div class="grp">Binding-signature balance — value preservation</div>
-<div class="g"><div class="g-head"><span class="term">balance</span><span class="anchor">Security.BindingSignature.Balance</span></div><div class="def">No transaction creates or destroys value (spec §4.13 Sapling / §4.14 Orchard). Value commitments are <code>cv v rcv = v • V + rcv • R</code>; a bundle's binding verification key collects to <code>bvk = A • V + B • R</code> with <code>A</code> the net value imbalance. The property is <em>not</em> "no discrete-log relation between <code>V</code> and <code>R</code> exists" — one always does in a prime-order group — but the reduction below.</div></div>
-<div class="g"><div class="g-head"><span class="term">NontrivialRelation</span><span class="anchor">BindingSignature.NontrivialRelation · .ofImbalance</span></div><div class="def">The break, as computed data: a nontrivial <code>F</code>-linear relation between the value base <code>Vbase</code> and randomness base <code>Rbase</code>. <code>ofImbalance</code> (and the bundle forms <code>ofBundleModImbalance</code>, <code>ofOrchardImbalance</code>, <code>ofSaplingImbalance</code>) computes one from a non-balancing verifying bundle, with no cryptographic hypothesis — equivalently the discrete log <code>dlog_Rbase Vbase</code> (<code>imbalance_yields_discrete_log</code>).</div></div>
-<div class="g"><div class="g-head"><span class="term">integer no-overflow lift</span><span class="anchor">intBalance_eq_zero_of_lt · orchard_natAbs_lt · sapling_natAbs_lt</span></div><div class="def">Lifts field balance (<code>A = 0</code> in <code>ZMod r</code>) to integer balance: with per-action 64-bit value ranges and a bounded action count, <code>|A| &lt; r</code>, so the residue being zero forces the integer to be zero. Discharged per pool from the value-type subranges.</div></div>
-<div class="g"><div class="g-head"><span class="term">reduces to DL</span><span class="anchor">Snark.Soundness.AGM.BindingSignature</span></div><div class="def">Turns the computed Orchard/Sapling relations into plain discrete-log solutions: <em>if you can unbalance, you can solve DL</em>. DLR and DL are tightly equivalent (Jaeger–Tessaro, <a href="https://eprint.iacr.org/2020/1213">2020/1213</a>, Lemma 3), so this assumes no more than DL hardness, given the independence of the hash-to-curve bases.</div></div>
-</section>
-
-<section>
-<div class="grp">Key binding — ZIP 2005 theorem (ROM)</div>
-<div class="g"><div class="g-head"><span class="term">key binding</span><span class="anchor">Security.KeyBinding.KB</span></div><div class="def">A verifying Recovery-Statement witness pins its key components — <code>ak</code> (up to y-sign), <code>nk</code>, and the <code>qk</code>/<code>sk</code> branch with its key — to <code>ivk</code>, unless a break is exhibited (<a href="https://zips.z.cash/zip-2005#thm-key-binding-rom">ZIP 2005 key-binding theorem</a>). Factors as <code>KB = KBOpening ∧ KBDerivation</code>: the <code>Commit^ivk</code> opening and the derivation constraints.</div></div>
-<div class="g"><div class="g-head"><span class="term">commit_scalar_pm</span><span class="anchor">KeyBinding.commit_scalar_pm · OpeningBreak</span></div><div class="def">Algebraic core: two openings of the same <code>Commitivk</code> value force their Pedersen scalars equal or negated. An <code>OpeningBreak</code> (two valid openings differing in the opening data) is the break structure the games layer produces.</div></div>
-<div class="g"><div class="g-head"><span class="term">reduces to an RO collision</span><span class="anchor">CollisionUpToSign.ofBreak · Birthday.birthday_closed_form</span></div><div class="def">The reduction computes a <code>±</code>-collision of the <code>rivk</code>-derivation random oracle at distinct derivation queries from a break (Layer B). Producing that collision within <code>q</code> queries is bounded by the birthday bound <code>ε_kb ≤ q(q-1)/|RIVK|</code>, which is <code>q(q-1)/r_ℙ</code> at the intended Pallas instantiation (Layer C).</div></div>
-</section>
-
-<section>
-<div class="grp">Ledger-model games — the abstract Action statement</div>
-<div class="g"><div class="g-head"><span class="term">Action statement satisfied</span><span class="anchor">Security.Ledger.ActionSatisfied</span></div><div class="def">The games-relevant conjuncts of an Orchard-shaped Action statement (spec §4.17.4) over abstract primitives: commitment integrity, Merkle-path validity, nullifier integrity, the key-binding condition, address integrity, value-commitment integrity. This is the interface the games consume, and the target the verifier-soundness proof is meant to deliver.</div></div>
-<div class="g"><div class="g-head"><span class="term">pinning lemmas</span><span class="anchor">ivk_pinned · nk_eq_or_break · nf_old_eq_or_break</span></div><div class="def">The deterministic steps of the Balance argument: an address <code>(g_d, pk_d)</code> determines <code>ivk</code> (needs only <code>g_d ≠ 0</code> and torsion-freeness), hence <code>nk</code> is determined up to an exhibited key-binding break, and spends of the same note tuple reveal the same nullifier up to a break.</div></div>
-<div class="g"><div class="g-head"><span class="term">NoteCommitBreak</span><span class="anchor">Ledger.NoteCommitBreak · noteCommitBreakOfNe</span></div><div class="def">A note-commitment opening collision, as data. <code>noteCommitBreakOfNe</code> computes one when an <code>extract</code>-equal commitment fails to pin the note tuple <code>(rcm, note)</code>. Prequantumly, note-commitment binding reduces to a Sinsemilla / discrete-log-relation break.</div></div>
-<div class="g"><div class="g-head"><span class="term">Merkle position binding</span><span class="anchor">Ledger.Merkle.collisionOfWrongLeaf</span></div><div class="def">Fixed-depth Merkle trees are position-binding up to a hash collision: a validating authentication path for a leaf that is <em>not</em> the committed one, against a defined tree, computes a <code>DefinedCollision</code> of one height’s compression — escaped (⊥) evaluations never count as collisions. The vector-commitment property the Balance and Spendability arguments require of the note-commitment tree. Prequantumly, the Sinsemilla compression’s collision resistance reduces to a discrete-log-relation break (SDLR) — the same terminal as note-commitment binding — so BLAKE2b collision resistance does not enter the pre-quantum Balance argument.</div></div>
-</section>
-
-<section>
-<div class="grp">Probabilistic capstones · Ledger/Capstone + Ledger/OrchardCapstone</div>
-<div class="g"><div class="g-head"><span class="term">Balance integrity</span><span class="anchor">Model.balanceIntegrityOrBreak · balanceIntegrityPerTxViolation</span></div><div class="def">The shielded pool is non-negative and the pools sum to the minted issuance. The deterministic <code>balanceIntegrityOrBreak</code> proves it up to a computed break; the probabilistic violation events mirror its conclusion (the transparent conjunct cannot fail on the valid sample space). The interval consequence <code>pool ∈ [0, issuanceTotal]</code> is weaker, and survives as the separate shielded-balance-cap capstones.</div></div>
-<div class="g"><div class="g-head"><span class="term">events as branch preimages</span><span class="anchor">Model.balanceSubsetBreakEvent · txBalanceBreakEvent</span></div><div class="def">An adversary is a <code>PMF</code> over valid annotated ledgers; each event is "the computed reduction lands in this branch on this sample", so no choice is needed to extract break data. Violation events are contained in unions of break events, and each break event's probability is a named ε hypothesis.</div></div>
-<div class="g"><div class="g-head"><span class="term">all-prefixes bounds, no factor of k</span><span class="anchor">Model.balanceIntegrity_measure_le · *Before / *UpTo</span></div><div class="def">One ε per shared break event bounds the violation at <em>every</em> prefix below a bound, where a naive union bound would pay <code>k · ε</code>. Prefix-indexed value events are named <code>*Before</code> and step-indexed Balance-subset events <code>*UpTo</code> (EWD 831 half-open ranges, exclusive bound as the parameter); the one step/prefix crossing is confined to <code>_succ</code>-marked lemmas.</div></div>
-<div class="g"><div class="g-head"><span class="term">the Orchard single-ε collapse</span><span class="anchor">Bridge.orchardRelationEvent · orchardBalanceIntegrity_measure_le</span></div><div class="def">At the Orchard-protocol bases, every Balance-subset arm's break computes a nontrivial discrete-log relation among the fixed Sinsemilla bases, so one <code>ε_sinsemilladlr</code> replaces the three per-arm ε's — and every prefix lands in the same relation event, so the all-prefixes bounds cost no factor of <code>k</code>. <code>ε_sinsemilladlr</code> reduces tightly to discrete-log hardness (Jaeger–Tessaro, <a href="https://eprint.iacr.org/2020/1213">2020/1213</a> Lemma 3, re-proved as <code>relation_prob_le_of_textbookDL</code>); the witness-level model abstracts away Halo 2 knowledge soundness, a separate, lossy reduction on the different Halo 2 bases. <code>ε_bindsig</code> names the bound on the conservation side; the extractor-plus-knowledge-error forms and the κ discharge below replace it with named bounds further down the reduction (<a href="https://github.com/zcash/ironwood/issues/107">#107</a> tracks the remaining glue).</div></div>
-<div class="g"><div class="g-head"><span class="term">the knowledge error κ, discharged</span><span class="anchor">RedDSA.kappaEvent_measure_le · Model.balanceConservation_extractFailArm_measure_le</span></div><div class="def">The binding signature is a signature of knowledge of <code>bsk</code>, the discrete log of <code>bvk</code> base $\mathcal{R}$; the conservation reduction's extraction-failure arm is bounded at $(q_H + 2)/|\mathbb{F}| + \varepsilon_{\mathrm{DL}}$ for any query-bounded algebraic ledger adversary — the straight-line AGM+ROM extraction of Fuchsbauer–Plouviez–Seurin (<a href="https://eprint.iacr.org/2019/877">2019/877</a>, Theorem 1), in the key-only setting — no signing oracle, because the signature extracted from is the adversary's own. Challenge queries carry the adversary's representations as labels the oracle never sees. The representation in effect at the output's query point — the run's first annotation there, or the announced output representation when the run never queried the point — pins the query's one bad challenge before the answer is drawn, and away from it the verification equation computes a relation over the presented basis. The extractor reads the key's $\mathcal{R}$-coefficient off that effective representation, and the reference-string heuristic carries the random-basis game to the deployed bases.</div></div>
-</section>
-
-<section>
-<div class="grp">Shared foundation · Zcash/Security/Common</div>
-<div class="g"><div class="g-head"><span class="term">collision vocabulary</span><span class="anchor">Security.RandomOracle.Collision · CollisionUpToSign</span></div><div class="def">Layer-A break events for the classical ROM: a <code>Collision</code> is two distinct queries with equal outputs; a <code>CollisionUpToSign</code> (<code>a =± b</code>) is the shape produced by arguments passing through the <code>Extract</code> coordinate extractor, whose fibres are <code>{P, −P}</code>. Key binding bottoms out here, as does the nullifier (Faerie-Gold) argument for the Recovery Statement; the deployed nullifier argument bottoms out in the Sinsemilla discrete-log relation instead.</div></div>
-<div class="g"><div class="g-head"><span class="term">birthday bound</span><span class="anchor">Security.Birthday.birthday_closed_form</span></div><div class="def">The Layer-C probability: the shifted <code>±</code>-collision event over <code>q</code> uniform oracle outputs has probability at most <code>q(q-1)/|𝔽|</code>, by union-bounding the per-pair fraction <code>2/|𝔽|</code>. Counted in the random-oracle model with no hardness assumption; proven as a probability statement over the uniform oracle table (#73).</div></div>
-</section>
-
-</div>
-
-New to the shorthand? See the [**Glossary**](glossary.md). &nbsp;·&nbsp; For the methodology, [**Security Models**](security-definitions.md). &nbsp;·&nbsp; For the verifier-soundness half, the [**Proof Map**](proof-map.md).
+New to the shorthand? See the [**Definitions**](definitions.md). &nbsp;·&nbsp; For the methodology, [**Security Models**](security-models.md). &nbsp;·&nbsp; For the verifier-soundness half, the [**Proof Map**](proof-map.md).

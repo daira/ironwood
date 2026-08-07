@@ -4,8 +4,8 @@ A directory-by-directory index of the Lean development under [`Zcash/`](https://
 what each subtree contains and where to start reading. It is the source-tree companion
 to the [proof map](proof-map.md) (which traces how the results connect), the
 [ledger security games](ledger-security-games.md) (which state the properties being proven),
-the [security models](security-definitions.md) page (which describes the methodology),
-and the [glossary](glossary.md) (which defines the coined terms).
+the [security models](security-models.md) page (which describes the methodology),
+and the [definitions](definitions.md) page (which defines the coined terms).
 
 The development has four tiers. **`Zcash/Arithmetic/`** holds the objects the other three are
 stated over — the scalar field, the verifier group and its reference string, the fingerprint

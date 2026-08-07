@@ -28,7 +28,7 @@ So each definition sits on a three-layer stack:
 ## What a reduction in these models says
 
 The capstones are reductions in idealized models: the challenge hash is modelled as
-a random oracle, and on the [generator-RO](glossary.md#generator-ro) endpoints the
+a random oracle, and on the [generator-RO](definitions.md#generator-ro) endpoints the
 adversary is restricted to be [algebraic](#the-algebraic-adversary-restriction).
 A theorem of this kind says: an *algebraic adversary in the random-oracle model* that
 wins the protocol game, under the stated conditions, would need to be able to compute
@@ -99,7 +99,7 @@ and the challenge is hidden perfectly rather than computationally. What the redu
 gains is private knowledge of the pairs. A returned relation among the bases then becomes
 a linear equation in $z$, solvable unless the relation's coefficients land on the single
 $1/|\mathbb{F}|$ hyperplane where the $y$ component cancels — the form of reduction the
-glossary calls [programmed-basis](glossary.md#programmed-basis). The argument is
+definitions page calls [programmed-basis](definitions.md#programmed-basis). The argument is
 Jaeger–Tessaro's proof of their Lemma 3, presented there as a careful use of
 self-reducibility techniques.
 
@@ -256,4 +256,4 @@ These models and their limitations are part of every statement in the developmen
 capstone's bound is no stronger than the adversary class it quantifies over. For the
 property statements the models scope, see the
 [**Ledger Security Games**](ledger-security-games.md); for the verifier-soundness half,
-the [**Proof Map**](proof-map.md); for the coined terms, the [**Glossary**](glossary.md).
+the [**Proof Map**](proof-map.md); for the coined terms, the [**Definitions**](definitions.md).

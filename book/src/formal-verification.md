@@ -152,4 +152,4 @@ What the fixture captures actually *check* is the statement of record in each fa
 `Zcash/Snark/Fixtures/PROVENANCE.md`.
 
 Coined terms and shorthand for the development, including the two conventions above, are
-collected in the [glossary](formal-verification/glossary.md).
+collected on the [Definitions](formal-verification/definitions.md) page.

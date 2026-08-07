@@ -30,7 +30,7 @@ with `fixedRepresented` and `permutationCommonRepresented` — is part of the ad
 AGM basis is heuristically instantiated by fixed hash-to-curve generators (the book's
 Security Models page); the Lean verifier is checked to correspond to deployed Halo 2 by the
 fingerprint fixtures; and the bridge from extracted circuit witnesses to the abstract ledger
-relation is tracked separately (the glossary's high-level-relation entry).
+relation is tracked separately (the definitions page's high-level-relation entry).
 -/
 
 namespace Zcash.Snark

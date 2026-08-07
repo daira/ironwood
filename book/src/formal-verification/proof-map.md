@@ -28,7 +28,7 @@ One connected picture of the verifier-soundness proof.
   </iframe>
 </div>
 
-Watch the [**Proof Journey**](proof-journey.md). &nbsp;·&nbsp; New to the terms? See the [**Glossary**](glossary.md).
+Watch the [**Proof Journey**](proof-journey.md). &nbsp;·&nbsp; New to the terms? See the [**Definitions**](definitions.md).
 
 <script>
 // Theme sync: forward the book's active theme (mdBook toggle) to the embedded map iframe.
