@@ -173,12 +173,11 @@ turning the fingerprint match into
 build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's constraint-system fields equal
 to the ones derived end to end from the ported `configure`. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
-schedule and static-check modules, the exact straight-line false-statement endpoint and the
-adaptive-statement knowledge-failure endpoints with conditionally staged-certified `2^123` and `2^125`
-adversary-work instantiations, data-coupled programmed-basis and verifier-commitment accounting,
-explicit adversary and complete-program staging-fidelity obligations, mechanically composed
-reduction work, a direct-decode bound derived from a required family invariant, and a separate
-oracle-query budget, and
+schedule and static-check modules, the adaptive-statement knowledge-failure endpoints — its `2^123`
+work-factor instantiation and the conditionally staged-certified `2^123` and `2^125` adversary-work
+ones — data-coupled programmed-basis and verifier-commitment accounting, explicit adversary and
+complete-program staging-fidelity obligations, mechanically composed reduction work, a direct-decode
+bound derived from a required family invariant, and a separate oracle-query budget, and
 `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
 captured key's own scalar data, so the staged IPA trace carries eleven live rounds.
 
@@ -329,11 +328,14 @@ Six subtrees carry the heavier machinery:
 
 ### `Capstones/` — the advertised endpoints
 
-Where the deployed Action circuit's own statements are stated. `ActionEvents` says which runs the
-endpoints are about, `ActionChecks` carries the captured key's scalars and static checks,
-`ActionBudgets` discharges the semantic surfaces, and `Action` states the twelve endpoints — the
-ordinary- and knowledge-soundness bounds for every consensus-valid bundle size, in compositional
-error-formula and resource-accounted finite-security forms.
+Where the deployed Action circuit's own statements are stated. `ActionEvents` carries the shape
+identification the rest of the chain is stated over, `ActionChecks` carries the captured key's
+scalars and static checks, `ActionBudgets` discharges the semantic surfaces, and `Action` states
+the endpoints — knowledge-soundness bounds for every consensus-valid bundle size, in
+compositional error-formula form, in resource-accounted finite-security form at the `2^123` work
+factor, and in the staged-certified forms carrying their group-work accounting at `2^123` and
+`2^125` adversary work. Knowledge soundness is the only property advertised: it implies the
+plain-soundness statement, so that is not stated separately.
 
 Endpoints about the *verifier's algebra* rather than the circuit statement live with the layer that
 proves them: the captured straight-line knowledge errors in
