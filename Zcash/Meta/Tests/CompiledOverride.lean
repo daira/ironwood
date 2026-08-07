@@ -78,7 +78,7 @@ Pinning the doctored data is only half the bypass: the entry that actually laund
 reaches is a compiled body, which no axiom footprint records — so it is caught by the closure-wide
 disclosure check, naming the declaration responsible. -/
 
-/-- error: Zcash.Meta.Tests.CompiledOverride.fingerprintMatch cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. Use the proven-equality `@[csimp]` instead, or — if the substitution really belongs in the trusted base — disclose it in `Zcash.TrustBoundary` and add it to `Zcash.Meta.allowedCompiledBodyOverrides`. -/
+/-- error: Zcash.Meta.Tests.CompiledOverride.fingerprintMatch cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. If you must, use `@[csimp]` instead, but be aware that `@[csimp]` still substantially increases the trust surface. -/
 #guard_msgs (whitespace := lax) in
 assert_axioms Zcash.Meta.Tests.CompiledOverride.fingerprintMatch +native(
   Zcash.Meta.Tests.CompiledOverride.fingerprintMatch)
@@ -88,7 +88,7 @@ artifact's trusted base, and an unchecked compiled body inside it is undisclosed
 wherever it sits; scoping the check to each entry's dependency cone would let the same commit that
 adds the override keep every unrelated entry green. -/
 
-/-- error: Zcash.Meta.Tests.CompiledOverride.honestCaptured cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. Use the proven-equality `@[csimp]` instead, or — if the substitution really belongs in the trusted base — disclose it in `Zcash.TrustBoundary` and add it to `Zcash.Meta.allowedCompiledBodyOverrides`. -/
+/-- error: Zcash.Meta.Tests.CompiledOverride.honestCaptured cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. If you must, use `@[csimp]` instead, but be aware that `@[csimp]` still substantially increases the trust surface. -/
 #guard_msgs (whitespace := lax) in
 assert_computable Zcash.Meta.Tests.CompiledOverride.honestCaptured
 
@@ -103,7 +103,7 @@ nothing at all is known. Both checks report it exactly as they report `@[impleme
 #guard_msgs (whitespace := lax) in
 assert_computable Zcash.Meta.Tests.CompiledOverride.externData
 
-/-- error: Zcash.Meta.Tests.CompiledOverride.cleanTheorem cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]), Zcash.Meta.Tests.CompiledOverride.externData (@[extern]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. Use the proven-equality `@[csimp]` instead, or — if the substitution really belongs in the trusted base — disclose it in `Zcash.TrustBoundary` and add it to `Zcash.Meta.allowedCompiledBodyOverrides`. -/
+/-- error: Zcash.Meta.Tests.CompiledOverride.cleanTheorem cannot be censused: Zcash.Meta.Tests.CompiledOverride.capturedData (@[implemented_by]), Zcash.Meta.Tests.CompiledOverride.externData (@[extern]) substitute(s) a compiled body Lean never checks against the kernel body, so the value the compiler runs is unconstrained by anything proved about it. If you must, use `@[csimp]` instead, but be aware that `@[csimp]` still substantially increases the trust surface. -/
 #guard_msgs (whitespace := lax) in
 assert_axioms Zcash.Meta.Tests.CompiledOverride.cleanTheorem
 

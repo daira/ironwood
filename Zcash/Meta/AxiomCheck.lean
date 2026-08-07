@@ -98,15 +98,16 @@ def compiledBodyOverride? (env : Environment) (decl : Name) : Option Name :=
   else if Lean.isExtern env decl then some `extern
   else none
 
-/-- Compiled-body overrides the census has examined and admitted, each of which must be justified by
-a disclosure in `Zcash.TrustBoundary` saying why the substituted body is trusted. Empty: the
-repository has none, and `Zcash.Arithmetic.FastMsm` records the convention that the proven-equality
-`@[csimp]` is used instead. An entry here is a deliberate widening of the trusted base, so it should
-be as hard to add unnoticed as any other census line. -/
-def allowedCompiledBodyOverrides : Array Name := #[]
+/-- Every declaration outside `ambientPackageRoots` that carries a compiled-body override, paired
+with the attribute responsible.
 
-/-- Every declaration outside `ambientPackageRoots` that carries a compiled-body override and is not
-on the allowlist, paired with the attribute responsible.
+There is deliberately no allowlist to sit alongside `ambientPackageRoots`, because the two would not
+be the same kind of thing. `ambientPackageRoots` is trust inherited by using Lean at all — no commit
+in this repository can add to it, since an attribute cannot be attached to an imported declaration —
+whereas an admitted override would be trust this repository chose to add, which is exactly what the
+prohibition is about. A substitution in a declaration this repository owns is therefore rejected
+outright rather than admitted with a disclosure, and `Zcash.Arithmetic.FastMsm` records the
+convention that the proven-equality `@[csimp]` is used instead.
 
 Imported declarations are read off the two attribute extensions' per-module entry arrays — the same
 arrays `ParametricAttribute.getParam?`, and hence the compiler, reads, so an override the compiler
@@ -134,8 +135,7 @@ def undisclosedCompiledBodyOverrides (env : Environment) : Array (Name × Name) 
   -- by `#guard_msgs` in the regression suite — would otherwise have no fixed order. The attribute
   -- breaks ties, since a declaration can in principle carry both and sorting on the name alone
   -- would leave those two rows unordered.
-  return (found.filter fun (d, _) => !allowedCompiledBodyOverrides.contains d).qsort
-    (fun a b => Name.lt a.1 b.1 || (a.1 == b.1 && Name.lt a.2 b.2))
+  return found.qsort (fun a b => Name.lt a.1 b.1 || (a.1 == b.1 && Name.lt a.2 b.2))
 
 /-- Render `(declaration, attribute)` pairs as the text of the offending attributes. -/
 def overridesText (overrides : Array (Name × Name)) : String :=
@@ -146,7 +146,6 @@ ambient-root target, because here the substitution is not background compiler tr
 own subject: everything the census goes on to verify is about the kernel term, which for such a
 declaration is not what runs. -/
 def checkNoCompiledBodyOverride (n : Ident) (name : Name) : CommandElabM Unit := do
-  if allowedCompiledBodyOverrides.contains name then return
   if let some attr := compiledBodyOverride? (← getEnv) name then
     throwError "{n} carries '@[{attr}]', so its compiled body is not the body the kernel reduces \
       and Lean checks no relation between the two. Nothing this census verifies about the kernel \
@@ -161,9 +160,8 @@ def checkCompiledBodyDisclosure (n : Ident) : CommandElabM Unit := do
   unless overrides.isEmpty do
     throwError "{n} cannot be censused: {overridesText overrides} \
       substitute(s) a compiled body Lean never checks against the kernel body, so the value the \
-      compiler runs is unconstrained by anything proved about it. Use the proven-equality \
-      `@[csimp]` instead, or — if the substitution really belongs in the trusted base — disclose it \
-      in `Zcash.TrustBoundary` and add it to `Zcash.Meta.allowedCompiledBodyOverrides`."
+      compiler runs is unconstrained by anything proved about it. If you must, use `@[csimp]` \
+      instead, but be aware that `@[csimp]` still substantially increases the trust surface."
 
 /-- The declaration an alleged `native_decide` axiom names as its owner. The compiler-generated
 name has an `_native.native_decide` marker after the owning declaration; only the tail after that
@@ -302,7 +300,9 @@ walking `e` walks the data, not the proof.
 `@[csimp]` lemma replaces a constant wholesale in compiled code, so where `e` says `evalNat` the
 compiled certificate ran `evalNatFast`. The walk therefore follows those replacements. Without that
 step a `partial` reachable only through a replacement target would be invisible here, and this
-repository redirects the fixtures' hot path exactly that way (`Zcash.Arithmetic.FastMsm`).
+repository redirects the fixtures' hot path exactly that way (`Zcash.Arithmetic.FastMsm`). That step
+is owed entirely to `@[csimp]` being permitted: prohibiting it retires the replacement map, and the
+walk collapses back to following the term the axiom states.
 
 Plain `opaque` is deliberately not reported. Its compiled body *is* its declared body, so it cannot
 make a certificate disagree with the source; and the sealed-subtype barriers this repository uses
