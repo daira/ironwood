@@ -30,7 +30,7 @@ Check all six failure modes; each has occurred in a merged or nearly-merged PR.
    entries write the full path.
 4. **Endpoint names fit the census regex.** `scripts/check_endpoint_census.sh` only sees the
    listed families and suffixes. A new endpoint is renamed to fit the pattern — the regex is
-   not widened ad hoc.
+   not widened ad hoc. Refine the regex only when genuinely needed.
 5. **Rebases drop entries silently.** After any rebase or merge, read
    `git diff main...HEAD -- Zcash/TrustBoundary.lean` and account for every *deleted* line by
    name. A consolidation that loses another PR's pins passes CI and loses the guarantee.
@@ -64,8 +64,15 @@ justification in the PR. Native *execution* (evaluation-based checks in the lane
 is an explicit documented opt-in — never ambient.
 
 The same tier logic bans bespoke axioms and `implemented_by` outright: when the fact is proven
-upstream (CompElliptic, Mathlib), remove the axiom rather than pin it. `@[csimp]` with a
-kernel-checked equality is the permitted counterpart, and every `@[csimp]` is censused.
+upstream (CompElliptic, Mathlib), remove the axiom rather than pin it.
+
+There should be no uses of `@[extern]`, `@[implemented_by]`, or `unsafe`, and no
+new uses of `@[csimp]`. Despite the restrictions that this development puts on use of
+`@[csimp]` (checked in CI), it pulls in a
+[large trust surface](https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md#appendix-a-extern-vs-implemented_by-vs-csimp),
+which is not worth the potential performance improvement. The equivalence proof it
+requires only a limited class of mistakes; it does not address this expansion of the
+trusted base.
 
 ## 3. `noncomputable` — props for specs, defs for reductions
 
@@ -83,7 +90,8 @@ For each `noncomputable` the diff adds, and for each new reduction:
 - Don't forget computed witnesses to `∃` or `Nonempty`: a reduction that computes an opening
   and then existentially closes it cannot be consumed as data by the next reduction, and
   retrofitting extraction-friendly statements is expensive. If a downstream layer consumes the
-  witness, return the data.
+  witness, return the data. `Nonempty` is basically equivalent to `∃` in introducing
+  non-extractability.
 - Each surviving exception is documented in the book, and un-marking one later obliges the
   census-tier upgrade and the book-paragraph deletion in the same PR.
 
@@ -129,7 +137,13 @@ For every touched docstring, module doc, book sentence, and the PR body:
 - No dev-history narration, no stale identifiers, no references to closed issues (open-issue
   references for tracked gaps stay — removing them is blocking). Every theorem, including
   trivial private lemmas, carries a doc comment. Constants cite the spec section and the
-  upstream Rust identifier; papers get author, year, and link.
+  upstream Rust identifier.
+- Cite papers that claims rely on, or that provide important context. Check that
+  it's the right paper and covers what is claimed. Ask the user to download it if
+  you can't. Use this citation format:
+  `(Author(s), linked title[, section/theorem][, venue year])`.
+  For example:
+  
 
 ## 6. Diff hygiene — the diff contains only its own changes
 
