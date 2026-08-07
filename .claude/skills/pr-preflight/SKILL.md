@@ -157,9 +157,15 @@ For every touched docstring, module doc, book sentence, and the PR body:
 - Proof-map edges: node colour carries done/not-done; an edge label states what the reduction
   *uses*. Don't draw composition that isn't formalized.
 - No dev-history narration, no stale identifiers, no references to closed issues (open-issue
-  references for tracked gaps stay — removing them is blocking). Every theorem, including
-  trivial private lemmas, carries a doc comment. Constants cite the spec section and the
-  upstream Rust identifier.
+  references for tracked gaps stay — removing them is blocking). Constants cite the spec section
+  and the upstream Rust identifier.
+- **Every new theorem carries a description** — no exceptions for trivial or private lemmas, and
+  none for a name that looks self-explanatory. The doc comment says what the statement means and
+  why the declaration exists (what it is for downstream, what it assumes, where its hypotheses
+  come from); it does not transliterate the name or restate the type in words. A statement whose
+  purpose cannot be written down in a sentence is usually the wrong statement. Register and
+  structure are owned by the `proof-comment-style` skill; the requirement itself is audited here,
+  because an undocumented lemma is where an unexamined claim survives review.
 - Cite papers that claims rely on, or that provide important context. Check that
   it's the right paper and covers what is claimed. Ask the user to download it if
   you can't. Use this citation format:
@@ -216,8 +222,21 @@ For every touched docstring, module doc, book sentence, and the PR body:
   or theorem whose body is a partial application (Lean silently appends hypotheses otherwise).
 - Named structure fields over tuples and numeric accessors; no field defaults (an inherited
   default has produced a real modeling bug).
-- No umbrella imports (CI-gated), no dead imports; generic lemmas live beside their
-  definitions, not where first used; no imports from `Soundness/` into lower layers.
+- No Mathlib glob imports — import surgically. Neither `import Mathlib` nor `import
+  Mathlib.Tactic` may appear (both CI-gated by `scripts/check_no_umbrella_imports.sh`); name the
+  specific modules a file actually uses. The cost is build-wide rather than local: the full
+  umbrella peaks around 6.5 GB RSS per Lean process, and even `Mathlib.Tactic` costs roughly
+  +1.6 s of import-load and +1.3 GB RSS per process over the narrow modules. Nothing fails when
+  one creeps back in — builds just quietly get slow again, which is why it is gated rather than
+  left to review.
+- When narrowing an import, expect breakage beyond name resolution. The umbrella supplies
+  definitions *and* simp/`norm_num`/`deriving` extensions transitively, so narrowing can break a
+  file the change never touched: a lost `norm_num` parity extension turned a passing proof into
+  a `sorryAx` that surfaced as `assert_no_sorry` failures several modules away. Re-run the
+  default-target build after any import trim and read failures for a dropped extension, not just
+  a dropped name.
+- No dead imports; generic lemmas live beside their definitions, not where first used; no
+  imports from `Soundness/` into lower layers.
 
 ## 8. Fixtures and process
 
