@@ -60,6 +60,17 @@ theorem queryLayoutBounded :
   fixedQueryBounded_of_interimFailures_eq_nil
     actionCircuit queryCoverageFailures_eq_nil
 
+/-- The Action circuit's dense fixed-column count.  `actionCircuit` is sealed behind an opaque
+reduction barrier, so no kernel route reaches this number: `decide` is stuck on the sealed
+constant and stays stuck after `Internal.actionCircuit_eq_impl` opens it.  No configure law
+bounds the derived fixed-column list either, so — as for the sibling counts in this file and in
+`ActionPermutationDomainCompute` — the count is anchored by evaluation.  Its consumer is the
+`fixedRepresentations_length_le` obligation on the adaptive-statement family, whose interface cap
+this count sits far below. -/
+theorem fixedColumnCount_eq :
+    actionCircuit.fixedColumnCount = 29 := by
+  native_decide
+
 /--
 **INTERIM:** the final dense Action fixed rows realize every table, region-fixed,
 and packed-selector entry consumed by Clean constraint semantics.

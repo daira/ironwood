@@ -180,5 +180,5 @@ non-interactive check. Identifying the deployed hash with that oracle is externa
 above the byte-level boundary noted above: the fixtures check challenge schedules against typed
 captures, not against transcript bytes.
 
-Coined terms and shorthand for the development, including the two conventions above, are
+Coined terms and shorthand for the development are
 collected on the [Definitions](formal-verification/definitions.md) page.

@@ -20,8 +20,13 @@ cd "$(dirname "$0")/.."
 
 # Every "csimp" line in the library (the census file itself included: a csimp
 # declared there is enforced like any other, and its comments follow the same
-# quoting rule).
-matches=$(grep -rn "csimp" Zcash/ --include="*.lean" || true)
+# quoting rule). `Zcash/Meta/Tests/` is excluded, as in
+# `scripts/check_endpoint_census.sh`: it holds forged adversarial declarations that
+# exercise the rejection paths of the census macros themselves, including a csimp
+# lemma resting on a bespoke axiom. Censusing those would assert the very axiom set
+# the fixture exists to be rejected for.
+matches=$(find Zcash -name '*.lean' -not -path 'Zcash/Meta/Tests/*' -print0 \
+  | xargs -0 grep -n "csimp" /dev/null || true)
 
 # Census entries that actually run, by final name component. Any census file counts, not just
 # Zcash/TrustBoundary.lean: entries are spread across the per-fixture boundaries and the test-only

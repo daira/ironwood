@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Check that every Lean module is built by `lake build` (the lakefile's defaultTargets).
+# Check that CI builds the lakefile's defaultTargets, and that every Lean module is
+# reachable from them. Two checks, closing the two ways build coverage silently shrinks:
+# a target that CI and the lakefile disagree about, and a module no target reaches.
 #
 # `lake build` compiles exactly the modules reachable from the default targets: each
 # `lean_lib`'s glob roots plus everything they transitively import. A module outside that
@@ -24,6 +26,41 @@
 # module is still checked. Run from the repository root; exits non-zero on violation.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+# ── CI's build surface must equal the lakefile's ────────────────────────────
+# CI names its targets explicitly rather than running a plain `lake build`, so the
+# build surface is spelled twice: `defaultTargets` in `lakefile.toml`, and `build-args`
+# in the Lean workflow. Pinning the workflow list closes one drift direction — the
+# lakefile shrinking under CI — but leaves the mirror one open: a target added to
+# `defaultTargets` that never lands in the workflow is never built by CI, and the
+# coverage check below would still pass, since it reads the lakefile alone. Compare
+# the two as sets so neither spelling can move without the other.
+workflow='.github/workflows/lean.yml'
+
+lake_targets=$(sed -n 's/^defaultTargets[[:space:]]*=[[:space:]]*//p' lakefile.toml |
+  grep -o '"[^"]*"' | tr -d '"' | sort) || true
+# Everything in `build-args` that is not a flag is a target.
+ci_targets=$(sed -n 's/^[[:space:]]*build-args:[[:space:]]*"\(.*\)".*/\1/p' "$workflow" |
+  tr ' ' '\n' | grep -v '^-' | grep -v '^$' | sort) || true
+
+if [ -z "$lake_targets" ]; then
+  echo "VIOLATION: no defaultTargets found in lakefile.toml" >&2
+  exit 1
+fi
+if [ -z "$ci_targets" ]; then
+  echo "VIOLATION: no build-args target list found in $workflow" >&2
+  exit 1
+fi
+if [ "$lake_targets" != "$ci_targets" ]; then
+  echo "VIOLATION: CI's build surface and lakefile.toml's defaultTargets disagree." >&2
+  echo "  only in lakefile.toml: $(comm -23 <(printf '%s\n' "$lake_targets") \
+    <(printf '%s\n' "$ci_targets") | tr '\n' ' ')" >&2
+  echo "  only in $workflow: $(comm -13 <(printf '%s\n' "$lake_targets") \
+    <(printf '%s\n' "$ci_targets") | tr '\n' ' ')" >&2
+  exit 1
+fi
+printf 'build surface: %d target(s), lakefile.toml and %s agree.\n' \
+  "$(printf '%s\n' "$lake_targets" | wc -l | tr -d ' ')" "$workflow"
 
 find Zcash -name '*.lean' -print | sort | awk '
   # The found files arrive on stdin as a LIST; they become awk input files via ARGV,
