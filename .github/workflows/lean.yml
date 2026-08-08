@@ -155,8 +155,9 @@ jobs:
       # `lake build --wfail <targets>`, which rejects all warnings. The targets are named
       # explicitly rather than left to the lakefile's `defaultTargets`, so CI's build surface
       # is pinned here: dropping a check library from the lakefile (or narrowing its globs)
-      # cannot silently shrink what CI builds without a visible diff in this workflow. Keep
-      # the list in sync with `lakefile.toml`'s `defaultTargets`.
+      # cannot silently shrink what CI builds without a visible diff in this workflow.
+      # `scripts/check_build_coverage.sh` asserts that this list and `lakefile.toml`'s
+      # `defaultTargets` are equal as sets, so neither spelling can drift alone.
       #
       # `Zcash` imports the fixture-free top-level trust census. Concrete capstone census entries
       # live beside their captures and are built through `FixtureCheck`.
