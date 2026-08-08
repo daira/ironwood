@@ -1,4 +1,4 @@
-# Interpreting Security
+# Reading the Security Bound
 
 > **Bottom line:** within the formal model, breaking the knowledge soundness of the
 > deployed Action verifier is —up to a small statistical error— at least as hard as
