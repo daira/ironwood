@@ -47,7 +47,7 @@ approach as FPS Theorem 1, it likely will be able to use the same extraction wit
 oracle added. The relation feeds a reduction that models the public bases as independent
 random group elements; the reference-string heuristic that carries this to the deployed fixed
 hash-to-curve bases, and its lifetime caveat, is described in the book (Security
-Definitions).
+Models).
 
 `Extractor` and `ExtractionFailure` state the obligation as data: a candidate extractor is a
 total function, and where it fails is an exhibited event, so κ bounds an exhibited event rather

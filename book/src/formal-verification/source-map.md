@@ -3,8 +3,9 @@
 A directory-by-directory index of the Lean development under [`Zcash/`](https://github.com/zcash/ironwood/tree/main/Zcash):
 what each subtree contains and where to start reading. It is the source-tree companion
 to the [proof map](proof-map.md) (which traces how the results connect), the
-[security definitions](security-definitions.md) (which state the properties being proven),
-and the [glossary](glossary.md) (which defines the coined terms).
+[ledger security games](ledger-security-games.md) (which state the properties being proven),
+the [security models](security-models.md) page (which describes the methodology),
+and the [definitions](definitions.md) page (which defines the coined terms).
 
 The development has four tiers. **`Zcash/Arithmetic/`** holds the objects the other three are
 stated over — the scalar field, the verifier group and its reference string, the fingerprint
@@ -158,9 +159,10 @@ consumes. `ConstraintWalk`, `GroupingTable` (with `Verifier/GroupingRef`), `Open
 assembly — grouping stability through a fixed reference table, the opening value, the IPA
 scalars, and the positional `other` coefficient stream — into `assembleCoeffFamily`: every
 MSM coefficient as a polynomial numerator over enumerated denominators with one degree budget.
-`Epsilon` then prices it: a competing coefficient family that differs from Lean's anywhere
-agrees at a uniform point with probability at most `(D + B)/p` — the invariant's concrete ε —
-with per-capture literals in the random families' `Epsilon` modules.
+`Epsilon` then prices the match. For bounded-degree polynomial numerators over the walk's
+enumerated challenge denominators, a family that differs from Lean's agrees at a uniform point
+with probability at most `(D + B)/p`. The random fixtures state the concrete ε values;
+`Fingerprint/Match.lean` lists the premisses, including class membership and sample uniformity.
 
 ### `Fixtures/` — captured proofs and boundary checks
 
@@ -197,7 +199,8 @@ keygen certificate along `PostNu63Random`'s point equalities, its `Boundary` sta
 aliveness guards in `Negative` (the model assembles at the random point, the capture is genuinely
 non-accepting, and one tamper canary), and its own `TrustBoundary` census. What the four families
 jointly check is that Lean's assembled MSM equals the deployed one coefficient-for-coefficient at
-each captured proof, priced by `Fingerprint/Epsilon.lean`.
+each captured proof; the two `Random/` families additionally carry the per-capture ε modules that
+price the quantified match (`Fingerprint/Epsilon.lean`, `Fixtures/*/Random/Epsilon.lean`).
 
 ### `Soundness/` — the soundness argument
 
@@ -239,7 +242,7 @@ and derives the conditional staged `2×` group-operation bound. Its private comp
 one closed program that constructs the charged basis, specializes the exact adversary path with
 its annotations and group nodes, constructs a proof-carrying cache from that result, and consumes
 that same cache in reified postprocessing. Lean proves the resulting counter equals adversary work
-plus reduction work. Since the cost language is [shallow](glossary.md), fidelity of the supplied
+plus reduction work. Since the cost language is [shallow](definitions.md#shallow), fidelity of the supplied
 adversary and of generic host callbacks inside the complete program remains external and is stated
 separately.
 The modeled three-decode inequality is derived from the family's required fixed-representation
@@ -344,7 +347,8 @@ the endpoints — knowledge-soundness bounds for every consensus-valid bundle si
 compositional error-formula form, in resource-accounted finite-security form at the `2^123` work
 factor, and in the staged-certified forms carrying their group-work accounting at `2^123` and
 `2^125` adversary work. Knowledge soundness is the only property advertised: it implies the
-plain-soundness statement, so that is not stated separately.
+plain-soundness statement, so that is not stated separately. Legacy fixed-statement
+endpoints and their events are retired.
 
 Endpoints about the *verifier's algebra* rather than the circuit statement live with the layer that
 proves them: the captured straight-line knowledge errors in
