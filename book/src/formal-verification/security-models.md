@@ -132,12 +132,18 @@ given cost into a bound on the protocol game; it does not certify the belief.
 
 ### The resource numbers are coverage parameters
 
-The Snark-side capstones quote concrete numbers: a $2^{123}$ work target for the covered
-adversary (oracle queries and group operations), an eight-fold finder envelope —a three-bit
-overhead, since the finder replays a bounded number of traversals— and a statistical
-remainder ($2^{-83}$ for the consensus-generic Action capstone), proved for every workload
-up to the full covered budget. It is easy to misread the envelope as an estimate of
-Vesta's discrete-log cost; it is in fact a coverage parameter. The target is as large as
+The Snark-side capstones quote concrete numbers: the covered adversary's random-oracle
+queries are bounded by $2^{123}$ and its group work by $2^{123}$ —or $2^{125}$ in a
+staged-certified variant— with a statistical remainder ($2^{-83}$ for the
+consensus-generic Action capstone) proved for every workload up to the full covered
+budget. The instantiated formula endpoint quotes an eight-fold finder envelope —a
+three-bit overhead, since the finder replays a bounded number of traversals— evaluating
+the advantage at $2^{126}$ oracle queries and group operations. The staged-certified
+endpoints instead count the reduction's work additively, by a proved counter
+composition, and evaluate it at $2^{124}$ queries and $2^{126}$ group operations — the
+group work including the adversary's own at the larger budget. It is easy to misread
+the envelope as an estimate of Vesta's discrete-log cost; it is in fact a coverage
+parameter. The target is as large as
 is useful —past roughly $2^{126}$ group operations an adversary can compute Vesta discrete
 logs directly, voiding every binding property here (see the lifetime caveat below)— and
 no smaller, so that no adversary with a meaningful guarantee is excluded.
