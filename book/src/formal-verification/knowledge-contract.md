@@ -87,15 +87,21 @@ knowledge failure: on a false statement the extractor must have returned `none`,
 witness would have entailed it. So `acceptFalseStatement_le` gives the soundness bound at the same
 error, for every contract, and no separate endpoint is advertised for it.
 
-**The ledger.** The contract ends at `ActionBundleWitness`. Carrying that witness into the Orchard
-ledger relation is a separate development, and an unfinished one: the circuit-level result is
-knowledge soundness, while the ledger-level consequence is still ordinary soundness, because the
-bridge to the ledger statement forgets the extracted witness into a proposition.
+**The ledger.** The contract ends at `ActionBundleWitness`. The formal continuation begins, for
+each member of that bundle, at `Zcash.Security.Ledger.Bridge.actionSpec_to_ledger`: it consumes the
+Action's public input, private witness, and `ActionSpec` proof. That theorem returns an
+`ActionBreak` or an existentially witnessed ledger statement in `Prop`; it does not return an
+executable ledger witness. The circuit-level result is therefore knowledge soundness, while the
+ledger-level consequence remains ordinary soundness.
 
 **The assumptions.** They are the arguments of `actionKnowledgeContract`, not fields of the
 record: a nonzero generator `B`, an injective oracle-parameter query, the family-construction
-obligations, and the costed discrete-log profile. They stay in that signature deliberately, so
-that reading the contract cannot give the impression the claim is unconditional. Two more are
+obligations, and the generic `AdaptiveStatementDlogProfile`. That profile's `proverGroupWork` and
+`reductionGroupWork` are caller-supplied labels, and `finderAdvantageLE` supplies the corresponding
+DLOG advantage bound. The operationally accounted route is separate:
+`AdaptiveStatementAdversaryCostCertificate` and `CertifiedAdaptiveStatementDlogProfile` feed
+`orchard_action_adaptiveStatement_certified_knowledge_error_bound`, where the work counts are read
+from the staged program syntax while staging fidelity remains explicit. Two more conditions are
 structural rather than arguments, carried by the adversary's *type*: the algebraic restriction
 above, and the random-oracle modelling of the challenge schedule. What trusting each of these
 means is the subject of [Security Models](security-models.md).

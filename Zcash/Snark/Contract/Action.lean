@@ -23,8 +23,12 @@ underneath it:
   per-surface Schwartz–Zippel budgets.
 
 Assumptions stay in the signature below rather than in the record: the nonzero generator, the
-injective oracle-parameter query, the family construction, and the costed DL profile. The
-continuation from `ActionBundleWitness` to the ledger relation is not part of this contract.
+injective oracle-parameter query, the family construction, and the generic DL advantage profile.
+That profile carries caller-supplied prover and reduction work labels; operational accounting is
+the separate `AdaptiveStatementAdversaryCostCertificate` and
+`CertifiedAdaptiveStatementDlogProfile` route consumed by
+`orchard_action_adaptiveStatement_certified_knowledge_error_bound`. The ledger continuation begins
+per Action at `Zcash.Security.Ledger.Bridge.actionSpec_to_ledger`; it is not part of this contract.
 -/
 
 open scoped ENNReal
