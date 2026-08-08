@@ -1,4 +1,4 @@
-import Zcash.Snark.Capstones.ActionBudgets
+import Zcash.Snark.Capstones.Action.Budgets
 import Zcash.Snark.Soundness.Action.DeploymentRecord
 
 /-!
