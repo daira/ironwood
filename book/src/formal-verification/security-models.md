@@ -215,11 +215,14 @@ gap between the two is the standard gap for protocols with a URS. We prove secur
 the family of protocols that sample the bases at random, over the distribution of that
 randomness. Then we argue heuristically that the deployed protocol, which fixes them via
 hash-to-curve, inherits it — provided that the hash-to-curve scheme admits no attack
-more efficient than the algebraic ones bounded by the proven reductions. The same
-heuristic underlies every use of hash-to-curve for fixed bases here, of which the value
-and note commitments, the Merkle hash, and the proof system's reference string are
-examples. The same primitive also produces bases on demand: `DiversifyHash` derives each
-diversified address base from `GroupHash` at key generation.
+more efficient than the algebraic ones bounded by the proven reductions. No Lean
+theorem instantiates the soundness endpoints at the deployed bases; identifying Halo2's
+hash-to-curve outputs with the sampled basis is the heuristic step
+(`Zcash/TrustBoundary.lean` records this scope). The same heuristic underlies every
+fixed-base use of hash-to-curve here, including the value and note commitments, the
+Merkle hash, and the proof system's reference string. The same primitive also produces
+bases on demand: `DiversifyHash` derives each diversified address base from `GroupHash`
+at key generation.
 
 This heuristic comes with an important caveat: an adversary has the protocol's *entire
 lifetime* to attack that one specific reference string — for example, to search for a
