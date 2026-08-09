@@ -6,8 +6,9 @@ import Zcash.Arithmetic
 # Random-oracle model for Fiat–Shamir
 
 Models transcript squeezes as a reprogrammable random function. `PMFEventBiasLE` adds explicit
-challenge-conversion bias when transporting ideal bounds. Blake2b randomness, transcript
-injectivity, the AGM, generator random oracle, and DLOG hardness remain assumptions.
+challenge-conversion bias when transporting ideal bounds; `Oracle/Challenge255.lean` instantiates
+it at the deployed reduction law. Blake2b randomness, transcript injectivity, the AGM, generator
+random oracle, and DLOG hardness remain assumptions.
 -/
 namespace Zcash.Snark
 
@@ -39,7 +40,8 @@ theorem reprogram_ne [DecidableEq F] [DecidableEq G]
 
 This is the ideal law used by the unsuffixed and `generatorRO` theorems.  Halo2's deployed
 `Challenge255 → Fp` conversion is not definitionally this PMF; consumers making a deployed-law
-claim must cross `PMFEventBiasLE` explicitly. -/
+claim must cross `PMFEventBiasLE` explicitly — `challenge255_eventBias_le` prices that crossing
+for one squeeze. -/
 noncomputable def uniformChallenge : PMF Fp := PMF.uniformOfFintype Fp
 
 /-- A uniform challenge lands in `bad` with probability `|bad| / |Fp|`. -/

@@ -31,6 +31,12 @@ AGM basis is heuristically instantiated by fixed hash-to-curve generators (the b
 Security Models page); the Lean verifier is checked to correspond to deployed Halo 2 by the
 fingerprint fixtures; and the bridge from extracted circuit witnesses to the abstract ledger
 relation is tracked separately (the definitions page's high-level-relation entry).
+
+A deployed byte-level prover is not confined to this adversary type: it can place a fresh point —
+a hash-to-curve output, say — in a proof slot without knowing coefficients over the enumerated
+basis.  That exclusion is the accepted algebraic-group floor of these results; the known
+strengthening models hash-to-curve as an adversary-queryable oracle whose fresh outputs extend
+the basis.
 -/
 
 namespace Zcash.Snark

@@ -15,6 +15,42 @@ separately because it is the weaker consequence at the same error:
 accepting-false-statement set is contained in the event these endpoints bound, so a soundness
 bound is `measure_mono` away and carries no independent content.
 
+## Model boundary
+
+The endpoints are theorems inside a stated model; each floor below is accepted and disclosed
+rather than proved, with its known strengthening named where one exists:
+
+* *Adversary class* — adversaries are represented online-AGM programs: every output point
+  carries coefficients over the enumerated augmented basis.  A byte-level prover that fills a
+  proof slot with a fresh point (a hash-to-curve output, say) sits outside the class; the known
+  extension models hash-to-curve as an adversary-queryable, basis-extending oracle
+  (`Soundness/Action/AdaptiveStatementModel.lean`, *Trust boundary*).  Larger algebraic classes
+  — AGM with oblivious sampling — exist and are not modeled here.
+* *Work accounting* — the certified tiers cost a staged program: a manually staged, costed copy
+  of the online-AGM adversary, proven to erase to it, with the finder/extractor/reduction staged
+  around it.  Lean checks the arithmetic of the staged nodes; that the staging omitted no group
+  work — host callbacks and pure continuations perform none — is `StagedGroupWorkFaithful`,
+  assumed for both halves and re-exported in each certified conclusion.  The uncertified tier
+  instead takes the caller-supplied `proverGroupWork`/`reductionGroupWork` values as premises.
+* *URS basis* — the probability space samples the basis through the generator random oracle
+  (`orchardGeneratorROSetup`); identifying the deployed fixed hash-to-curve derivation with that
+  experiment is the GroupHash random-oracle idealization, not a Lean theorem.
+* *Challenges* — squeezes are exactly uniform (`uniformChallenge`).  The deployed conversion
+  reduces a 64-byte digest modulo `p`; its exact reduction bias is priced by
+  `challenge255_eventBias_le` (`Soundness/Oracle/Challenge255.lean`), and idealizing Blake2b as
+  a uniform digest remains external.
+* *DLOG hardness* — each profile takes a caller-supplied advantage bound for its exact relation
+  finder (`AdaptiveStatementDlogProfile`, `CertifiedAdaptiveStatementDlogProfile`); relating that
+  bound to a standard resource-bounded DLOG game and a concrete security estimate is external.
+* *Key digest* — `vkHash` is opaque: one canonical key per basis, no cross-key binding claimed
+  (`AdaptiveStatementModel.lean`, *Intended instantiation*).
+* *Acceptance* — `DeployedAccepts` starts at typed, post-decode values and prices one proof
+  bundle; byte encoding and halo2's optional `BatchVerifier` sit outside the formalized
+  verifier (`Fingerprint/Match.lean`, *What remains external*).
+
+The bounds these endpoints prove are exact inside that model; a numerical claim about the
+deployed protocol instantiates each floor above separately.
+
 Each is censused directly in `Fixtures/MultiAction/Honest/TrustBoundary.lean`.
 -/
 

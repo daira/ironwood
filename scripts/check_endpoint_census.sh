@@ -28,6 +28,14 @@
 # suffixes `_error_bound`, `_finite_security`, or `_capstone`. The declaration's name must be on
 # the same line as its `theorem`/`def` keyword. Run from the repository root; exits non-zero on
 # violation.
+#
+# The same rule is enforced a second time from the elaborated environment:
+# `Zcash/Meta/EndpointCensus.lean` ports the pattern below to a Lean predicate, the census
+# commands record every pin they elaborate, and `Zcash/CensusCheck.lean` (the `CensusCheck`
+# default target) asserts that no endpoint in the census files' import closure is unpinned. That
+# closes what this line parser cannot see — declarations emitted by custom commands, unrecognized
+# modifiers, or multiline syntax — while this scan keeps the whole file tree in scope, census
+# imports or not. Keep `ENDPOINT_RE` and `Zcash.Meta.isEndpointBaseName` in sync.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

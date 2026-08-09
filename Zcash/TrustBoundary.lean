@@ -73,6 +73,7 @@ import Zcash.Snark.Soundness.AGM.AdaptiveIpaSurfaces
 import Zcash.Snark.Soundness.AGM.AdaptiveRootSurfaces
 import Zcash.Snark.Soundness.Action.AdaptiveStatementReads
 import Zcash.Snark.Soundness.Action.AdaptiveStatementInhabitant
+import Zcash.Snark.Soundness.Oracle.Challenge255
 
 /-!
 # Trust boundary, build-checked
@@ -851,6 +852,14 @@ assert_axioms Zcash.Snark.uniformChallenge_quotient_szBadSet
 assert_axioms Zcash.Snark.uniformChallenge_szBadSet_union
 assert_axioms Zcash.Snark.exists_accepting_good_challenge
 assert_axioms Zcash.Snark.exists_accepting_good_challenge_quotient
+-- The deployed challenge conversion (`Soundness.Oracle.Challenge255`): one squeeze's exact
+-- reduction bias against the uniform idealization, and its transport across `PMFEventBiasLE`.
+assert_axioms Zcash.Snark.challenge255
+assert_axioms Zcash.Snark.challenge255Bias
+assert_axioms Zcash.Snark.challenge255_apply
+assert_axioms Zcash.Snark.challenge255_eventBias_le
+assert_axioms Zcash.Snark.challenge255Bias_le
+assert_axioms Zcash.Snark.challenge255_badSet_le
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique

@@ -1,7 +1,7 @@
 name = "Zcash"
 version = "0.1.0"
 keywords = ["cryptography", "math", "protocols"]
-defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "MetaCheck", "SecurityCheck"]
+defaultTargets = ["Zcash", "FixtureCheck", "CircuitCheck", "MetaCheck", "SecurityCheck", "CensusCheck"]
 
 [leanOptions]
 pp.unicode.fun = true # pretty-prints `fun a ↦ b`
@@ -107,3 +107,14 @@ globs = ["Zcash.Circuits.Tests.+"]
 [[lean_lib]]
 name = "SecurityCheck"
 globs = ["Zcash.Security.Ledger.BridgeTests"]
+
+# `Zcash/CensusCheck.lean` — the endpoint census enforced a second time, from the elaborated
+# environment: it imports every census (TrustBoundary) file and asserts that each endpoint-named
+# declaration in that closure carries a direct pin recorded by an elaborated
+# `assert_axioms`/`assert_computable` entry (`Zcash.Meta.EndpointCensus`). This closes the
+# surface-syntax evasions `scripts/check_endpoint_census.sh`'s line parser cannot see — custom
+# declaration commands, unrecognized modifiers, multiline syntax, declaration-emitting
+# metaprogramming — while the script keeps the wider file-tree scope.
+[[lean_lib]]
+name = "CensusCheck"
+globs = ["Zcash.CensusCheck"]

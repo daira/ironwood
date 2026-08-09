@@ -23,6 +23,11 @@ real accepting two-action run of the pinned deployed verifier, which the random 
 cannot provide; the invariant itself rides on the derived boundary statements (see
 `Fingerprint/Match.lean`).
 
+The pinned `native_decide` owner set is a deliberate trust-base cost — trust in Lean's native
+code generator, the C toolchain, and the runtime — accepted for the facts it certifies and held
+as a reduction target: owners move to kernel-checked `decide` or ordinary proofs as that becomes
+feasible, and the pins below are the ratchet that keeps the surface from growing unnoticed.
+
 * `assert_axioms` (from `Zcash.Meta.AxiomCheck`) — bounds the trusted base at the standard tier,
   rejecting `sorryAx` and any unexpected axiom, walking the whole elaborated dependency graph
   (`Lean.collectAxioms`) rather than a syntactic scan. `+native` on the captured fixtures that run

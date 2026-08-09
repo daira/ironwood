@@ -5,6 +5,7 @@ import Lean.Compiler.ImplementedByAttr
 import Lean.Compiler.ExternAttr
 import Lean.Compiler.CSimpAttr
 import Mathlib.Util.AssertNoSorry
+import Zcash.Meta.EndpointCensus
 
 /-!
 # `assert_axioms` — a concise, build-checked trust-boundary bound
@@ -415,6 +416,7 @@ elab "assert_axioms " n:ident native:(nativeFlag)? : command => do
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
   checkCompiledBodyDisclosure n
+  recordCensusPin name
 
 /--
 `assert_computable foo` fails the build unless `foo` is a plain `def` — an actual definition,
@@ -474,5 +476,6 @@ elab "assert_computable " n:ident choice:("+choice")? native:(nativeFlag)? : com
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
   checkCompiledBodyDisclosure n
+  recordCensusPin name
 
 end Zcash.Meta

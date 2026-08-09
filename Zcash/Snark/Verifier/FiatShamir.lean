@@ -16,8 +16,9 @@ Reprogramming and uniform-challenge results live in `Soundness.Oracle.Model`.
 `deriveChallenges` records the absorb/squeeze order from halo2's PLONK, multiopen, and commitment
 verifiers. `nonInteractiveFingerprint` runs `assemble` at those derived challenges.
 
-The security development idealizes `squeeze` as a random oracle; identifying deployed Blake2b and
-field conversion with it is external. Fixtures use trusted typed captures, not transcript bytes.
+The security development idealizes `squeeze` as a random oracle; identifying deployed Blake2b
+with it is external, and the field conversion's exact reduction bias is priced in
+`Soundness/Oracle/Challenge255.lean`. Fixtures use trusted typed captures, not transcript bytes.
 -/
 
 namespace Zcash.Snark
