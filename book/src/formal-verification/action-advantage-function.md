@@ -1,9 +1,10 @@
 # Interpreting Security
 
-> **Bottom line:** within the formal model, every covered computational failure of
-> Action knowledge soundness yields a solver for Vesta discrete log. The underlying
-> benchmark therefore remains breaking Vesta DLOG, whose best known classical attack has
-> a headline expected cost of about $2^{125}$ group operations.
+> **Bottom line:** within the formal model, breaking Action is at least as hard as
+> breaking Vesta discrete log: every covered computational failure of Action knowledge
+> soundness yields a DLOG solver. The underlying benchmark therefore remains breaking
+> Vesta DLOG, whose best known classical attack has a headline expected cost of about
+> $2^{125}$ group operations.
 
 Here “knowledge soundness” means that an accepted proof has a recoverable valid
 *witness*: the private data that justifies the proved statement. “Covered” means inside
@@ -25,15 +26,13 @@ $$
 + \varepsilon_{\mathrm{stat}}(Q,n).
 $$
 
-**$\operatorname{Adv}_{\mathrm{DLOG}}(q,w)$ is the advantage function.** For query
-budget $q$ and work budget $w$, it gives the externally supplied upper bound on the
-success probability of a Vesta DLOG solver.
-$\varepsilon_{\mathrm{stat}}(Q,n)$ is the statistical soundness error term for an
-adversary making at most $Q$ oracle queries against a bundle containing $n$ Actions. It
-bounds the exceptional cases in which the random challenges prevent extraction. The
-reduction also makes a small fixed number of extra oracle reads; the deployed endpoint
-absorbs them when it rounds its query budget up to a power of two, so this page writes
-$Q$ throughout.
+**$\operatorname{Adv}_{\mathrm{DLOG}}(q,w)$ is the advantage function**: for query budget
+$q$ and work budget $w$, the externally supplied upper bound on the success probability
+of a Vesta DLOG solver.
+
+**$\varepsilon_{\mathrm{stat}}(Q,n)$ is the statistical soundness error**: it bounds the
+exceptional cases in which the random challenges prevent extraction, for an adversary
+making at most $Q$ oracle queries against a bundle containing $n$ Actions.
 
 **Direction of the reduction:**
 
@@ -42,14 +41,15 @@ $Q$ throughout.
 > $\longrightarrow$ Vesta DLOG solver using $Q$ queries and $W+R(n)$ group operations.
 
 The reduction constructs the DLOG solver by running the Action attacker and processing
-its output. $R(n)$ is the extra Vesta group work performed by the reduction itself for a
-bundle containing $n$ Actions — reduction overhead, not attacker work or a probability
-loss.
+its output. $R(n)$ is the extra Vesta group work it performs for a bundle containing $n$
+Actions — reduction overhead, not attacker work or a probability loss. It also makes a
+small fixed number of extra oracle reads, which the deployed endpoint absorbs when it
+rounds its query budget up to a power of two, so this page writes $Q$ throughout.
 
 For the certified consensus profile, the endpoint evaluates the advantage at $2^{126}$
 group operations: the $2^{125}$ attacker budget plus the reduction's own work, rounded up
-to a power of two. Neither number is a probability; the vertical failure probability is
-determined by $\operatorname{Adv}_{\mathrm{DLOG}}+\varepsilon_{\mathrm{stat}}$.
+to a power of two. Neither number is a probability: the failure probability is determined
+by $\operatorname{Adv}_{\mathrm{DLOG}}+\varepsilon_{\mathrm{stat}}$.
 
 That $2^{125}$ is a coverage parameter — the adversary group-work budget this theorem
 covers, not an estimate of anything. It is not the Pasta curves' security design target,
@@ -75,8 +75,8 @@ DLOG estimate.
 Choose an amount of DLOG-solver work on the horizontal axis, trace upward to the orange
 curve, and then read the corresponding DLOG-attack success on the vertical axis. The
 marked point is the best known attack's headline expected cost, about $2^{125}$ group
-operations. The axis runs one bit further, to the $2^{126}$ this page's bound is
-evaluated at; that extra bit is accounting, not a better attack.
+operations. The axis runs one bit further, to the $2^{126}$ at which this page's bound is
+evaluated; that extra bit is accounting, not a better attack.
 
 The graph shows only group work. The oracle-query budget $Q$ remains a separate input in
 the equation above.
