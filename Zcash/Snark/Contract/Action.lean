@@ -53,23 +53,38 @@ noncomputable def actionKnowledgeContract (numProofs : ℕ) {T : Type*} [Decidab
     (profile : ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
       family (adaptiveStatement_pairCount_lt numProofs family) B) :
     KnowledgeContract where
+  -- One run: a generator-oracle table at the query labels, and one transcript table
+  -- (`Coins`, from `Soundness/Action/AdaptiveStatementModel`).
   Run := (↥(Set.range query) → VestaG) × family.Coins
+  -- Both drawn uniformly and independently; the oracle setup is
+  -- `Soundness/AGM/ProbabilityVesta`'s.
   law :=
     independentProductPMF (orchardGeneratorROSetup query) (PMF.uniformOfFintype family.Coins)
+  -- Deployed halo2 acceptance (`Soundness/Action/AdaptiveStatementModel`), over the basis read
+  -- from the run's oracle table.
   Accepts r := family.accepts (orchardGeneratorROBasis query r.1) r.2
+  -- The bundle witness type from `Soundness/Action/StraightLineTerminal`, which abbreviates
+  -- `Circuits/Integration/TopLevelCorrectness`'s external bundle witness.
   Witness r :=
     ActionBundleWitness (family.runOutput (orchardGeneratorROBasis query r.1) r.2).inputs
+  -- The executable witness projection from `Soundness/Action/AdaptiveStatementKnowledge`.
   extract r :=
     family.adaptiveStatementKnowledgeExtractor (adaptiveStatement_pairCount_lt numProofs family)
       (orchardGeneratorROBasis query r.1) r.2
+  -- The semantic bundle conclusion from `Circuits/Action/TopLevel`.
   Statement r :=
     BundleStatement (family.runOutput (orchardGeneratorROBasis query r.1) r.2).inputs
+  -- `StraightLineTerminal`'s lemma: an extracted bundle entails the statement.
   witness_statement := ActionBundleWitness.statement
+  -- `AdaptiveStatementKnowledge`'s failure event, pulled back along the table→basis map …
   failure :=
     (fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
       family.adaptiveStatementKnowledgeFailureEvent
         (adaptiveStatement_pairCount_lt numProofs family)
+  -- … and the identification that the pulled-back event is the fields' event, definitionally.
   failure_eq := rfl
+  -- The endpoint's error formula verbatim; `algebraicRootBudget` is
+  -- `Soundness/Composition/AlgebraicRootBudget`'s.
   knowledgeError :=
     (profile.advantage (adaptiveStatementDlogRandomOracleQueries family)
         (adaptiveStatementDlogGroupWork profile.proverGroupWork
@@ -85,6 +100,7 @@ noncomputable def actionKnowledgeContract (numProofs : ℕ) {T : Type*} [Decidab
           ((![numProofs * 2 ^ 25, numProofs * 950835027, numProofs * 73554,
               numProofs * 2 ^ 23, 20470] i : ℕ) : ENNReal) /
             Fintype.card Fp)
+  -- The advertised endpoint from `Capstones/Action`, applied unchanged.
   knowledge_sound :=
     orchard_action_adaptiveStatement_knowledge_error_bound numProofs B hB query hquery family
       profile
