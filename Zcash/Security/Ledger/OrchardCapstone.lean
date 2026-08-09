@@ -140,10 +140,11 @@ theorem balanceSubsetViolationUpTo_subset_relation (k : ℕ) :
   exact ⟨i, hik,
     balanceSubsetViolation_subset_relation verify bverify issuance maxActions i hω⟩
 
-/-- **The Orchard Balance-subset bound at every prefix, at no extra cost in `k`.** One
-`ε_sinsemilladlr` bounds the Balance-subset violation at every step `i < k`, where the
-abstract bound names three ε's per arm family: every step's break lands in the one
-relation event, a nontrivial relation among the same fixed bases. -/
+/-- **The Orchard Balance-subset bound at every prefix, from one bound on the relation
+event.** One `ε_sinsemilladlr`, hypothesized on the shared all-prefixes relation event,
+bounds the Balance-subset violation at every step `i < k`, where the abstract bound names
+three ε's per arm family: every step's break lands in the one relation event, a
+nontrivial relation among the same fixed bases. -/
 theorem orchardBalanceSubset_measure_le
     (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr : ℝ≥0∞}
@@ -239,16 +240,16 @@ theorem balanceIntegrityViolationBefore_subset_relation (k : ℕ) :
     · exact absurd (ω.2.transparent_nonneg i) h'
     · exact Or.inr ⟨i, hik, h'⟩
 
-/-- **Orchard Balance integrity at every prefix, at no extra cost in `k`.** Balance
-integrity (the shielded pool is non-negative and the pools sum to the minted
+/-- **Orchard Balance integrity at every prefix, from one bound per shared event.**
+Balance integrity (the shielded pool is non-negative and the pools sum to the minted
 issuance) holds at every prefix `i < k`, except with probability at most
-`ε_sinsemilladlr + ε_bindsig` — the same bound as for a single prefix, with no
-factor of `k`. A naive union bound over the prefixes would pay `k · ε`, but the
-prefix violations are not independent: the reduction sends every step's break to a
-relation among the same fixed Sinsemilla bases, so a break at any step lands in the
-one event `orchardRelationEventUpTo`, a single discrete-log-relation advantage
-independent of `k`. The conservation side collapses the same way onto the one
-all-prefixes conservation event, whose named bound is `ε_bindsig` (#107). -/
+`ε_sinsemilladlr + ε_bindsig` — the containment adds no factor of `k`. A naive union
+bound over the prefixes would pay `k · ε`, but the prefix violations are not
+independent: the reduction sends every step's break to a relation among the same fixed
+Sinsemilla bases, so a break at any step lands in the one event
+`orchardRelationEventUpTo`, on which `ε_sinsemilladlr` is hypothesized once. The
+conservation side collapses the same way onto the one all-prefixes conservation event,
+whose named bound is `ε_bindsig` (#107). -/
 theorem orchardBalanceIntegrity_measure_le
     (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr ε_bindsig : ℝ≥0∞}
