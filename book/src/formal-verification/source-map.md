@@ -408,10 +408,10 @@ them as data (`SpecOrBreak`) rather than assuming them away.
   `ResolverQueryEnvironment`, `PolynomialEnvironment`, `ExprRich`), and the reassembly of full
   circuit satisfaction (`CircuitSatisfaction`, `CircuitIntegration`). The `Action*` modules
   specialize all of that to the deployed Action circuit and land at `ActionTerminal`; the
-  `TopLevel*` modules are the circuit-generic versions. `StraightLineActionTerminal` reaches that
-  same terminal from one accepting execution instead of a rewinding one, and
-  `StraightLineActionEvent` bounds the probability loss from the challenge exclusions it leaves
-  open — the probability that an accepting run carries neither the bundle statement nor a
+  `TopLevel*` modules are the circuit-generic versions. `Soundness/Action/StraightLineTerminal`
+  reaches that same terminal from one accepting execution, and
+  `Soundness/Action/StraightLineEvent` bounds the probability loss from the challenge exclusions it
+  leaves open — the probability that an accepting run carries neither the bundle statement nor a
   nontrivial relation.
 - **`Fixtures/`** and **`Tests/`** — the VK cross-check against Rust. `Fixtures/` reconstructs,
   purely and computably, the layout products a keygen-view dump pins (the ordered copy list, the

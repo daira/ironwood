@@ -95,7 +95,9 @@
   svg.map { display: block; width: 100%; min-width: 0; height: auto; }
 
   .terr { fill: var(--th); opacity: 1; stroke: var(--ts); stroke-width: 1.4; stroke-dasharray: 3 3; rx: 16; }
-  .terr-label { font-size: 15px; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; fill: var(--ts); opacity: 1; }
+  /* Darkened toward the ink so the hue still identifies the territory but the title reads at the
+     scale the map is actually viewed at; the map SVG is laid out at 1920 wide and scaled down. */
+  .terr-label { font-size: 15px; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; fill: color-mix(in srgb, var(--ts) 78%, var(--ink)); opacity: 1; }
   .terr-tag { font-family: ui-monospace, monospace; font-size: 12px; fill: var(--ts); opacity: .9; }
   .map-title { font-size: 25px; font-weight: 650; fill: var(--ink); letter-spacing: .015em; }
 
@@ -110,6 +112,10 @@
   .edge.hot.rests { marker-end: url(#ar-hot-rests); }
   .edge.hot.gap { marker-end: url(#ar-hot-gap); }
   .edge.dim { opacity: .5; }
+  /* Filtering is a different job from hover-dimming: `dim` fades the neighbourhood's surroundings
+     just enough to read through, while `filtered` has to actually take a category out of the
+     picture. Sharing one class made the Show chips look inert. */
+  .edge.filtered { opacity: .07; }
 
   .node { cursor: pointer; }
   .node rect { transition: opacity .15s; }
@@ -118,6 +124,7 @@
   .node.goal .box { fill: var(--accent); stroke: var(--accent); }
   .node.goal .label { fill: #fff; font-weight: 640; }
   .node.dim { opacity: .82; }
+  .node.filtered { opacity: .13; }
   .node.near { filter: drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)); }
   .node .anchor { font-size: 11px; fill: var(--muted); dominant-baseline: middle; }
 
@@ -221,7 +228,7 @@
     <p class="railhint">Click a node to show its details here; click the background to clear.</p>
     <div class="detail" id="detail">
       <p class="empty">A node's card shows what it is, its Lean anchor, and every theorem it connects to — with the lemma that justifies each link.</p>
-      <p class="hint">The spine runs down the left: <span class="mono">accepting proof &#8594; verifier equation &#8594; generator fold &#8594; one-run classify &#8594; IPA opening &#8594; SnarkRelation</span>. Extraction is straight-line — one accepting execution, no rewinding. The tinted territories are the machinery that discharges its assumptions.</p>
+      <p class="hint">The soundness route is <span class="mono">accepting proof &#8594; verifier equation &#8594; one-run classify &#8594; deployed decode &#8594; Action witness extractor &#8594; knowledge bound</span>. <span class="mono">SnarkRelation</span> is a retained constraint-side payload, not the Action capstone's consumer boundary.</p>
     </div>
   </aside>
   <section class="legendbar">
@@ -248,163 +255,165 @@ const ROW = r => 96 + r * 116;
 
 const territories = [
   { id:'faith', label:'Faithfulness',               cells:[[0,0],[1,0],[2,0]],             h:'#b0873a' },
-  { id:'sl',    label:'Straight-line extraction',   cells:[[1,5],[1,6],[2,6]],             h:'#c15f86', labelDx:44 },
-  { id:'caps',  label:'Capstones',                 cells:[[3,6],[3,7]],                   h:'#8a78e8', labelSide:'right', padRight:10 },
+  // Label positions (labelDx / the shortened titles) are collision-tuned: each title sits in a
+  // gap of the edge routing at the 1920-wide layout. Re-check crossings after moving any node.
+  { id:'sl',    label:'Straight-line',   cells:[[1,5],[1,6],[2,6]],             h:'#c15f86', labelDx:52 },
+  { id:'caps',  label:'Capstones',                 cells:[[3,6],[3,7]],                   h:'#8a78e8', labelSide:'right', padRight:10, labelDx:-16 },
   // headroom 26, not 32: the Faithfulness band now reaches column 2, and its rect bottom sits at
   // y = 139. Anything above 30 here would collide with it.
   { id:'fs',   label:'Fiat–Shamir · Random Oracle', cells:[[2,1],[3,1],[2,2],[3,2],[2,3]], h:'#6f7bd6', headroom:26 },
   { id:'dec',  label:'Multiopen Decode', cells:[[6,3],[7,3],[6,4],[7,4]],       h:'var(--c-proven)', labelSide:'right' },
   { id:'sz',   label:'Schwartz–Zippel', cells:[[6,6],[7,6]],                   h:'var(--c-incoming)' },
-  { id:'agmBoundary', label:'Online AGM · adaptive statement', cells:[[4,1],[4,2],[5,2],[4,3],[5,3],[4,4],[5,4]], h:'#a06fb0', labelSide:'right', headroom:32 },
-  { id:'agm',  label:'AGM relation → DL reduction', cells:[[0,7],[1,7],[0,8],[1,8]], h:'#a06fb0', headroom:24, padRight:32 },
-  { id:'floor',label:'Assumptions · outside Lean',    cells:[[2,8],[3,8],[4,8],[5,8],[6,8],[7,8]], h:'var(--c-floor)' },
+  { id:'agmBoundary', label:'Online AGM', cells:[[4,1],[4,2],[5,2],[4,3],[5,3],[4,4],[5,4]], h:'#a06fb0', labelSide:'right', headroom:32 },
+  { id:'agm',  label:'DLOG reduction', cells:[[0,7],[1,7],[0,8],[1,8]], h:'#a06fb0', headroom:24, padRight:32, labelDx:112 },
+  { id:'floor',label:'Assumptions',    cells:[[2,8],[3,8],[4,8],[5,8],[6,8]], h:'var(--c-floor)', labelDx:336 },
 ];
 
 const nodes = [
   { id:'assemble', c:0,r:0, label:'assembled MSM', status:'object',
     anchor:'Verifier.Assemble.assemble',
-    role:'The whole verifier collapsed into one multi-scalar multiplication — the fingerprint, reproduced line-for-line from halo2. Acceptance reads the partial assemble?, where rejection is none; the total assemble wrapper’s zero-MSM fallback evaluates to the accept value and is never what the accept condition consumes.' },
+    role:'The whole verifier as a single multi-scalar multiplication — the fingerprint — copied line-for-line from halo2. Acceptance reads the strict assemble?, which returns none on rejection; the total wrapper’s zero fallback never feeds the accept condition.' },
   { id:'fingerprint', c:1,r:0, label:'pinned to Rust', status:'proven',
     anchor:'Fingerprint.Match.msmMatch_eval · Fixtures.MultiAction.Honest.Boundary.nonInteractiveFingerprint_matches_derived',
-    role:'The fingerprint match (msmMatch_eval): the Lean-assembled MSM is compared coefficient-for-coefficient against the Rust verifier’s captured MSM, and a match implies equal evaluations. The statement of record is now stated at the Lean-derived verifying key and at challenges Lean’s own Fiat–Shamir model derives from the captured oracle — the dumped VK record no longer enters the comparison. It is still an empirical anchor rather than a universal equivalence, but Fingerprint/Epsilon prices the quantified version: a competing coefficient family that differs from Lean’s anywhere agrees at a uniform point with probability at most (D + B)/p. Backed by schedule checks, shape/VK faithfulness, and per-slot tamper sweeps that exercise the modeled rejection paths.' },
+    role:'msmMatch_eval checks the Lean-built MSM against the Rust verifier’s captured MSM, coefficient by coefficient; a match means equal group values. The check runs at the verifying key and challenges Lean derives itself — the dumped VK record is out of the picture. This is evidence about one capture, not all runs; Fingerprint/Epsilon prices the difference: a competing coefficient family that differs anywhere agrees at a random point with probability at most (D + B)/p (D its degree bound, B the VK’s summed denominator degrees). Backed by schedule checks, shape/VK checks, and per-slot tamper sweeps.' },
   { id:'vkderiv', c:2,r:0, label:'derived VK', status:'proven',
     anchor:'Keygen.Pipeline.toVerifierKey · Keygen.Certificate.certificate',
-    role:'The verifying key is derived, not assumed: one generic pipeline takes a closed TopLevelCircuit and a monomial URS to a full VerifyingKey — Lagrange URS by inverse FFT, dense fixed columns, keygen permutation polynomials, commit_lagrange for both commitment families. Certificate.certificate is the single bundled native_decide comparing every field of the derived key against the capture, and VkCertificate transports it to the multi-action key along the cross-capture point equalities. Keygen/InstanceCapture joins the captured instance commitments to the circuit-derived family.' },
+    role:'The verifying key is computed, not assumed: one pipeline takes the circuit and a monomial URS to a full VerifyingKey — Lagrange URS by inverse FFT, fixed columns, permutation polynomials, commitments for both families. Certificate.certificate is a single native_decide comparing every field against the capture; VkCertificate carries that to the multi-action key, and InstanceCapture ties the captured instance commitments to the circuit-derived ones.' },
   { id:'accept', c:0,r:1, label:'accepting proof', status:'object',
     anchor:'Main.DeployedAccepts',
-    role:'The concrete accept condition: the rejecting assemble? succeeds and the resulting MSM evaluates to the group identity. The premiss everything hangs from.' },
+    role:'The accept condition: assemble? succeeds and the MSM evaluates to the group identity. The premiss everything hangs from.' },
   { id:'verifierEq', c:0,r:2, label:'verifier equation', status:'proven',
     anchor:'Main.deployedAccepts_verifierEq · Deployed.Verification.deployed_verification_eq',
-    role:'halo2’s explicit IPA verifier equation, recovered from the accept: deployedAccepts_verifierEq unpacks the compact MSM = 0 into P + [-v]g₀ + [ξ]S + Σ(rounds) + [-c·b·z]U + [-f]W + [-c]G′₀ = 0, the equation the straight-line AGM analysis consumes. One direction — the accept also carries the rejection guards. Main exports no forked-transcript compatibility lane.' },
+    role:'The accept unpacked into halo2’s explicit IPA verifier equation: deployedAccepts_verifierEq turns MSM = 0 into P + [-v]g₀ + [ξ]S + Σ(rounds) + [-c·b·z]U + [-f]W + [-c]G′₀ = 0. One direction only, keeping the verifier’s rejection guards; no forked-transcript lane is exported.' },
   { id:'gfold', c:0,r:3, label:'generator fold', status:'proven',
     anchor:'Deployed.Fold.deployed_gterm_foldAll',
-    role:'The g-term of the flattened verifier equation, rewritten as the closed-form fold the extractor reads. The deployed compute_s scalars halve at each round exactly as commitGen_append splits a commitment, so the whole g-term is [-c]·G′₀ at the folded generator — the same foldGens step, at the inverted challenge, that Ipa.CommitFold proves the commitment respects.' },
+    role:'The g-part of the equation rewritten as the closed fold the extractor reads. The deployed compute_s scalars halve each round exactly as commitGen_append splits a commitment, so the g-term is [-c]·G′₀ at the folded generator — the same fold Ipa.CommitFold proves for the commitment.' },
   { id:'peel', c:0,r:4, label:'one-run classify', status:'proven',
-    anchor:'AGM.StraightLineIpa.straightLineIpaZeroOrRelation · AGM.Peel.separateOrRelationWitness',
-    role:'Straight-line AGM extraction: one accepting algebraic transcript is classified as a clean opening, an explicit relation over the augmented basis (g, U, W), or a squeeze-pinned bad-challenge event — from a single adversary execution, with no rewinding. separateOrRelationWitness is the kernel underneath: it compares two explicit representations, returns equal coordinates on the left, and otherwise returns their difference as computed relation data. A total computable function on the represented accept — no decidability instance, no Classical.choice.' },
-  { id:'clean', c:1,r:5, label:'clean opening', status:'object',
-    anchor:'AGM.StraightLineIpa.straightLineIpaZeroOrRelation',
-    role:'The good branch of the one-run classify: the adversary’s aggregate witness opens the de-blinded commitment. Composition.Bridge identifies it with the deployed opened commitment (deployedCommitment − pU•u − pW•w), so the extracted opening is the generalized Pedersen triple (aMulti, pU, pW) read off the AGM representation. pU and pW are outputs, never hypotheses.' },
+    anchor:'AGM.StraightLineIpa.straightLineIpaZeroOrRelation · straightLineBindingAttackZRootOrRelation · AGM.Peel.separateOrRelationWitness',
+    role:'Read together, the one-run endpoints give the classification. straightLineIpaZeroOrRelation returns zero symbolic IPA coordinates or concrete relation data; for a false accepted opening with z ≠ 0, straightLineBindingAttackZRootOrRelation refines the zero case to a round-local root event or a relation. Away from those priced roots, the deployed layer builds the retained decode. Nothing rewinds. separateOrRelationWitness is the executable coordinate-comparison kernel; its census pin admits Classical.choice, and the classify also carries the Vesta point-count native kernel.' },
+  { id:'clean', c:1,r:5, label:'clean deployed decode', status:'object',
+    anchor:'AGM.DeployedRootDecode.DeployedAlgebraicDecode · deployedAlgebraicDecode_of_good_roots',
+    role:'The relation-free result after the priced x₄, x₃, x₂, and x₁ root exclusions: the exact AGM batches and value equations for this accepting run, retained as DeployedAlgebraicDecode. Its aggregate coefficients and U/W parts are outputs, not hypotheses. The same decode yields the deployed IPA opening and the opened-batch/member views used by the circuit terminal.' },
   { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'object',
     anchor:'Zcash.NontrivialRelation · Common.DiscreteLogRelation.NontrivialRelation.ofCombinationCollision',
-    role:'The bad branch: a nontrivial discrete-log relation on the augmented generators (g, U, W), carried as coefficients. A relation always exists in a prime-order group, so an ∃-closed statement here would be vacuous — the content is that this branch *computes* one, which is exactly the break the DL reduction consumes.' },
+    role:'The bad case: a nontrivial relation among (g, U, W), as concrete coefficients. Some relation always exists in a prime-order group, so merely claiming existence would say nothing — the point is that this branch computes one, exactly the break the reduction consumes.' },
   { id:'slRoots', c:1,r:6, w:200, label:'pinned round roots', status:'proven',
     anchor:'AGM.StraightLinePinnedRoots.StraightLineIpaOnlineTrace · StraightLineIpaSqueezeInvariance',
-    role:'The third branch: the per-round quadratic events the one-run dichotomy leaves open, exposed through PinnedRootFamily and priced. The online trace is the interface boundary — the final-output OracleComp interface never records when a representation was emitted, so the trace exposes a pre-squeeze computation, proves it has not queried the squeeze point, and connects its result to the final AlgebraicWfProof. Squeeze invariance follows from that query chronology, never from the final proof value alone.' },
+    role:'The third case: per-round quadratic events the classify leaves open, collected in PinnedRootFamily and priced. The final-output interface never says when a representation was emitted, so the online trace fills that gap: it shows a computation made before the squeeze, shows it never queried the squeeze point, and ties it to the final proof. Squeeze-invariance comes from that query history, never from the final value alone.' },
   { id:'IpaRelation', c:2,r:6, label:'IPA opening', status:'object',
     anchor:'InnerProduct.IpaRelation',
-    role:'The extracted opening: commit a = P and ⟨a,b⟩ = v, where b = (1, x, x², …). Since #142 retired three-special-soundness there is exactly one producer — the straight-line AGM route — rather than two alternates.' },
+    role:'The opening produced by DeployedAlgebraicDecode.ipaRelation: commit a = P with ⟨a,b⟩ = v, b = (1, x, x², …). Both halves come from the same retained decode; commit_aMulti_eq_multiopen alone proves only the commitment half, not this conjunction.' },
   { id:'SnarkRelation', c:3,r:6, label:'SnarkRelation', status:'object',
     anchor:'Relation.KnowledgeSoundness.SnarkRelation',
-    role:'The SNARK relation — a Lean structure with two fields, i.e. a conjunction: opens, the IPA opening ∧ satisfiesCircuit, circuit satisfaction. The deployed path pairs the two directly; there is no separate combiner. Its boundary is stated in the same file: DL-relation hardness, an ideal random oracle for Blake2b and challenge conversion (and, on the generatorRO endpoints, for the hash-to-curve URS derivation), CompElliptic’s Vesta point-count axiom, and correctness of the supplied verifying key.' },
+    role:'A constraint-side payload retained in DeployedConstraintWitness: opens and satisfiesCircuit for the same aggregate. snarkRelation_constraints builds it from those two facts. The Action knowledge endpoints do not consume this structure: their terminal projects the retained decode, establishes the stronger Action semantics, and returns ActionBundleWitness data directly.' },
   { id:'circuitSat', c:4,r:6, w:235, label:'circuit satisfaction', status:'object',
     anchor:'Relation.KnowledgeSoundness.circuitSatViaConstraints',
-    role:'The circuit-satisfaction half of the SNARK relation: the decoded columns satisfy the y-combined constraint identity. The deployed fold (combineConstraints / circuitSatViaConstraints) folds the permutation and lookup constraint values in too — the same list the verifier’s expected_h_eval combines — and Relation.ConstraintRelations reads the copy-constraint equalities and the lookup inclusion back out of the predicate. So satisfaction on the deployed path covers gates, the permutation argument, and the lookup argument, not the gate identity alone.' },
+    role:'The compressed full-list identity over gates, permutation, and lookup constraints. It is the circuitSat half stored in SnarkRelation, but not by itself the row-level semantics: ConstraintRelations recovers copy equalities and lookup inclusion only with the separately priced y, β, γ, and θ exclusions and the structural routing hypotheses.' },
   { id:'capstones', c:3,r:7, label:'verifier knowledge soundness', status:'goal',
     anchor:'Capstones.Action.orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for · orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for',
-    role:'For every consensus-valid Action count, the conditionally staged-certified capstones bound acceptance with failed executable bundle-witness extraction against represented online algebraic adversaries whose Fiat–Shamir challenges are modelled as a random oracle. The adversary may choose the statement and proof together; erasure preserves that game. With Q ≤ 2^123, both 2^123 and 2^125 adversary group-work budgets are covered by Adv_DLOG(2^124,2^126) + 2^-83. One closed program constructs the charged basis, specializes the exact adversary path and annotations, builds its cache, and feeds that same cache through reified postprocessing. Lean checks the value flow and counter decomposition. Fidelity of the supplied adversary and of generic host callbacks in the complete shallow program remains explicit; the three-decode bound additionally relies on the required family representation-length invariant.' },
+    role:'For every consensus-valid Action count, these bound the chance the verifier accepts while witness extraction fails, against represented algebraic adversaries with random-oracle challenges. The adversary picks the statement and proof together. With Q ≤ 2^123, both 2^123 and 2^125 adversary group-work budgets are covered by Adv_DLOG(2^124,2^126) + 2^-83. One closed program builds the charged basis, replays the exact adversary path, and pushes one proof-carrying cache through the verifier steps; Lean checks the data flow and the operation counts. What stays assumed: the supplied adversary and host callbacks match their costed versions, and the family meets the representation-length cap behind the three-decode bound.' },
   { id:'gateLift', c:5,r:5, label:'gate-check lift', status:'proven',
     anchor:'Canonical.Terminal.acceptedModel_circuitSat_or_relation',
-    role:'Lifts the verifier’s point-check at x to the full polynomial identity — circuit satisfaction — given a good challenge and the decoded columns, or else returns a relation. The canonical terminal is what joins the deployed quotient view (separate fixed, advice, instance, permutation, lookup and selector families) to the single model the circuit-integration boundary consumes.' },
+    role:'Turns the verifier’s single-point check at x into the full polynomial identity — circuit satisfaction — given a good challenge and the decoded columns, or else returns a relation. The canonical terminal merges the deployed column families (fixed, advice, instance, permutation, lookup, selector) into the one model the circuit boundary uses.' },
   { id:'hquot', c:6,r:5, label:'quotient check', status:'proven',
     anchor:'Constraint.Constraints.quotientCheck · quotientCheck_sound',
-    role:'The verifier’s check at x: numerator(x) = h(x)·(xⁿ − 1). Derived on the live path from the member bindings; assumed only on the compatibility rungs. quotientCheck_sound is the root-counting half — if the identity fails as polynomials, the check passes for at most deg/|F| of the challenges. The x-to-x₃ transport content lives with hfold and hgood.' },
+    role:'The verifier’s check at x: numerator(x) = h(x)·(xⁿ − 1). On the live path it is derived from the member bindings; the old theorems that assumed it are gone (#151). quotientCheck_sound counts roots: a false identity passes for at most deg/|F| of the challenges. The x-to-x₃ transport lives with the hfold lemmas and hgood.' },
   { id:'structural', c:5,r:7, w:235, label:'structural residuals', status:'hyp',
     anchor:'hB · hquery · DeployedConstraintStaticChecks · DeployedConstraintXSqueezeSchedule',
-    role:'What is left of the structural residuals once the rewinding rungs were removed. The straight-line and adaptive routes assume none of the old four: the z = 0 slice is priced into the bound as its (Q+1)/|F| term (straightLineRootFailure), hg0 no longer exists anywhere in the soundness stack, and hs/hξ survive only inside witness-construction keystones. The pair-count bound is now derived rather than assumed (adaptiveStatement_pairCount_lt). What every endpoint still takes is hB : B ≠ 0 (the DLOG challenge point) and injectivity of the basis query map (hquery); the straight-line endpoints additionally take the static-check and x-squeeze-schedule interfaces, discharged from the capture on the captured rungs.' },
-  { id:'hgood', c:5,r:6, label:'sound challenge', status:'hyp',
+    role:'The structural assumptions that survive. None of the old four remain: the z = 0 case is priced as the (Q+1)/|F| term (straightLineRootFailure), hg0 is gone, hs/hξ appear only inside witness-construction helpers, and the pair-count bound is now proven (adaptiveStatement_pairCount_lt). Every endpoint still takes hB : B ≠ 0, as a binder or inside its DLOG profile. Endpoints that sample their basis through the generator oracle also take injectivity of the query map (hquery) — the fixed-basis captured one has no query map. The deployed endpoints also take the static-check and x-schedule interfaces: proven from the capture where there is one, explicit premisses on the consensus package.' },
+  { id:'hgood', c:5,r:6, label:'good-challenge premiss', status:'hyp',
     anchor:'hgood',
-    role:'The challenge avoids the Schwartz–Zippel bad set, so the point-check at x implies the full constraint identity. Produced, not assumed: the good-challenge derivation spends an accept-measure budget, and the straight-line route prices the x-squeeze failure into the composed error via the schedule budget ((Q+1)·ε_x; captured ε_x = 20470/|F|). ChallengePricing prices the other surfaces the permutation and lookup chains condition on — y, β, γ, θ — the same way.' },
+    role:'The challenge misses the Schwartz–Zippel bad set, so the point check implies the full identity. Produced, not assumed: the derivation spends probability budget from the accept event, and the straight-line route prices x-squeeze failure at (Q+1)·ε_x (captured ε_x = 20470/|F|). ChallengePricing treats the other surfaces — y, β, γ, θ — the same way.' },
   { id:'roModel', c:2,r:1, w:216, label:'random-oracle model', status:'object',
     anchor:'Oracle.Model.uniformChallenge · PMFEventBiasLE',
-    role:'Transcript squeezes modeled as a reprogrammable random function. uniformChallenge is the idealization of one fresh squeeze; PMFEventBiasLE is the explicit challenge-conversion bias carried when an ideal bound is transported to the deployed conversion, so that step is a named premiss rather than an equality. Blake2b randomness, transcript injectivity, the AGM, the generator random oracle, and DLOG hardness all remain assumptions here.' },
+    role:'Transcript squeezes as a reprogrammable random function. uniformChallenge models one fresh squeeze; PMFEventBiasLE names the bias allowed when an ideal bound is moved to the deployed challenge conversion — a stated premiss, not an equality. Blake2b randomness, transcript injectivity, the AGM, the generator oracle, and DLOG hardness all stay assumptions.' },
   { id:'pinnedSqueeze', c:2,r:2, label:'pinned squeeze', status:'proven',
-    anchor:'FiatShamir.PinnedSqueeze.xEscAtPoint_measure_le · FiatShamir.PinnedRoots',
-    role:'The one-level Fiat–Shamir squeeze bound the additive root analysis runs on: a root set fixed before its squeeze is escaped with bounded probability at each queried point. This is what replaced the forking lemma — the pinned-root events compose as a finite additive union rather than a four-level joint coupling, so the residual has no fourth root and no rewinding.' },
+    anchor:'FiatShamir.PinnedSqueeze.xEscAtPoint_measure_le · FiatShamir.PinnedRoots.PinnedRootFamily',
+    role:'The one-step Fiat–Shamir bound the analysis runs on: a set fixed before its squeeze is hit with bounded probability at each queried point. This replaced the forking lemma — events add up as a simple union instead of a four-way joint rewind, so nothing rewinds.' },
   { id:'provenance', c:2,r:3, w:216, label:'assembly provenance', status:'proven',
     anchor:'FiatShamir.Adversary.Provenance.AssemblyPoint',
-    role:'Every point the deployed multiopen MSM appends comes from the proof string or the verifying key. This is what lets the AGM layer attach a representation to each emitted point without the adversary smuggling in group elements of unknown provenance.' },
-  { id:'slCapstone', c:2,r:7, w:190, label:'straight-line endpoints', line1:'straight-line', line2:'endpoints', status:'proven',
+    role:'Every point the deployed multiopen MSM appends comes from the proof string or the verifying key — so each emitted point can carry a representation, and nothing of unknown origin sneaks in.' },
+  { id:'slCapstone', c:2,r:7, w:190, label:'deployed endpoints', line1:'deployed', line2:'endpoints', status:'proven',
     anchor:'Fixtures.MultiAction.Honest.StraightLineKnowledgeError.orchard_deployed_straightline_captured_direct_generatorRO_knowledge_error_bound · AGM.StraightLineOrchardConsensusBounds.orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security',
-    role:'The fixed-statement siblings of the adaptive endpoints: three captured-key knowledge-error bounds stated through the fixed-call straight-line relation finder, and one consensus-maximum finite-security package recording the tight three-bit query/group-work interpretation at Adv_DLOG(2^126, 2^126) + 2^-84. These live with the layer that proves them rather than in Capstones/, because they are about the verifier’s algebra rather than the circuit statement — but each is still a top-level leaf censused by name.' },
+    role:'The deployed-level siblings of the adaptive endpoints: three captured-key knowledge-error bounds, plus one consensus finite-security package recording the tight three-bit reading at Adv_DLOG(2^126, 2^126) + 2^-84. They live with the layer that proves them, not in Capstones/ — verifier algebra, not circuit statement — but each is named in the trust census. The captured three are the only results tied to the actual recorded run: the capture proves the static checks and x-schedule instead of assuming them.' },
   { id:'qAdversary', c:3,r:1, w:216, label:'Q-query adversary', status:'object',
     anchor:'FiatShamir.Adversary.OracleComp',
-    role:'The adversary as an adaptive query tree with eager whole-table semantics, bounded by Q oracle queries. Query logs support the resource accounting the finite-security profiles need, and blind escape sets give the adaptive query loss — the (Q + 1) factor that multiplies each priced surface.' },
-  { id:'ordering', c:3,r:2, w:270, label:'round-by-round soundness', status:'proven',
+    role:'The adversary as a bounded query tree: at most Q oracle queries, answered from one table. Its query log feeds the resource accounting, and its blind-escape sets give the (Q + 1) factor on each priced surface.' },
+  { id:'ordering', c:3,r:2, w:270, label:'transcript ordering', status:'proven',
     anchor:'FiatShamir.Ordering.roundPoint_mem_roundTranscript · deriveChallenges_x_eq',
-    role:'The transcript-ordering guarantee: each IPA round point sits in the transcript prefix before its challenge is drawn, so later messages cannot bend earlier challenges — round-by-round soundness. halo2 does not reabsorb squeezed challenges, so each squeeze prefix determines its challenge. The backbone under the pinned-root bounds, the sealed x₁/x₄ prefixes the decode uses, and the x-fixed-before-sampling the Schwartz–Zippel argument needs.' },
+    role:'Each IPA round point lands in the transcript before its challenge is drawn, so later messages cannot bend earlier challenges; halo2 never reabsorbs a squeezed challenge. This is the chronology that pins the IPA and constraint root sets. The opened-batch interpolation points are separate extractor-side arithmetic, not transcript squeezes.' },
   { id:'openedBatch', c:6,r:3, label:'opened batch', status:'object',
     anchor:'Multiopen.Opened.OpenedBatchOpenings',
-    role:'The augmented opened-batch interface: per-run witnesses with declared U/W components, the commitment equations in augmented power form commit(aᵣ) + pUᵣ•u + pWᵣ•w = Σⱼ ξᵣʲ•Cⱼ, and the corresponding evaluation equations. It is populated from explicit AGM coordinate batches — no accept-measure or rewind constructor is exported here any more.' },
+    role:'The opened-batch view of one retained DeployedAlgebraicDecode: witnesses with declared U/W parts, commitment equations in power form, and matching evaluation equations. toOpenedBatch uses injective pinnedPoints rooted at the actual x₄ challenge; the extra interpolation points are extractor arithmetic, not oracle answers or reruns.' },
   { id:'x4batch', c:7,r:3, label:'challenge batch', status:'proven',
     anchor:'Multiopen.Deployed.deployedCommitment_x4_batch · multiopenValue_x4_batch',
-    role:'As a function of the x₄ squeeze, the pinned deployed commitment and multiopen value *are* flat power batches, with coefficients read off the fingerprinted constructIntermediateSets grouping. So the decode consumes the deployed grouping itself, leaving no separate “flat model equals deployed” obligation at the x₄ level.' },
+    role:'Under the x₄ squeeze, the pinned commitment and multiopen value already are flat power batches, with coefficients read off the fingerprinted grouping. The decode consumes the deployed grouping itself — no separate “model equals deployed” step.' },
   { id:'decode', c:6,r:4, label:'decode columns', status:'object',
     anchor:'Multiopen.Opened.openedColumnDecode · vandermonde_decode_map',
-    role:'The canonical Vandermonde decode, run componentwise: the same inverse matrix decodes the witness vectors, the U-components and the W-components. Each decoded column opens its aggregate in augmented form and every run’s triple is reconstructed as its ξᵣ-power combination. What this level recovers are the multiopen point-set aggregates (qᵢ, q′) — not yet circuit columns: the member commitments are read out by the x₁ unbatch, and the per-point claimed evaluations plus the x→x₃ transport stay delegated to the fingerprint half (hquot).' },
+    role:'The canonical Vandermonde view of OpenedBatchOpenings, run over witness, U, and W coordinates. On the live route it recovers the exact AGM x₄ columns already retained by DeployedAlgebraicDecode; the x₁ member view then unbatches each point-set aggregate. This node is produced by the opened batch — never by IpaRelation.' },
   { id:'member_binding', c:7,r:4, label:'challenge unbatch', status:'proven',
-    anchor:'Multiopen.Opened.OpenedMemberDecode',
-    role:'One augmented opening for every member commitment in a deployed point set, reconstructing the corresponding x₄ aggregate at the actual x₁ challenge. This unbundles the per-point-set aggregate back to the individual queried member commitments and pins the extracted witness as the explicit two-level (x₄ then x₁) power combination — three parallel combinations, over the witness and its declared U/W components.' },
+    anchor:'AGM.DecodeToOpened.DeployedAlgebraicDecode.toMemberDecode · DeployedAlgebraicDecode.memberBinding',
+    role:'One opening per member commitment, reconstructed at the actual x₁ challenge from the retained decode. toMemberDecode supplies the explicit two-level x₄-then-x₁ power combination; memberBinding supplies every routed claimed evaluation consumed by the canonical circuit terminal.' },
   { id:'szBadSet', c:7,r:6, label:'SZ bad set', status:'proven',
     anchor:'Constraint.Constraints.szBadSet_card_le',
-    role:'The Schwartz–Zippel count: the bad x-values are the roots of the constraint-difference polynomial, so at most degree-many are bad — the bound that makes a good challenge findable. Pricing.DegreeWalk supplies the explicit degree bound D behind ε_x = D/|F|.' },
+    role:'The counting step: bad x-values are roots of the difference polynomial, so at most degree-many exist. DegreeWalk supplies the explicit degree bound D behind ε_x = D/|F|.' },
   { id:'goodChallenge', c:6,r:6, label:'good challenge', status:'proven',
     anchor:'Pricing.GoodChallenge.uniformChallenge_szBadSet · exists_accepting_good_challenge',
-    role:'A uniform squeeze lands in the bad set with probability at most natDegree C / p, so an accept event whose measure beats the budget contains an accepting challenge outside it — hgood is produced from the accept measure, not assumed. The several d/p exclusions compose subadditively.' },
+    role:'A uniform squeeze hits the bad set with probability at most natDegree C / p, so an accept event that beats this budget contains a good accepting challenge — hgood is produced, not assumed. The several d/p losses just add.' },
   { id:'fsAdversary', c:4,r:1, dx:138, w:260, label:'FS algebraic adversary', status:'object',
     anchor:'FiatShamir.Adversary.Algebraic.AlgebraicWfProof · ComputedAlgebraicFSFamily',
-    role:'The real bounded-query Fiat–Shamir adversary with algebraic proof output: its deployed transcript is decoded into the representation-carrying proof the AGM reduction consumes, and the acceptance and binding-attack events are named on one oracle table. One run reads one table, so a family’s Coins is that table alone. These coefficients are ghost extractor data — neither transmitted nor checked by the Halo 2 verifier.' },
-  { id:'straightAdapter', c:5,r:2, dx:5, w:190, label:'straight-line AGM family', line1:'straight-line', line2:'AGM family', status:'proven',
+    role:'The bounded-query adversary whose proof output carries algebraic representations. Its transcript is decoded into the representation-carrying proof the reduction uses; acceptance and attack events live on one oracle table, and one run reads one table. The representations are ghost data — the Halo 2 verifier never sees them.' },
+  { id:'straightAdapter', c:5,r:2, dx:5, w:190, label:'deployed AGM family', line1:'deployed', line2:'AGM family', status:'proven',
     anchor:'Composition.StraightLineDeployed.ComputedStraightLineDeployedFSFamily.ofCovered · straightLineDeployedRelationFinder',
-    role:'The theorem-level adapter constructor for the fixed-statement route: it combines the online member family — whose aggregate coordinates and deployed-member coverage are derived from OnlineMemberProofData — with caller-supplied executable root, IPA-round and constraint-x stages plus their freshness proofs. It packages the family the straight-line relation finder consumes; it neither constructs those stages nor performs extraction itself. straightLineRootFailure is where the z = 0 slice is priced rather than assumed away.' },
+    role:'The builder for the fixed-statement route. As a security notion the adaptive game supersedes it — every Action capstone is adaptive — but it is not dead weight: the captured endpoints bind here, and the adaptive terminal reuses its ActionBundleWitness. It assembles the online member family with caller-supplied root, IPA-round, and constraint-x stages plus freshness proofs, packaging what the relation finder consumes — it does not extract anything itself. straightLineRootFailure prices the z = 0 case instead of assuming it away.' },
   { id:'directCost', c:5,r:3, dx:5, w:190, label:'AGM direct-decode bound', line1:'AGM direct-decode', line2:'work bound', status:'proven',
     anchor:'AGM.StraightLineFiniteSecurity.straightLineDirectDecodeOps_le · StraightLineDirectDlogProfile.solverCost_le',
-    role:'The actual direct-coordinate source traversed by the finder is charged, rather than a free reduction-work number. The direct decode is group-free, but verifier MSM and other group postprocessing are budgeted separately. The straight-line fallback budgets its two possible decodes. For the adaptive endpoint, proof-controlled source lengths are exact and all three calls — identity, terminal, and final extraction — are derived below 2^123 after the family supplies its required fixed-representation length invariant. The generic theorem does not construct a concrete deployed family satisfying that invariant.' },
+    role:'Charges the actual coordinate data the finder walks, not an invented work number. The direct decode uses no group operations; verifier MSM and other group work are budgeted separately. The straight-line fallback budgets both its possible decodes; on the adaptive endpoint all three calls — identity, terminal, final extraction — come in below 2^123 once the family meets its representation-length cap. The theorem does not build a family meeting that cap.' },
   { id:'securityBound', c:5,r:4, dx:5, w:190, label:'checked group-work bound', line1:'checked DLOG', line2:'group-work bound', status:'proven',
     anchor:'Action.AdaptiveStatementCost.costedCachedKnowledgeExtractor_two_mul_bound · Capstones.Action.orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for',
-    role:'The staged cost language records Vesta group-law operations and erases to the original represented adversary. A private, single closed program constructs charged programmed-basis points, specializes the exact adversary path while retaining its group nodes and annotations, builds a proof-carrying cache, and uses that same cache while charged canonical commitments drive verifier assembly. Lean proves its counter is adversary work plus reified reduction work, then bounds the total by twice the adversary budget: 2^125 adversary work is covered by 2^126 DLOG work. Oracle queries remain at most 2^124 under Q ≤ 2^123. Equality/list and direct-decode resources are separate. Because the embedding is shallow, both adversary fidelity and no-hidden-group-work fidelity for generic host callbacks in the complete program remain explicit premisses.' },
+    role:'The cost-tracking program records Vesta group operations and strips back to the original adversary. One closed program builds the charged basis points, replays the exact adversary path, and drives verifier assembly through one proof-carrying cache. Lean proves the counter equals adversary work plus reduction work, and bounds it by twice the adversary budget: 2^125 adversary work fits in 2^126 DLOG work, with at most 2^124 oracle queries under Q ≤ 2^123. What stays assumed: the real adversary and host callbacks do no group work the costed program does not count.' },
   { id:'adaptive', c:4,r:2, dx:35, w:190, label:'adaptive-statement game', line1:'adaptive-statement', line2:'game', status:'object',
     anchor:'Action.AdaptiveStatementModel.AdaptiveActionStatementOutput',
-    role:'The strongest Action notion in the tree: one online-AGM adversary returns the public inputs and the proof together. Its verifier transcript is not a free init — it is reconstructed from the basis-dependent VK transcript representation and the instance commitments derived from the adversary’s own output, which is the load-bearing pre-theta invariant. vkHash is an opaque transcript representation: the theorems quantify over every such function and do not claim cross-key binding.' },
-  { id:'retained', c:4,r:3, dx:35, w:190, label:'retained provenance', line1:'retained', line2:'provenance', status:'proven',
+    role:'The strongest Action game: one adversary returns the public inputs and the proof together. Its transcript is not free — it is rebuilt from the VK representation and the instance commitments derived from the adversary’s own output, all bound before theta. vkHash stays opaque: the theorems hold for every such function and claim no cross-key binding.' },
+  { id:'retained', c:4,r:3, dx:35, w:190, label:'retained execution', line1:'retained', line2:'execution', status:'proven',
     anchor:'Action.AdaptiveStatementProvenance.cachedExecution_log_length_le',
-    role:'One shared executable output/annotation cache under the unchanged logical surface proofs. All instance, pre-IPA, IPA, semantic, and complete-source comparisons consume that single retained adaptive execution rather than re-running the adversary — which is what keeps the query accounting from being multiplied a second time.' },
+    role:'One shared output-and-annotation cache. Every comparison — instance, pre-IPA, IPA, semantic, source — reads this single retained run instead of re-running the adversary, so queries are never counted twice.' },
   { id:'knowExtract', c:4,r:4, dx:35, w:190, label:'knowledge extractor', line1:'knowledge', line2:'extractor', status:'proven',
     anchor:'Action.AdaptiveStatementKnowledge.adaptiveStatementKnowledgeExtractor',
-    role:'The complete executable selected-statement witness projection. Failure of that projection is proven to be covered by the same combined relation finder and statistical surfaces as adaptive-statement false-statement soundness, so knowledge soundness costs no separate reduction.' },
-  { id:'algRel', c:0,r:6, label:'algebraic relation', status:'object',
+    role:'The executable witness projection for the chosen statement. Its failure is covered by the same relation finder and statistical terms as false-statement soundness — knowledge costs no extra reduction.' },
+  { id:'algRel', c:0,r:6, label:'relation witness', status:'object',
     anchor:'Common.AlgebraicRelation.AlgebraicRelationWitness',
-    role:'The explicit relation witness obtained from the computed relation on the augmented (g, U, W) basis — the data programmedExtractOrMiss consumes. Representations over a public basis (GroupRepresentation, AlgebraicPoint, AlgebraicRelationWitness) borrow basic structure from ArkLib’s AGM Basic.lean; ArkLib is not a dependency, and the operational prover, certificate, and reductions here are defined and proven in this repository.' },
+    role:'The relation packaged as an explicit witness — the input programmedExtractOrMiss consumes. The representation types borrow basic shape from ArkLib’s AGM file; ArkLib is not a dependency, and the prover, certificate, and reductions are proven here.' },
   { id:'adapter', c:0,r:7, label:'programmed-basis adapter', line1:'programmed-basis', line2:'adapter', status:'object',
     anchor:'Common.AlgebraicRelation.ProgrammedBasisEmbedding · programmedExtractOrMiss',
-    role:'The programmed-basis adapter takes an embedding that programs every basis slot from the discrete-log challenge as x·B + y·C with fresh pairs (Jaeger–Tessaro Lemma 3), then classifies the exact returned relation. A nonzero challenge component yields the discrete log of the challenge; a miss retains that relation with proof that it annihilates the programming.' },
+    role:'Plants the discrete-log challenge in every basis slot as x·B + y·C with fresh pairs (Jaeger–Tessaro Lemma 3), then reads the returned relation: a nonzero challenge component gives the discrete log; a miss keeps the relation with proof it annihilates the planting.' },
   { id:'dlrep', c:0,r:8, label:'DL solution', status:'object',
     anchor:'Common.AlgebraicRelation.DiscreteLogWitness',
-    role:'A solved discrete log (DiscreteLogWitness), extracted from a relation with a nonzero challenge component — the programmed-basis reduction’s output. The probability theorem upper-bounds relation-finding success by the finite-resource advantage of this resulting solver; it does not assume a separate DLOG-hardness proposition.' },
+    role:'A solved discrete log (DiscreteLogWitness), read off any relation with a nonzero challenge component. The probability theorem bounds relation-finding by this solver’s finite-resource advantage — no separate hardness assumption is taken.' },
   { id:'missesSlot', c:1,r:8, label:'programmed miss', status:'object',
     anchor:'Common.AlgebraicRelation.ProgrammedRelationOutcome',
-    role:'The miss branch retains the exact relation returned by the deployed kernel and proves it annihilates the challenge programming — one hyperplane of coins per relation. It is not a separately chosen existential relation. The programmed-basis accounting prices this miss at 1/|Fp|.' },
+    role:'The miss case keeps the exact returned relation plus proof that it annihilates the planted challenge — one 1/|Fp| slice of the randomness per relation, not a freely chosen one.' },
   { id:'dlbound', c:1,r:7, label:'DL reduction bound', status:'proven',
     anchor:'AGM.StraightLineFiniteSecurity.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile · ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le · CertifiedAdaptiveStatementDlogProfile',
-    role:'For represented algebraic adversaries, the programmed-basis reduction turns every computed relation into either a DLOG solution or one 1/|Fp| miss hyperplane. The adaptive certificate checks the staged adversary, while branch-selected reduction work executes through concrete reified group operations; random-oracle, equality/list, and direct-decode resources remain separate. The conclusion is parameterized by the resulting solver’s finite-resource DLOG advantage.' },
+    role:'For represented algebraic adversaries, every computed relation becomes either a DLOG solution or one 1/|Fp| miss. The adaptive certificate checks the staged adversary, reduction work runs through real counted group operations, and oracle, list, and decode resources are kept separate. The conclusion is stated in terms of the resulting solver’s advantage.' },
   { id:'DLhard', c:2,r:8, label:'DLOG advantage', status:'floor',
     anchor:'Common.RelationProbability.TextbookDLAdvantageLE · Action.AdaptiveStatementCost.CertifiedAdaptiveStatementDlogProfile',
-    role:'The finite-resource Vesta DLOG advantage appearing in the bound. Lean constructs the reduction and proves its oracle-query and group-work coverage; it neither assumes a proposition named “DLOG hardness” nor computes a numerical advantage. Interpreting this term using a concrete Vesta security estimate is an external modeling step.' },
-  { id:'actionTerminal', c:4,r:7, w:190, label:'Action terminal · #99 · #167', line1:'Action terminal', line2:'#99 · #167', status:'proven',
+    role:'The finite-resource Vesta DLOG advantage in the bound. Lean builds the reduction and counts its queries and group work; it neither assumes a hardness statement nor computes a security number. Reading this as a concrete Vesta estimate happens outside Lean.' },
+  { id:'actionTerminal', c:4,r:7, w:190, label:'Action terminal', status:'proven',
     anchor:'Action.AdaptiveStatementKnowledge.adaptiveStatementKnowledgeExtractor · Action.StraightLineTerminal.actionKnowledgeExtractor',
-    role:'The Action terminal returns either Type-valued private witnesses for every proof in the bundle — an ActionBundleWitness, each entry carrying a circuit PrivateWitness and a proof it satisfies the compiled Action specification — or explicit relation coefficients. Both the adaptive-statement and the straight-line route share one data-bearing outcome; the adaptive route additionally retains its annotation log. So neither existential relation availability nor a merely propositional statement branch counts as extracted knowledge.' },
+    role:'Returns real data either way: private witnesses for the whole bundle — an ActionBundleWitness, each entry with a proof it satisfies the compiled Action spec — or explicit relation coefficients. Both routes end here (the adaptive one also keeps its annotation log), so a bare existence claim never counts as extracted knowledge.' },
   { id:'blake2b', c:3,r:8, label:'Blake2b = RO', status:'floor',
     anchor:'Oracle.Model.uniformChallenge',
-    role:'Blake2b modeled as a random oracle. The oracle model itself — reprogramming, uniform challenges, the explicit conversion-bias transport — is mechanized (Oracle.Model); identifying the deployed Blake2b transcript with that oracle, and assuming transcript injectivity, is the idealization.' },
+    role:'Blake2b treated as a random oracle. The oracle model itself — reprogramming, uniform challenges, conversion-bias transport — is proven in Lean; the assumption is that the real Blake2b transcript behaves like it, with injective transcripts.' },
   { id:'h2cRO', c:6,r:8, w:235, label:'Hash-to-Curve = RO', status:'floor',
     anchor:'AGM.ProbabilityVesta.orchardGeneratorROSetup · orchard_uniformURSIdentification_of_generatorRO',
-    role:'The deployed generator hash-to-curve is modeled as the uniform group-valued generator random oracle used by the setup theorem. Lean proves the sampled-basis distribution equality inside that model; identifying halo2’s concrete deterministic generator derivation with the oracle remains an out-of-Lean idealization, separate from the Fiat–Shamir transcript RO.' },
-  { id:'hlrel', c:4,r:8, w:225, label:'high-level relation', status:'floor',
-    anchor:'ActionBundleWitness → Security.Ledger.Bridge.actionSpec_to_ledger',
-    role:'The output-side floor, narrowed. Security/Ledger/Bridge.actionSpec_to_ledger now refines the Action circuit’s postcondition to the games-facing ledger statement — re-evaluating the witness’s four exact Sinsemilla query families with the Σ-refined chain and certifying any escape as an exhibited break — and Circuits/Action/TopLevel.actionCircuit_spec_iff connects that postcondition to the circuit Spec the extractor returns. What is missing is the *composition*: nothing yet chains an extracted ActionBundleWitness through the bridge, which the census records as living on the Circuits side where the constraint predicate is produced.' },
-  { id:'vkfaith', c:5,r:8, label:'VK correctness', status:'floor',
-    anchor:'Keygen.Pipeline · Circuits.Action.Circuit',
-    role:'The input-side gap, also narrowed: the verifying key is no longer assumed — Keygen derives it from the ported configure/synthesize and certifies every field against the capture. What remains outside Lean is that the ported circuit *is* the deployed Ironwood circuit, and that the captured proof bytes, MSM, and oracle transcript faithfully record a real deployed run. Dual to the high-level relation on the output side.' },
+    role:'The generator hash-to-curve treated as a uniform random oracle into the group. Lean proves the sampled basis has the right distribution inside that model; that halo2’s real deterministic derivation behaves like the oracle is the assumption, separate from the transcript oracle.' },
+  { id:'ledgerComposition', c:4,r:8, w:225, label:'bundle → ledger composition', status:'floor',
+    anchor:'ActionBundleWitness · Security.Ledger.Bridge.actionSpec_to_ledger',
+    role:'The output-side composition gap. actionSpec_to_ledger already refines one ActionSpec witness to the games-facing ledger statement or an exhibited Sinsemilla break, and actionCircuit_spec_iff links the extractor’s circuit spec to ActionSpec. What is not yet exported is the theorem mapping every entry of an extracted ActionBundleWitness through those bridges to the bundle-level ledger relation.' },
+  { id:'deploymentProvenance', c:5,r:8, w:225, label:'deployment provenance', status:'floor',
+    anchor:'Keygen.Pipeline · Fingerprint.Match',
+    role:'The input-side deployment floor. Lean derives the verifying key and checks every field against the capture, but the ported configure/synthesize is not universally proven equal to the shipped Rust circuit, and the captured proof bytes, MSM, and oracle transcript remain empirical records rather than a byte-level refinement theorem.' },
 ];
 
 // Each edge is [from, to, kind, via?] where `via` names the Lean lemma/def that
@@ -419,25 +428,23 @@ const edges = [
   ['verifierEq','gfold','entails','deployed_gterm_foldAll'],
   ['gfold','peel','entails','straightLineIpaZeroOrRelation'],
   ['fsAdversary','peel','entails','AlgebraicWfProof'],
-  ['peel','clean','entails','straightLineIpaZeroOrRelation'],
+  ['peel','clean','entails','deployedAlgebraicDecode_of_good_roots'],
   ['peel','relation','entails','separateOrRelationWitness'],
-  ['peel','slRoots','entails','straightLineIpaRootEvents'],
+  ['peel','slRoots','entails','straightLineBindingAttackZRootOrRelation'],
   ['pinnedSqueeze','slRoots','entails','StraightLineIpaSqueezeInvariance'],
-  ['clean','IpaRelation','entails','commit_aMulti_eq_multiopen'],
-  ['IpaRelation','SnarkRelation','entails','SnarkRelation.opens'],
-  ['IpaRelation','decode','entails','openedColumnDecode'],
-  ['gateLift','circuitSat','entails','circuitSatViaConstraints'],
-  ['circuitSat','SnarkRelation','entails','SnarkRelation.satisfiesCircuit'],
+  ['clean','IpaRelation','entails','DeployedAlgebraicDecode.ipaRelation'],
+  ['IpaRelation','SnarkRelation','entails','snarkRelation_constraints'],
+  ['gateLift','circuitSat','entails','acceptedModel_circuitSat_or_relation'],
+  ['circuitSat','SnarkRelation','entails','snarkRelation_constraints'],
   ['gateLift','hquot','rests'],
   ['gateLift','hgood','rests'],
-  ['decode','gateLift','entails','acceptedModel_circuitSat_or_relation'],
-  ['ordering','openedBatch','entails','multiopenValue_x4_batch'],
-  ['x4batch','openedBatch','entails','deployedCommitment_x4_batch'],
+  ['member_binding','gateLift','entails','acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq'],
+  ['clean','openedBatch','entails','DeployedAlgebraicDecode.toOpenedBatch'],
+  ['x4batch','openedBatch','entails','deployedSyntheticOpenedX4'],
   ['openedBatch','decode','entails','openedColumnDecode'],
-  ['decode','member_binding','entails','OpenedMemberDecode'],
+  ['clean','member_binding','entails','DeployedAlgebraicDecode.toMemberDecode · DeployedAlgebraicDecode.memberBinding'],
   ['szBadSet','goodChallenge','entails','uniformChallenge_szBadSet'],
   ['goodChallenge','hgood','discharges','exists_accepting_good_challenge'],
-  ['SnarkRelation','capstones','entails','orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for'],
   ['roModel','pinnedSqueeze','entails','xEscAtPoint_measure_le'],
   ['ordering','pinnedSqueeze','entails','roundPoint_mem_roundTranscript'],
   ['roModel','blake2b','rests'],
@@ -453,26 +460,34 @@ const edges = [
   ['directCost','securityBound','entails','StraightLineDirectDlogProfile.solverCost_le'],
   ['dlbound','securityBound','entails','orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for'],
   ['dlbound','slCapstone','entails','orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security'],
-  ['capstones','securityBound','entails','orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for'],
+  ['dlbound','capstones','entails','adaptiveStatementKnowledgeFailure_prob_le'],
+  ['securityBound','capstones','entails','orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for'],
   ['actionTerminal','capstones','entails','adaptiveStatementKnowledgeFailure_prob_le'],
-  ['relation','algRel','entails','NontrivialRelation.ofCombinationCollision'],
+  ['relation','algRel','entails','AugmentedRelationWitness.toAlgebraicRelationWitness'],
   ['algRel','adapter','entails','programmedExtractOrMiss'],
   ['adapter','dlrep','entails','discreteLogOfChallenge_of_relation'],
   ['adapter','missesSlot','entails','programmedExtractOrMiss'],
-  ['adapter','dlbound','entails','relationWithCoins_prob_le_of_truncated_textbookDL'],
+  ['adapter','dlbound','entails','relationWithCoins_prob_le_of_textbookDL'],
   ['dlbound','DLhard','rests'],
   ['dlbound','h2cRO','rests'],
   ['slCapstone','DLhard','rests'],
   ['securityBound','DLhard','rests'],
   ['securityBound','h2cRO','rests'],
-  ['capstones','hlrel','rests'],
   ['capstones','structural','rests'],
-  ['capstones','vkfaith','rests'],
+  ['capstones','ledgerComposition','rests'],
+  ['capstones','deploymentProvenance','rests'],
 ];
 
 // Explicit routes keep cross-territory composition edges from passing through unrelated nodes.
 const edgeRoutes = {
-  'ordering:openedBatch': [{ x:1050, y:258 }, { x:1480, y:258 }],
+  'clean:openedBatch': [
+    { x:650, y:650 }, { x:1000, y:630 }, { x:1180, y:630 }, { x:1450, y:630 },
+    { x:1450, y:500 },
+  ],
+  'clean:member_binding': [
+    { x:650, y:658 }, { x:900, y:622 }, { x:1450, y:622 }, { x:1680, y:600 },
+  ],
+  'member_binding:gateLift': [{ x:1700, y:630 }, { x:1450, y:630 }],
   // Down the left of the Fiat–Shamir column, then through the 34px gap between the DL reduction
   // bound and the straight-line endpoints, and along the top of the assumptions band.
   'roModel:blake2b': [
@@ -503,13 +518,18 @@ const edgeRoutes = {
     { x:1130, y:383 }, { x:980, y:402 }, { x:946, y:620 }, { x:950, y:840 },
     { x:820, y:860 }, { x:470, y:856 },
   ],
+  // The deployed endpoint occupies the direct row-7 chord; carry this separate Action bound just
+  // above it, in the narrow clear band below the other long-form reduction routes.
+  'dlbound:capstones': [
+    { x:480, y:870 }, { x:700, y:870 }, { x:720, y:875 },
+  ],
   'dlbound:securityBound': [
     { x:440, y:844 }, { x:700, y:842 }, { x:905, y:840 }, { x:932, y:824 },
     { x:934, y:700 }, { x:1000, y:616 }, { x:1230, y:612 },
   ],
-  'capstones:securityBound': [
-    { x:1080, y:860 }, { x:1203, y:852 }, { x:1207, y:790 }, { x:1206, y:700 },
-    { x:1208, y:636 }, { x:1290, y:596 },
+  'securityBound:capstones': [
+    { x:1290, y:596 }, { x:1208, y:636 }, { x:1206, y:700 }, { x:1207, y:790 },
+    { x:1203, y:852 }, { x:1080, y:860 },
   ],
   'securityBound:DLhard': [
     { x:1500, y:600 }, { x:1692, y:640 }, { x:1692, y:810 }, { x:1665, y:940 },
@@ -602,7 +622,7 @@ territories.forEach(t => {
   rect.style.setProperty('--ts', t.h);
   g.appendChild(rect);
   const labX = (t.labelSide === 'right' ? x1+padRight-14 : x0-pad+14) + (t.labelDx || 0);
-  const lab = el('text', { x:labX, y:y0-pad-headroom+22, class:'terr-label' });
+  const lab = el('text', { x:labX, y:y0-pad-headroom+22+(t.labelDy||0), class:'terr-label' });
   if (t.labelSide === 'right') lab.setAttribute('text-anchor', 'end');
   lab.style.setProperty('--ts', t.h);
   lab.textContent = t.label;
@@ -684,16 +704,23 @@ svg.appendChild(nodeLayer);
 const detail = document.getElementById('detail');
 let pinned = null, activeFilter = 'all', journeyActive = false;
 
+// The top-level result carries status 'goal' and has no chip of its own, so it has to ride along
+// with 'proven' — it is a proven theorem, and dropping it out of that view was the one node the
+// filter should never hide.
+function matchesFilter(id) {
+  const s = byId[id].status;
+  return activeFilter === 'all' || s === activeFilter || (activeFilter === 'proven' && s === 'goal');
+}
+
 function applyFilter() {
   nodes.forEach(n => {
-    const show = activeFilter === 'all' || n.status === activeFilter;
-    n._g.classList.toggle('dim', !show);
+    n._g.classList.toggle('filtered', !matchesFilter(n.id));
+    n._g.classList.remove('dim', 'near');
   });
   edgeEls.forEach((p,i) => {
     const [a,b] = edges[i];
-    const show = activeFilter === 'all' || byId[a].status === activeFilter || byId[b].status === activeFilter;
-    p.classList.toggle('dim', !show);
-    p.classList.remove('hot');
+    p.classList.toggle('filtered', !(matchesFilter(a) || matchesFilter(b)));
+    p.classList.remove('hot', 'dim');
   });
 }
 
@@ -701,8 +728,10 @@ function highlight(id) {
   const near = new Set([id]);
   const eidx = new Set();
   adj[id].forEach(a => { near.add(a.other); eidx.add(a.i); });
-  nodes.forEach(n => { n._g.classList.toggle('dim', !near.has(n.id)); n._g.classList.toggle('near', near.has(n.id)); });
-  edgeEls.forEach((p,i) => { p.classList.toggle('hot', eidx.has(i)); p.classList.toggle('dim', !eidx.has(i)); });
+  // A pinned node's neighbourhood takes over from the filter, so clear `filtered` here; unpinning
+  // calls clearHi() and re-applies the filter.
+  nodes.forEach(n => { n._g.classList.remove('filtered'); n._g.classList.toggle('dim', !near.has(n.id)); n._g.classList.toggle('near', near.has(n.id)); });
+  edgeEls.forEach((p,i) => { p.classList.remove('filtered'); p.classList.toggle('hot', eidx.has(i)); p.classList.toggle('dim', !eidx.has(i)); });
 }
 
 function applyJourneyStage(payload) {
@@ -711,7 +740,7 @@ function applyJourneyStage(payload) {
   const focus = new Set(payload.focus || []);
   const revealed = new Set(payload.revealed || payload.focus || []);
   nodes.forEach(n => {
-    n._g.classList.remove('dim');
+    n._g.classList.remove('dim', 'filtered');
     n._g.classList.toggle('journey-current', focus.has(n.id));
     n._g.classList.toggle('journey-past', !focus.has(n.id) && revealed.has(n.id));
     n._g.classList.toggle('journey-hidden', !revealed.has(n.id));
@@ -720,7 +749,7 @@ function applyJourneyStage(payload) {
     const [a, b] = edges[i];
     const bothRevealed = revealed.has(a) && revealed.has(b);
     const touchesCurrent = focus.has(a) || focus.has(b);
-    p.classList.remove('dim', 'hot');
+    p.classList.remove('dim', 'hot', 'filtered');
     p.classList.toggle('journey-current', bothRevealed && touchesCurrent);
     p.classList.toggle('journey-past', bothRevealed && !touchesCurrent);
     p.classList.toggle('journey-hidden', !bothRevealed);
@@ -764,13 +793,13 @@ nodes.forEach(n => {
 });
 
 function clearHi() {
-  nodes.forEach(n => { n._g.classList.remove('dim'); n._g.classList.remove('near'); });
-  edgeEls.forEach(p => { p.classList.remove('hot'); p.classList.remove('dim'); });
+  nodes.forEach(n => { n._g.classList.remove('dim'); n._g.classList.remove('near'); n._g.classList.remove('filtered'); });
+  edgeEls.forEach(p => { p.classList.remove('hot'); p.classList.remove('dim'); p.classList.remove('filtered'); });
 }
 
 function resetDetail() {
   detail.innerHTML = `<p class="empty">A node's card shows what it is, its Lean anchor, and every theorem it connects to — with the lemma that justifies each link.</p>
-    <p class="hint">The spine runs down the left: <span class="mono">accepting proof → verifier equation → generator fold → one-run classify → IPA opening → SnarkRelation</span>. Extraction is straight-line — one accepting execution, no rewinding. The tinted territories are the machinery that discharges its assumptions.</p>`;
+    <p class="hint">The soundness route is <span class="mono">accepting proof → verifier equation → one-run classify → deployed decode → Action witness extractor → knowledge bound</span>. <span class="mono">SnarkRelation</span> is a retained constraint-side payload, not the Action capstone's consumer boundary.</p>`;
 }
 
 svg.addEventListener('click', () => { if (journeyActive) return; pinned = null; nodes.forEach(m => m._g.classList.remove('pinned')); clearHi(); resetDetail(); if(activeFilter!=='all') applyFilter(); });

@@ -138,6 +138,13 @@
       "url": "https://github.com/zcash/ironwood/pull/173",
       "sha": "6b7ef38",
       "lane": "merged"
+    },
+    "185": {
+      "label": "PR #185",
+      "title": "Review fixes and the staged-certified endpoints",
+      "url": "https://github.com/zcash/ironwood/pull/185",
+      "sha": "263d64d",
+      "lane": "merged"
     }
   },
   "description": "The logical route from the deployed verifier to the formal soundness endpoint, as it stands on main.",
@@ -151,8 +158,7 @@
       "nodes": [
         "assemble",
         "fingerprint",
-        "vkderiv",
-        "vkfaith"
+        "vkderiv"
       ],
       "theorems": [
         {
@@ -191,7 +197,7 @@
       "proves": [
         "The checked Lean and captured Rust MSM coefficients match, at the Lean-derived verifying key and the Lean-derived challenge schedule.",
         "A matching MSM has the same group evaluation under any supplied URS.",
-        "A competing coefficient family that differs from Lean's anywhere agrees at a uniform point with probability at most (D + B)/p."
+        "A competing coefficient family that differs from Lean's anywhere agrees at a uniform point with probability at most (D + B)/p, D bounding the competing family's degree and B the summed degrees of the verifying key's denominator factors."
       ],
       "residuals": [
         "Rust capture provenance: the captured MSM, proof bytes, and oracle transcript are taken as faithful records of a deployed run.",
@@ -311,7 +317,7 @@
       "chapter": "Straight-line extraction",
       "title": "Classify one accepting execution",
       "claim": "One accepting algebraic transcript is a clean IPA opening, an explicit relation over (g, U, W), or a squeeze-pinned bad-challenge event — with no rewinding.",
-      "summary": "The represented execution carries a coefficient vector for every group point the prover emits. straightLineIpaZeroOrRelation reads the symbolic IPA equation off that representation and returns the trichotomy as data; separateOrRelationWitness is the small kernel that compares two representations and returns their difference as relation coefficients when they disagree. PR #142 removed the recursive extractor, the transcript tree, and three-special-soundness from the live stack: nothing on this route re-runs the adversary.",
+      "summary": "The represented execution carries a coefficient vector for every group point the prover emits. straightLineIpaZeroOrRelation returns zero symbolic IPA coordinates or concrete relation data; on a false accepted opening, straightLineBindingAttackZRootOrRelation refines the zero case to a pinned round-root event or a relation. Away from the priced roots, deployedAlgebraicDecode_of_good_roots retains the run's exact AGM batches and value equations. separateOrRelationWitness is the coordinate-comparison kernel. PR #142 removed the recursive extractor, transcript tree, and three-special-soundness: nothing here re-runs the adversary.",
       "nodes": [
         "fsAdversary",
         "peel",
@@ -356,6 +362,14 @@
         {
           "symbol": "commit_aMulti_eq_multiopen",
           "path": "Zcash/Snark/Soundness/Composition/Bridge.lean"
+        },
+        {
+          "symbol": "deployedAlgebraicDecode_of_good_roots",
+          "path": "Zcash/Snark/Soundness/AGM/DeployedRootDecode.lean"
+        },
+        {
+          "symbol": "DeployedAlgebraicDecode.ipaRelation",
+          "path": "Zcash/Snark/Soundness/AGM/DeployedConstraintSupply.lean"
         }
       ],
       "prs": [
@@ -379,7 +393,7 @@
       "chapter": "Multiopen",
       "title": "Recover the verifier's opened columns",
       "claim": "The x4 collapse is a flat power batch, and Vandermonde inversion decodes it componentwise down to the individual queried member commitments.",
-      "summary": "deployedCommitment_x4_batch shows the deployed grouping itself has the flat power shape the decode inverts, so there is no separate 'flat model equals deployed' obligation. The live decode is the augmented opened-batch interface: the same inverse matrix decodes the witness vectors and their declared U- and W-components, and the x1 layer unbatches each point-set aggregate back to the member commitments. The batch is populated from explicit AGM coordinates, not from a rewind.",
+      "summary": "deployedCommitment_x4_batch and multiopenValue_x4_batch show that the deployed grouping has the flat power shape used by the retained AGM decode. DeployedAlgebraicDecode.toOpenedBatch presents that one-run data at injective extractor-side pinnedPoints, openedColumnDecode recovers the retained x4 columns, and toMemberDecode unbatches each point-set aggregate at x1. The added interpolation points are arithmetic, not oracle answers or rewinds.",
       "nodes": [
         "x4batch",
         "openedBatch",
@@ -396,6 +410,14 @@
           "path": "Zcash/Snark/Soundness/Multiopen/Deployed.lean"
         },
         {
+          "symbol": "DeployedAlgebraicDecode",
+          "path": "Zcash/Snark/Soundness/AGM/DeployedRootDecode.lean"
+        },
+        {
+          "symbol": "DeployedAlgebraicDecode.toOpenedBatch",
+          "path": "Zcash/Snark/Soundness/AGM/DecodeToOpened.lean"
+        },
+        {
           "symbol": "OpenedBatchOpenings",
           "path": "Zcash/Snark/Soundness/Multiopen/Opened.lean"
         },
@@ -410,6 +432,14 @@
         {
           "symbol": "OpenedMemberDecode",
           "path": "Zcash/Snark/Soundness/Multiopen/Opened.lean"
+        },
+        {
+          "symbol": "DeployedAlgebraicDecode.toMemberDecode",
+          "path": "Zcash/Snark/Soundness/AGM/DecodeToOpened.lean"
+        },
+        {
+          "symbol": "DeployedAlgebraicDecode.memberBinding",
+          "path": "Zcash/Snark/Soundness/AGM/DecodeToOpened.lean"
         },
         {
           "symbol": "DeployedRootDecodeWitness",
@@ -436,7 +466,7 @@
       "chapter": "Constraints",
       "title": "Lift the point check to circuit satisfaction",
       "claim": "Outside the Schwartz-Zippel bad set, the quotient point check implies the full combined gate, permutation, and lookup identity.",
-      "summary": "quotientCheck_sound bounds the roots of the constraint-difference polynomial, and the good challenge is derived from challenge uniformity rather than assumed: an accept event whose measure beats the budget contains an accepting challenge outside the bad set. The deployed fold combines the permutation and lookup constraint values too, and ConstraintRelations reads the copy-constraint equalities and the lookup inclusion back out of the satisfaction predicate.",
+      "summary": "quotientCheck_sound bounds the roots of the constraint-difference polynomial, and the good challenge is derived from challenge uniformity rather than assumed: an accept event whose measure beats the budget contains an accepting challenge outside the bad set. The deployed fold includes gate, permutation, and lookup values. The resulting circuitSatViaConstraints is the compressed identity; ConstraintRelations recovers copy equalities and lookup inclusion only with the separately priced y, beta, gamma, and theta exclusions and the structural routing hypotheses.",
       "nodes": [
         "szBadSet",
         "goodChallenge",
@@ -495,10 +525,10 @@
       "proves": [
         "A good challenge turns the verifier's point identity into the full constraint polynomial identity.",
         "Bad-set avoidance comes from an explicit probability budget, and the x-squeeze exclusion's pinning half is derived from the run's own query log.",
-        "Circuit satisfaction on the deployed path covers the gates, the permutation argument's copy constraints, and the lookup argument's inclusion."
+        "With the separately priced challenge exclusions and structural routing hypotheses, the compressed deployed identity yields gate satisfaction, the permutation argument's copy constraints, and the lookup argument's inclusion."
       ],
       "residuals": [
-        "hquot still carries the fingerprint-to-gate-check and x-to-x3 transport content on the compatibility rungs.",
+        "hquot's fingerprint-to-gate-check and x-to-x3 transport content lives with the hfold discharge lemmas and hgood; the legacy rungs that assumed the quotient check outright were removed.",
         "The grand-product telescoping and final lookup assembly are proven as structural results but their Schwartz-Zippel bridge is priced, not free."
       ],
       "durationMs": 9500
@@ -528,6 +558,10 @@
           "path": "Zcash/Common/AlgebraicRelation.lean"
         },
         {
+          "symbol": "AugmentedRelationWitness.toAlgebraicRelationWitness",
+          "path": "Zcash/Common/AlgebraicRelation.lean"
+        },
+        {
           "symbol": "ProgrammedBasisEmbedding",
           "path": "Zcash/Common/AlgebraicRelation.lean"
         },
@@ -548,7 +582,7 @@
           "path": "Zcash/Common/RelationProbability.lean"
         },
         {
-          "symbol": "relationWithCoins_prob_le_of_truncated_textbookDL",
+          "symbol": "relationWithCoins_prob_le_of_textbookDL",
           "path": "Zcash/Common/RelationProbabilityCoins.lean"
         },
         {
@@ -581,7 +615,7 @@
       "chapter": "Adaptive statement",
       "title": "Let the adversary choose the statement",
       "claim": "One online-AGM adversary returns the public inputs and proof together, and an executable extractor returns the private witnesses for every proof in the bundle or explicit relation coefficients.",
-      "summary": "The adaptive-statement game reconstructs the verifier transcript from the basis-dependent VK representation and the instance commitments derived from the adversary's own output, binding the selected instance prefix before theta. Its instance, pre-IPA, IPA, semantic, and source comparisons all consume one retained execution. The straight-line family is the fixed-statement sibling: both terminate in a data-bearing outcome, so neither existential relation availability nor a merely propositional statement branch counts as extracted knowledge.",
+      "summary": "The adaptive-statement game reconstructs the verifier transcript from the basis-dependent VK representation and the instance commitments derived from the adversary's own output, binding the selected instance prefix before theta. Its instance, pre-IPA, IPA, semantic, and source comparisons all consume one retained execution. The deployed AGM family is the fixed-statement sibling: both terminate in a data-bearing outcome, so neither existential relation availability nor a merely propositional statement branch counts as extracted knowledge.",
       "nodes": [
         "adaptive",
         "retained",
@@ -672,9 +706,9 @@
     {
       "id": "compose",
       "chapter": "Capstones",
-      "title": "Compose the opening, the circuit, and the budget",
-      "claim": "The extracted opening and the constraint identity form SnarkRelation, and the nine advertised endpoints bound acceptance-with-extraction-failure at explicit resource ceilings.",
-      "summary": "SnarkRelation is the conjunction of one pinned IPA opening and circuit satisfaction for the same witness. Above it sit exactly nine censused endpoints: five consensus-generic adaptive-statement Action bounds, three captured straight-line knowledge errors, and one consensus-maximum finite-security package. For every consensus-valid bundle size, the conditionally staged-certified adaptive-statement capstones bound verifier acceptance when executable private-witness extraction fails by Adv_DLOG(2^124, 2^126) + 2^-83; at the separate Q <= 2^123 oracle parameter, both 2^123 and 2^125 adversary group-work budgets are covered, the latter's adversary-plus-reduction group work being at most 2^126.",
+      "title": "Package the relation and close the endpoint budgets",
+      "claim": "The retained decode packages an IPA opening and constraint identity as SnarkRelation, while the nine advertised endpoints separately bound executable witness-extraction failure at explicit resource ceilings.",
+      "summary": "SnarkRelation is retained inside DeployedConstraintWitness as the opening and compressed constraint identity for one aggregate, but the current Action endpoints do not consume that structure. Their terminal projects the same retained decode, proves the stronger Action semantics, and returns ActionBundleWitness data; their probability theorems bound failure of that executable projection through the computed relation finder. The advertised leaves are five adaptive-statement Action bounds, three captured straight-line knowledge errors, and one consensus-maximum finite-security package. At Q <= 2^123, the staged-certified endpoints cover both 2^123 and 2^125 adversary group-work budgets by Adv_DLOG(2^124, 2^126) + 2^-83.",
       "nodes": [
         "SnarkRelation",
         "capstones",
@@ -686,6 +720,14 @@
         {
           "symbol": "SnarkRelation",
           "path": "Zcash/Snark/Soundness/Relation/KnowledgeSoundness.lean"
+        },
+        {
+          "symbol": "snarkRelation_constraints",
+          "path": "Zcash/Snark/Soundness/Relation/KnowledgeSoundness.lean"
+        },
+        {
+          "symbol": "DeployedConstraintWitness",
+          "path": "Zcash/Snark/Soundness/AGM/DeployedConstraintSupply.lean"
         },
         {
           "symbol": "orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for",
@@ -732,10 +774,12 @@
         "139",
         "151",
         "165",
-        "167"
+        "167",
+        "185"
       ],
       "proves": [
-        "The opening and constraint branches refer to the same pinned verifier statement.",
+        "The retained constraint witness packages its opening and compressed identity as SnarkRelation for the same aggregate; this is a side payload, not the Action capstones' consumer boundary.",
+        "The Action endpoints instead consume the executable ActionBundleWitness projection and the computed relation finder over that same retained run.",
         "Every advertised endpoint is a top-level leaf named directly in a TrustBoundary census entry, so its own trusted base is checked rather than inherited.",
         "The 2^-83 term is an independent statistical soundness error, and the endpoint requires no externally supplied traces, cuts, or views."
       ],
@@ -756,11 +800,11 @@
         "structural",
         "hquot",
         "hgood",
-        "hlrel",
-        "vkfaith",
         "DLhard",
         "blake2b",
-        "h2cRO"
+        "h2cRO",
+        "ledgerComposition",
+        "deploymentProvenance"
       ],
       "theorems": [
         {

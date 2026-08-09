@@ -990,8 +990,9 @@ assert_axioms Zcash.Snark.perm_copy_constraints_of_chunk_products
 assert_axioms Zcash.Snark.chunkName_injective_of_coset
 assert_axioms Zcash.Snark.deployed_declared_equalities_of_identity_chunks
 assert_axioms Zcash.Snark.circuitSatViaConstraints_of_check
--- Closing the loop: the capstone hands over an opening paired with satisfaction of the whole
--- constraint list, and the two arguments' relations are read back out of that same predicate.
+-- The retained constraint witness pairs an opening with the compressed full-list identity.
+-- Consumers can read the two arguments' relations back out when they separately supply the
+-- semantic challenge exclusions; the current Action capstones consume the retained decode instead.
 assert_axioms Zcash.Snark.snarkRelation_constraints
 assert_axioms Zcash.Snark.declared_equalities_of_circuitSat
 assert_axioms Zcash.Snark.lookup_relation_of_circuitSat

@@ -14,6 +14,7 @@ FV_DIR = BOOK_DIR / "src" / "formal-verification"
 SOURCE_REMOTE = "https://github.com/zcash/ironwood.git"
 SOURCE_CACHE = {}
 FETCHED_SOURCES = set()
+LEAN_IDENT_CHARS = r"A-Za-z0-9_.'!?"
 
 
 def fail(errors, message):
@@ -24,6 +25,13 @@ def duplicates(items):
     return sorted(item for item, count in Counter(items).items() if count > 1)
 
 
+def contains_lean_identifier(text, symbol):
+    return re.search(
+        rf"(?<![{LEAN_IDENT_CHARS}])" + re.escape(symbol) + rf"(?![{LEAN_IDENT_CHARS}])",
+        text,
+    )
+
+
 def validate_graph(errors, map_text):
     node_ids = re.findall(r"\{ id:'([^']+)', c:\d+,r:\d+", map_text)
     edges = re.findall(
@@ -31,6 +39,7 @@ def validate_graph(errors, map_text):
         map_text,
     )
     node_set = set(node_ids)
+    formal_edges = []
 
     for node_id in duplicates(node_ids):
         fail(errors, f"duplicate map node: {node_id}")
@@ -43,6 +52,10 @@ def validate_graph(errors, map_text):
             fail(errors, f"unknown edge kind: {kind}")
         if kind in {"entails", "discharges"} and not anchor:
             fail(errors, f"formal edge has no theorem anchor: {source} -> {target}")
+        elif kind in {"entails", "discharges"}:
+            formal_edges.append(
+                (source, target, [symbol.strip() for symbol in anchor.split("·")])
+            )
         if kind in {"rests", "gap"} and anchor:
             fail(errors, f"assumption edge unexpectedly has a theorem anchor: {source} -> {target}")
 
@@ -65,7 +78,35 @@ def validate_graph(errors, map_text):
 
     for node_id in node_ids:
         visit(node_id, [])
-    return node_set, len(edges)
+    return node_set, len(edges), formal_edges
+
+
+def validate_map_edge_anchors(errors, formal_edges):
+    """Catch renamed or deleted edge anchors in the checked-out Lean tree.
+
+    This is intentionally a syntactic guard. Whether a theorem has the direction and hypotheses
+    claimed by an edge remains a proof-map review question, but a green build must not let a stale
+    edge keep naming a declaration that no longer exists.
+    """
+    lean_root = REPO_DIR / "Zcash"
+    try:
+        lean_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in sorted(lean_root.rglob("*.lean"))
+        )
+    except OSError as error:
+        fail(errors, f"could not index Lean sources for map edge anchors: {error}")
+        return
+
+    for source, target, symbols in formal_edges:
+        for symbol in symbols:
+            # Namespace-qualified declarations are often written under `namespace Foo` as only
+            # `def bar`; accept the full spelling when present and otherwise its final component.
+            short_symbol = symbol.rsplit(".", 1)[-1]
+            if not (
+                contains_lean_identifier(lean_text, symbol)
+                or contains_lean_identifier(lean_text, short_symbol)
+            ):
+                fail(errors, f"map edge anchor not found in Lean tree: {source} -> {target}: {symbol}")
 
 
 def fetch_source_if_missing(source):
@@ -173,9 +214,7 @@ def validate_timeline(errors, data, node_set):
                 # `assembleQueries`, so a symbol renamed into a longer name is still caught.
                 # Lean identifiers admit `_`, `'`, `!`, `?` and dotted namespaces, so the
                 # boundaries exclude those rather than relying on `\b`.
-                if text is not None and not re.search(
-                    r"(?<![A-Za-z0-9_.'])" + re.escape(symbol) + r"(?![A-Za-z0-9_'])", text
-                ):
+                if text is not None and not contains_lean_identifier(text, symbol):
                     fail(errors, f"{stage_id} symbol not found in {source_path}: {symbol}")
         for pr_id in stage["prs"]:
             referenced_prs.add(pr_id)
@@ -252,7 +291,10 @@ def main():
         print(f"proof journey data error: {error}", file=sys.stderr)
         return 1
 
-    node_set, edge_count = validate_graph(errors, map_path.read_text(encoding="utf-8"))
+    node_set, edge_count, formal_edges = validate_graph(
+        errors, map_path.read_text(encoding="utf-8")
+    )
+    validate_map_edge_anchors(errors, formal_edges)
     validate_timeline(errors, data, node_set)
     validate_endpoints(errors, data)
 
