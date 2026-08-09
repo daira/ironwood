@@ -50,7 +50,10 @@ def main():
 
     todo_paths = collect_todo_paths(summary_path)
     if todo_paths:
-        data = json.dumps(todo_paths)
+        # Escape "<" so no path can terminate the raw-text <script> element below
+        # (json.dumps leaves "<" alone, and a literal "</script>" inside the
+        # element would end it early). JSON.parse turns the escape back into "<".
+        data = json.dumps(todo_paths).replace("<", "\\u003c")
         script_tag = (
             f'\n<script class="todo-data" type="application/json">{data}</script>\n'
         )
