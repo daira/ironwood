@@ -1696,8 +1696,6 @@ assert_axioms Zcash.Snark.ActionTerminal.actionRunDecode +native(
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.straightLineRunAcceptsAt +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.topLevelStatementOrRelationDecoded +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.topLevelBundleStatementDecoded +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.straightLineTerminalRelationEvent +native(

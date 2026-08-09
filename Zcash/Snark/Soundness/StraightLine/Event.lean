@@ -260,29 +260,6 @@ def topLevelTerminalRelationFinderCovers
     (¬∀ proofIndex, top.Statement (inputs proofIndex)) →
     (finder basis O).isSome
 
-/-- The circuit statement or an explicit relation over the run's basis, as a bare `Nonempty`
-proposition.  Legacy shape: the relation branch is inhabited at any basis by
-`nonempty_nontrivialRelation_vesta` (`Decoded/VacuityWitness.lean`), so this proposition alone
-carries no extraction content; the computable extraction claims are the
-`assert_computable`-pinned endpoints. -/
-def topLevelStatementOrRelationDecoded
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (pp : ProofParams)
-    (family : ComputedStraightLineDeployedFSFamily (top.shape.withProofParams pp))
-    (inputs : Fin pp.numProofs → PublicInput Fp) :
-    (AugmentedIndex (2 ^ top.shape.k) → VestaG) →
-    (BTranscript Fp VestaG
-      (preIpaLen (top.shape.withProofParams pp) family.init.length 10
-        + 3 * top.shape.k) → Fp) → Prop :=
-  fun basis _ =>
-    Nonempty ((∀ proofIndex, top.Statement (inputs proofIndex)) ⊕'
-      NontrivialRelation (F := Fp)
-        (ursOfAugmentedBasis top.shape.k basis).g
-        (ursOfAugmentedBasis top.shape.k basis).u
-        (ursOfAugmentedBasis top.shape.k basis).w)
-
 /-- The exact semantic target: the circuit statement holds for every bundled proof. -/
 def topLevelBundleStatementDecoded
     {Config : Type} {PublicInput : TypeMap}
