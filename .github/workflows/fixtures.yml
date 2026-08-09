@@ -73,6 +73,12 @@ jobs:
       # the tree as a "capture" nothing regenerates.
       - name: Check the committed capture-artifact set against the pinned list
         run: ./scripts/regenerate-fingerprint-fixtures.sh --check-set
+      # Digest-level provenance, also filter-independent: every committed capture must match
+      # its manifest entry (path, sha256, generator, source, invocation), and any
+      # generated-looking artifact without an entry fails. Binds the committed bytes to their
+      # recorded provenance on every run, not only when a full regeneration executes.
+      - name: Check the fixture provenance manifest
+        run: ./scripts/check_fixture_manifest.sh
       # Regeneration is expensive (real k=11 Orchard proofs + verifier runs), so only run
       # it when a committed capture artifact or the pins change.
       #
