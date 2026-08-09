@@ -3,8 +3,11 @@
 > **Bottom line:** within the formal model, breaking Action is at least as hard as
 > breaking Vesta discrete log: every covered computational failure of Action knowledge
 > soundness yields a DLOG solver. The underlying benchmark therefore remains breaking
-> Vesta DLOG, whose best known classical attack has a headline expected cost of about
-> $2^{125}$ group operations.
+> Vesta DLOG, whose best known classical attacks have an expected-work scale of about
+> $2^{126}$ group operations. This is conventionally summarized as a 126-bit headline
+> security level for Vesta DLOG. At the certified profile, the constructed solver uses
+> less than twice the attacker's group-work budget, giving Action a conservative 125-bit
+> computational-work headline; the advantage function below is the more precise statement.
 
 Here “knowledge soundness” means that an accepted proof has a recoverable valid
 *witness*: the private data that justifies the proved statement. “Covered” means inside
@@ -22,7 +25,7 @@ $$
 \Pr[\text{verifier accepts but extraction fails}]
 \;\le\;
 \operatorname{Adv}_{\mathrm{DLOG}}
-  \bigl(Q,\,W+R(n)\bigr)
+  \bigl(Q+22,\,W+R(n)\bigr)
 + \varepsilon_{\mathrm{stat}}(Q,n).
 $$
 
@@ -30,34 +33,50 @@ $$
 $q$ and work budget $w$, the externally supplied upper bound on the success probability
 of a Vesta DLOG solver.
 
-**$\varepsilon_{\mathrm{stat}}(Q,n)$ is the statistical soundness error**: it bounds the
-exceptional cases in which the random challenges prevent extraction, for an adversary
-making at most $Q$ oracle queries against a bundle containing $n$ Actions.
+**$\varepsilon_{\mathrm{stat}}(Q,n)$ is the statistical soundness error**: it collects
+the non-DLOG statistical terms, including exceptional random challenges that prevent
+extraction and the random-URS binding term, for an adversary making at most $Q$ oracle
+queries against a bundle containing $n$ Actions.
 
 **Direction of the reduction:**
 
 > Action attacker $A$ using $Q$ queries and $W$ group operations
-> $\longrightarrow$ reduction adds $R(n)$ group operations
-> $\longrightarrow$ Vesta DLOG solver using $Q$ queries and $W+R(n)$ group operations.
+> $\longrightarrow$ reduction adds 22 queries and $R(n)$ group operations
+> $\longrightarrow$ Vesta DLOG solver using $Q+22$ queries and $W+R(n)$ group operations.
 
 The reduction constructs the DLOG solver by running the Action attacker and processing
 its output. $R(n)$ is the extra Vesta group work it performs for a bundle containing $n$
-Actions — reduction overhead, not attacker work or a probability loss. It also makes a
-small fixed number of extra oracle reads, which the deployed endpoint absorbs when it
-rounds its query budget up to a power of two, so this page writes $Q$ throughout.
+Actions — reduction overhead, not attacker work or a probability loss. For the deployed
+Action specialization, the reduction also makes 22 oracle queries beyond those made by
+the attacker.
 
-For the certified consensus profile, the endpoint evaluates the advantage at $2^{126}$
-group operations: the $2^{125}$ attacker budget plus the reduction's own work, rounded up
-to a power of two. Neither number is a probability: the failure probability is determined
-by $\operatorname{Adv}_{\mathrm{DLOG}}+\varepsilon_{\mathrm{stat}}$.
+For the certified consensus profile, $Q\le 2^{123}$, $W\le 2^{125}$,
+$R(n)\le 2^{123}$, and $\varepsilon_{\mathrm{stat}}(Q,n)\le 2^{-83}$. The exact bound is
 
-That $2^{125}$ is a coverage parameter — the adversary group-work budget this theorem
-covers, not an estimate of anything. It is not the Pasta curves' security design target,
-which carries the same value but measures something else: the “headline cost”, meaning
-the expectation, of the best known pre-quantum discrete-log attack on the curve. A design
-target for the underlying curves and primitives is expected to sit above the achieved
-bound for the protocol built on them. [Security Models](security-models.md) develops the
-coverage-parameter reading in full.
+$$
+\Pr[\text{failure}]
+\;\le\;
+\operatorname{Adv}_{\mathrm{DLOG}}
+  \bigl(2^{123}+22,\,2^{125}+2^{123}\bigr)
++2^{-83}.
+$$
+
+Rounding the solver budgets up to powers of two gives the simpler endpoint
+
+$$
+\Pr[\text{failure}]
+\;\le\;
+\operatorname{Adv}_{\mathrm{DLOG}}
+  \bigl(2^{124},\,2^{126}\bigr)
++2^{-83}.
+$$
+
+Here $2^{125}$ is the covered Action-attacker work budget. The reduction turns it into at
+most $2^{125}+2^{123}\approx 2^{125.32}$ solver work, giving Action a conservative 125-bit
+computational-work headline. The $2^{126}$ in the endpoint is only its rounded ceiling.
+Separately, Vesta itself has a [headline 126-bit DLOG security level](https://electriccoin.co/blog/the-pasta-curves-for-halo-2-and-beyond/);
+the matching number has a different origin. [Security Models](security-models.md) gives
+the full coverage-parameter interpretation.
 
 ## In plain language
 
@@ -70,22 +89,22 @@ The advantage function says more than any single “security-bit target” could
 query and work budgets, it tells experts exactly where to evaluate their preferred Vesta
 DLOG estimate.
 
-## Reading the DLOG curve
+## Reading the work curve
 
-Choose an amount of DLOG-solver work on the horizontal axis, trace upward to the orange
-curve, and then read the corresponding DLOG-attack success on the vertical axis. The
-marked point is the best known attack's headline expected cost, about $2^{125}$ group
-operations. The axis runs one bit further, to the $2^{126}$ at which this page's bound is
-evaluated; that extra bit is accounting, not a better attack.
+Choose an amount of Action-attacker group work on the horizontal axis, trace upward to the
+orange curve, and then read the corresponding computational-success scale on the vertical
+axis. The curve shifts the idealized Vesta DLOG reference by the reduction's conservative
+one-bit work loss. Its marked scale is therefore the Action headline: about $2^{125}$
+group operations, derived from Vesta's 126-bit DLOG headline.
 
 The graph shows only group work. The oracle-query budget $Q$ remains a separate input in
-the equation above.
+the equation above, and the statistical term is not plotted. The exact advantage function,
+not this illustration, is the security claim.
 
 <figure class="advantage-figure">
 <svg class="advantage-chart" viewBox="0 0 840 500" role="img" aria-labelledby="advantage-chart-title advantage-chart-desc">
-  <title id="advantage-chart-title">Work versus success for the best known Vesta DLOG attack</title>
-  <desc id="advantage-chart-desc">A log-log plot of the idealized Pollard-rho attack-success heuristic. Success rises with group work. The marked point is the best known attack's headline expected cost, near two to the 125 group operations; the shaded strip continues one bit further, to the two to the 126 the bound is evaluated at. This known-attack curve is not a proved upper bound.</desc>
-  <rect class="advantage-break-zone" x="765" y="42" width="15" height="390" rx="4" />
+  <title id="advantage-chart-title">Reduction-adjusted computational work scale for Action</title>
+  <desc id="advantage-chart-desc">A log-log illustration obtained by shifting the idealized Vesta discrete-log work curve by the reduction's conservative one-bit work loss. The marked Action computational-work headline is near two to the 125 group operations. This illustration is not a proved upper bound on the advantage function.</desc>
   <g class="advantage-grid">
     <line x1="92" y1="42" x2="780" y2="42" />
     <line x1="92" y1="123" x2="780" y2="123" />
@@ -117,16 +136,16 @@ the equation above.
     <text x="541" y="454" text-anchor="middle">2¹¹⁰</text>
     <text x="690" y="454" text-anchor="middle">2¹²⁰</text>
     <text x="780" y="454" text-anchor="middle">2¹²⁶</text>
-    <text x="436" y="486" text-anchor="middle">DLOG solver group operations</text>
-    <text transform="translate(20 237) rotate(-90)" text-anchor="middle">DLOG success probability</text>
+    <text x="436" y="486" text-anchor="middle">Action attacker group operations</text>
+    <text transform="translate(20 237) rotate(-90)" text-anchor="middle">computational success scale</text>
   </g>
-  <polyline class="advantage-rho" points="92,417 242,336 391,255 481,206 541,174 690,92 735,68 765,52 770,50 780,46" />
-  <circle class="advantage-break-point" cx="765" cy="52" r="6" />
-  <line class="advantage-break-callout" x1="760" y1="60" x2="706" y2="238" />
-  <text class="advantage-break-label" x="700" y="256" text-anchor="end">best known attack</text>
-  <text class="advantage-break-label" x="700" y="275" text-anchor="end">≈ 2¹²⁵ (expectation)</text>
+  <polyline class="advantage-rho" points="92,409 242,328 391,247 481,198 541,166 690,84 735,60 765,46 780,43" />
+  <circle class="advantage-break-point" cx="765" cy="46" r="6" />
+  <line class="advantage-break-callout" x1="759" y1="55" x2="706" y2="238" />
+  <text class="advantage-break-label" x="700" y="256" text-anchor="end">Action computational security</text>
+  <text class="advantage-break-label" x="700" y="275" text-anchor="end">≈ 2¹²⁵ work</text>
 </svg>
-<figcaption>The orange line is an idealized Pollard-rho reference curve, not a proved upper bound on <code>Adv_DLOG</code>. The marked point is the best known attack's headline expected cost; the shaded strip is the extra bit of accounting — reduction overhead plus rounding — separating it from the 2¹²⁶ this page's bound is evaluated at. Neither is a chosen protocol target.</figcaption>
+<figcaption>The orange line is the idealized Vesta DLOG work curve shifted by the reduction's conservative one-bit work loss. It illustrates Action's 125-bit computational-work headline; it is not a proved upper bound on <code>Adv_DLOG</code>. The equations above are the precise claim.</figcaption>
 </figure>
 
 Lean proves the adversary-to-DLOG reduction, its resource transformation, and the
