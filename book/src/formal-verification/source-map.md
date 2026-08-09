@@ -47,7 +47,11 @@ directory level, naming the notable modules as entry points.
   of Mathlib's `assert_no_sorry` that asserts an *upper bound* on a declaration's trusted
   base without hard-coding the pretty-printed axiom list, so the trust pins stay green across
   toolchain bumps that rename the `native_decide` axiom, and `assert_computable`, which additionally
-  requires the declaration to be a plain `def`.
+  requires the declaration to be a plain `def`. `EndpointCensus` enforces the endpoint census a
+  second time from the elaborated environment: both census commands record every pin they
+  elaborate, and `assert_endpoint_census` — run by `Zcash/CensusCheck.lean`, the `CensusCheck`
+  target, whose imports span every census file — fails the build on an endpoint-named declaration
+  with no recorded pin, closing the surface-syntax evasions a source-text scan cannot see.
 - **`Arithmetic.lean`** — the tier's root module, and the only place in the repository that earns
   root vocabulary: `Fp` and `URS` are re-exported at `Zcash` so every module finds them by the
   enclosing-namespace walk.
@@ -201,6 +205,10 @@ non-accepting, and one tamper canary), and its own `TrustBoundary` census. What 
 jointly check is that Lean's assembled MSM equals the deployed one coefficient-for-coefficient at
 each captured proof; the two `Random/` families additionally carry the per-capture ε modules that
 price the quantified match (`Fingerprint/Epsilon.lean`, `Fixtures/*/Random/Epsilon.lean`).
+Capture lineage and seeds live in `Fixtures/PROVENANCE.md`, and `Fixtures/MANIFEST.tsv` binds
+each committed capture to its digest, generator, and invocation —
+`scripts/check_fixture_manifest.sh` verifies the binding on every CI run and rejects any
+generated-looking artifact without an entry.
 
 ### `Soundness/` — the soundness argument
 
@@ -328,6 +336,12 @@ Six subtrees carry the heavier machinery:
   oracle-domain reduction to finite support (`DomainReduction`), and the adaptive interface and
   pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). These components use the bounded
   querying-adversary model to price straight-line pinned-root events.
+- **`Oracle/`** — the squeeze idealization and its deployed gap. `Model` models squeezes as a
+  reprogrammable random function with the exactly uniform challenge law and the `PMFEventBiasLE`
+  transport interface; `Challenge255` prices the deployed conversion against that ideal — a
+  uniform 512-bit digest reduced modulo `p` overshoots uniform by exactly
+  `r(p−r)/(p·2^512) < 2^-260`, stated as the `PMFEventBiasLE` premise the work-factor capstone's
+  bias conjunct consumes, with Blake2b's idealization as the uniform digest remaining external.
 - **`Multiopen/`** — the multiopen argument's value binding. `Decode` supplies the coefficient and
   Vandermonde primitives; `Opened` defines the augmented opened-batch and member-decode interfaces
   populated by explicit AGM representations; and `Deployed` proves that halo2's `x₄` fold has the
@@ -355,7 +369,8 @@ proves them: the captured straight-line knowledge errors in
 `Fixtures/MultiAction/Honest/StraightLineKnowledgeError`, and the consensus-maximum work factors in
 `Soundness/AGM/StraightLineOrchardConsensusBounds`. Every endpoint, wherever it sits, is a
 top-level leaf that nothing else depends on, which is why each must be named directly in a
-`TrustBoundary.lean` census entry — see `scripts/check_endpoint_census.sh`.
+`TrustBoundary.lean` census entry — see `scripts/check_endpoint_census.sh`, enforced a second
+time from the elaborated environment by the `CensusCheck` target (`Zcash/Meta/EndpointCensus.lean`).
 
 ## Circuit layer — `Zcash/Circuits/`
 
