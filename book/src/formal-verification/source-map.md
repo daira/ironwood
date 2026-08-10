@@ -236,7 +236,10 @@ arbitrary top-level circuit using that circuit's derived verifier key and public
 inputs. `Action/StraightLineTerminal` and `Action/StraightLineEvent` connect the one-run computed
 decode to the concrete Action statement and carry a failure as explicit relation data.
 `Action/AdaptiveStatement*` is the adaptive-statement stack, the strongest Action notion: one
-online-AGM adversary returns the public inputs and proof together. `AdaptiveStatementModel`
+online-AGM adversary returns the public inputs and proof together. `DeploymentRecord` states the
+machine-readable deployment-instantiation record — one identification field per model floor
+(challenge law, basis law, key digest, typed acceptance, discrete-log advantage) — that a
+deployed interpretation of the capstones supplies. `AdaptiveStatementModel`
 defines the game and binds the verifying key and selected instance commitments before `theta`;
 `Accounting`, `Terminal`, and `Surfaces` decode arbitrary statement prefixes and price the
 root, IPA, and semantic surfaces under the single `(Q + 1)` query factor; `Provenance`,

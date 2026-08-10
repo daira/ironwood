@@ -49,7 +49,9 @@ rather than proved, with its known strengthening named where one exists:
   verifier (`Fingerprint/Match.lean`, *What remains external*).
 
 The bounds these endpoints prove are exact inside that model; a numerical claim about the
-deployed protocol instantiates each floor above separately.
+deployed protocol instantiates each floor above separately.  The machine-readable shape those
+instantiations fill is `ActionDeploymentInstantiation`
+(`Soundness/Action/DeploymentRecord.lean`), one identification field per floor.
 
 Each is censused directly in `Fixtures/MultiAction/Honest/TrustBoundary.lean`.
 -/
