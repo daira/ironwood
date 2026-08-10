@@ -74,6 +74,7 @@ import Zcash.Snark.Soundness.AGM.AdaptiveRootSurfaces
 import Zcash.Snark.Soundness.Action.AdaptiveStatementReads
 import Zcash.Snark.Soundness.Action.AdaptiveStatementInhabitant
 import Zcash.Snark.Soundness.Oracle.Challenge255
+import Zcash.Snark.Soundness.Composition.ZeroBasisAcceptance
 
 /-!
 # Trust boundary, build-checked
@@ -860,6 +861,10 @@ assert_axioms Zcash.Snark.challenge255_apply
 assert_axioms Zcash.Snark.challenge255_eventBias_le
 assert_axioms Zcash.Snark.challenge255Bias_le
 assert_axioms Zcash.Snark.challenge255_badSet_le
+-- Zero-basis acceptance scaffolding (`Soundness.Composition.ZeroBasisAcceptance`): structural,
+-- computation-free steps toward an accepting run of the adaptive knowledge machinery.
+assert_axioms Zcash.AlgebraicPoint.point_eq_zero_of_zeroBasis
+assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique

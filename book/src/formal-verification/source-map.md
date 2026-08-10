@@ -317,6 +317,11 @@ Six subtrees carry the heavier machinery:
   `StraightLineDeployed` (the primary deployed path), `StraightLineConstraint`,
   `StraightLineDecodeSupply`, and the two inhabitants of its interface — `StraightLineWitness` at
   the degenerate shape and `ZeroStraightLine` with eleven live IPA rounds.
+  `ZeroBasisAcceptance` proves the computation-free steps toward an accepting run of the adaptive
+  knowledge machinery: representations and algebraic points vanish at the all-zero basis, MSM
+  evaluation reduces to its base terms, and assembly success plus vanishing bases give
+  `DeployedAccepts`; assembly success at a guard-passing oracle and the base-provenance walk
+  remain open.
   `SemanticChallengeRemainder` bounds the probability loss from the bundle-wide `y`/`β`/`γ`/`θ`
   exclusions the Action-level statement needs, and `DirectPathCost` bounds the direct-coordinate
   postprocessing's field
