@@ -67,16 +67,20 @@ def isEndpointBaseName (s : String) : Bool :=
   containsSubstring s "fingerprint_matches_positional" ||
   endpointSuffixes.any fun suf => s.endsWith suf || s.endsWith (suf ++ "_for")
 
-/-- The declaration kinds that can state an endpoint, matching the script's
-`theorem`/`lemma`/`def`/`abbrev`/`axiom`/`opaque` line forms.  In particular, axioms and opaque
-declarations must not bypass the census merely because their bodies have a different environment
-representation from ordinary definitions and theorems. -/
+/-- Every elaborated constant kind can carry an endpoint-shaped declaration.  Keeping this match
+exhaustive makes a new Lean declaration kind fail closed until it is classified, while inductive
+types, structures/classes, their constructors and recursors, axioms, and opaque declarations cannot
+bypass the census merely because their environment representation differs from an ordinary
+definition or theorem. -/
 def isCensusKind : ConstantInfo → Bool
   | .thmInfo _ => true
   | .defnInfo _ => true
   | .axiomInfo _ => true
   | .opaqueInfo _ => true
-  | _ => false
+  | .quotInfo _ => true
+  | .inductInfo _ => true
+  | .ctorInfo _ => true
+  | .recInfo _ => true
 
 /-- The module that declared `n` — the module currently elaborating when `n` is local. -/
 def moduleOf (env : Environment) (n : Name) : Name :=
