@@ -22,6 +22,10 @@ The command is complete only where the import closure contains every census file
 `Zcash/CensusCheck.lean` (the `CensusCheck` target) is that module.  The source scan keeps the
 wider scope — it sees files no census imports — so the two checks are complements, not
 replacements.
+
+The pin record shares the declaration-range limitation: metaprogramming under `run_cmd` could
+invoke `recordCensusPin` directly, so the standing review rule for declaration-emitting
+metaprograms applies here too — this check guards accidental drift, not a deceptive author.
 -/
 
 namespace Zcash.Meta

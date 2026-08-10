@@ -9,9 +9,11 @@ The Action capstones are exact inside their stated model; interpreting them as c
 deployed verifier requires identifying each modeled ingredient with its deployed counterpart.
 `ActionDeploymentInstantiation` is that bridge as one machine-readable surface: a field per
 floor, each stating the identification against the development's own definitions, with the
-deployed objects carried as record data.  A term of this record is exactly what a deployment
-interpretation supplies; no term is constructed here, and fields whose floors are intentionally
-permanent say so in their docstrings.
+deployed objects carried as record data.  A term of this record is what a deployment
+interpretation supplies, with one derivation left on top: the per-squeeze challenge bias
+composes into the capstones' joint-experiment premise by a hybrid over the table's reads.  No
+term is constructed here, and fields whose floors are intentionally permanent say so in their
+docstrings.
 
 The adversary-class restriction — deployed provers are modeled as represented online-AGM
 programs — is carried by `ComputedAdaptiveActionStatementFSFamily` itself, the type the record

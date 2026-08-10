@@ -13,8 +13,8 @@ This module proves that chain with no computation and no compiler trust: represe
 base terms (`Msm.eval_zeroURS`), and checked assembly plus vanishing bases give `DeployedAccepts`
 (`deployedAccepts_of_assembles_of_zeroBases`).
 
-Two lemmas complete the chain into an unconditional accepting run of the adaptive knowledge
-machinery, and are the tracked remainder: checked assembly succeeds on the zero family's proof
+Two lemmas complete the chain into an unconditional acceptance witness for the adaptive family,
+and are the tracked remainder: checked assembly succeeds on the zero family's proof
 string at an oracle whose derived challenges pass the vanishing, grouping, and multiopen guards;
 and every base of the assembled MSM is drawn from the verifying-key, instance, and proof-string
 point families — the base-provenance walk over `Verifier/Assemble.lean`.  Both are structural
