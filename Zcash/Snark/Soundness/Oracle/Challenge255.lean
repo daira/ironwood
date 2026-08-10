@@ -1,5 +1,5 @@
 import Mathlib.Data.Int.CardIntervalMod
-import Zcash.Snark.Soundness.Oracle.Model
+import Zcash.Snark.Soundness.Oracle.Hybrid
 
 /-!
 # Exact bias of the deployed challenge conversion
@@ -15,9 +15,9 @@ to each of the first `challengeRem` field elements and `challengeQuot` to the re
 (`challenge255_apply`), so an event's probability exceeds its uniform value by at most
 `challengeRem * (p - challengeRem) / (p * 2 ^ 512)` — attained by the heavy residues, so the
 constant is exact; it is below `2 ^ -260` (`challenge255Bias_le`).  `challenge255_eventBias_le`
-states the bound as the `PMFEventBiasLE` premise that `event_measure_le_of_bias` and the
-work-factor capstone's bias conjunct consume; `challenge255_badSet_le` runs one squeeze through
-that transport.
+states the event form and `challenge255_weightedBias_le` proves the continuation-weighted form.
+`challenge255_joint_eventBias_le` composes the latter through a complete adaptive query tree;
+`challenge255_badSet_le` runs one squeeze through the event transport.
 -/
 
 namespace Zcash.Snark
@@ -88,6 +88,7 @@ theorem challenge255_apply (x : Fp) :
   rw [← Finset.sum_filter, Finset.sum_const, nsmul_eq_mul, challenge255_fiberCard x,
     div_eq_mul_inv]
 
+/-- Clearing denominators reduces the one-squeeze event bound to this natural-number inequality. -/
 private theorem challenge255_key_le {p q r N s h : ℕ} (hN : N = p * q + r) (hrp : r ≤ p)
     (hhr : h ≤ r) (hhs : h ≤ s) :
     p * (q * s + h) ≤ s * N + r * (p - r) := by
@@ -157,6 +158,136 @@ theorem challenge255_eventBias_le :
   exact challenge255_key_le
     (Nat.div_add_mod challengeDigestCard scalarFieldOrder).symm
     (Nat.mod_lt challengeDigestCard hp).le hH_le_r hH_le_s
+
+/-- The weighted heavy-residue bound used to compose Challenge255 through adaptive continuations. -/
+private theorem challenge255_weighted_key_le {p q r N : ℕ} {s h : ℝ≥0∞}
+    (hN : N = p * q + r) (hrp : r ≤ p)
+    (hhr : h ≤ r) (hhs : h ≤ s) :
+    (p : ℝ≥0∞) * ((q : ℝ≥0∞) * s + h) ≤
+      s * (N : ℝ≥0∞) + (r : ℝ≥0∞) * ((p - r : ℕ) : ℝ≥0∞) := by
+  have hsplit : ((p - r : ℕ) : ℝ≥0∞) * h + (r : ℝ≥0∞) * h =
+      (p : ℝ≥0∞) * h := by
+    rw [← add_mul, ← Nat.cast_add, Nat.sub_add_cancel hrp]
+  have hcore : (p : ℝ≥0∞) * h ≤
+      (r : ℝ≥0∞) * s + (r : ℝ≥0∞) * (p - r : ℕ) := by
+    calc
+      (p : ℝ≥0∞) * h = ((p - r : ℕ) : ℝ≥0∞) * h + (r : ℝ≥0∞) * h := hsplit.symm
+      _ ≤ ((p - r : ℕ) : ℝ≥0∞) * r + (r : ℝ≥0∞) * s :=
+        add_le_add (mul_le_mul_right hhr _) (mul_le_mul_right hhs _)
+      _ = (r : ℝ≥0∞) * s + (r : ℝ≥0∞) * (p - r : ℕ) := by ring
+  calc
+    (p : ℝ≥0∞) * ((q : ℝ≥0∞) * s + h) =
+        (p : ℝ≥0∞) * q * s + (p : ℝ≥0∞) * h := by ring
+    _ ≤ (p : ℝ≥0∞) * q * s +
+        ((r : ℝ≥0∞) * s + (r : ℝ≥0∞) * (p - r : ℕ)) :=
+      add_le_add le_rfl hcore
+    _ = s * ((p : ℝ≥0∞) * q + r) + (r : ℝ≥0∞) * (p - r : ℕ) := by ring
+    _ = s * (N : ℝ≥0∞) + (r : ℝ≥0∞) * ((p - r : ℕ) : ℝ≥0∞) := by
+      rw [hN, Nat.cast_add, Nat.cast_mul]
+
+set_option exponentiation.threshold 1024 in
+set_option maxRecDepth 32768 in
+/-- The exact Challenge255 one-squeeze bound in the weighted form needed by adaptive
+composition.  Unlike the event-only interface, this controls continuation probabilities and can
+therefore be applied at each answer-dependent query node. -/
+theorem challenge255_weightedBias_le :
+    PMFWeightedBiasLE challenge255 uniformChallenge challenge255Bias := by
+  classical
+  intro weight hweight
+  let heavy : Finset Fp := Finset.univ.filter fun x ↦ x.val < challengeRem
+  let s : ℝ≥0∞ := ∑ x, weight x
+  let h : ℝ≥0∞ := ∑ x ∈ heavy, weight x
+  have hcard : heavy.card ≤ challengeRem := by
+    have hle : heavy.card ≤ (Finset.range challengeRem).card := by
+      refine Finset.card_le_card_of_injOn ZMod.val ?_ ?_
+      · intro x hx
+        exact Finset.mem_range.mpr (Finset.mem_filter.mp hx).2
+      · intro a _ b _ hab
+        rw [← ZMod.natCast_zmod_val a, ← ZMod.natCast_zmod_val b, hab]
+    simpa using hle
+  have hh_le_r : h ≤ (challengeRem : ℝ≥0∞) := by
+    calc
+      h ≤ ∑ _x ∈ heavy, (1 : ℝ≥0∞) := Finset.sum_le_sum fun x _ ↦ hweight x
+      _ = (heavy.card : ℝ≥0∞) := by
+        rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ ≤ (challengeRem : ℝ≥0∞) := by exact_mod_cast hcard
+  have hh_le_s : h ≤ s := by
+    exact Finset.sum_le_sum_of_subset (Finset.filter_subset _ _)
+  have lhs_eq : ∑ x, challenge255 x * weight x =
+      ((challengeQuot : ℝ≥0∞) * s + h) / challengeDigestCard := by
+    unfold s h heavy
+    calc
+      ∑ x, challenge255 x * weight x =
+          ∑ x, (((challengeQuot + if x.val < challengeRem then 1 else 0 : ℕ) : ℝ≥0∞) /
+            challengeDigestCard) * weight x :=
+        Finset.sum_congr rfl fun x _ ↦ by rw [challenge255_apply]
+      _ = (∑ x, ((challengeQuot + if x.val < challengeRem then 1 else 0 : ℕ) : ℝ≥0∞) *
+            weight x) / challengeDigestCard := by
+        simp only [div_eq_mul_inv]
+        calc
+          ∑ x, ((challengeQuot + if x.val < challengeRem then 1 else 0 : ℕ) : ℝ≥0∞) *
+              (challengeDigestCard : ℝ≥0∞)⁻¹ * weight x =
+              ∑ x, (((challengeQuot + if x.val < challengeRem then 1 else 0 : ℕ) :
+                ℝ≥0∞) * weight x) * (challengeDigestCard : ℝ≥0∞)⁻¹ :=
+            Finset.sum_congr rfl fun _ _ ↦ by ac_rfl
+          _ = (∑ x, ((challengeQuot + if x.val < challengeRem then 1 else 0 : ℕ) :
+                ℝ≥0∞) * weight x) * (challengeDigestCard : ℝ≥0∞)⁻¹ :=
+            by rw [Finset.sum_mul]
+      _ = ((challengeQuot : ℝ≥0∞) * ∑ x, weight x +
+            ∑ x ∈ Finset.univ.filter (fun x : Fp ↦ x.val < challengeRem), weight x) /
+            challengeDigestCard := by
+        apply congrArg (fun z : ℝ≥0∞ ↦ z / challengeDigestCard)
+        simp only [Nat.cast_add, add_mul]
+        rw [Finset.sum_add_distrib, ← Finset.mul_sum, Finset.sum_filter]
+        apply congrArg (fun z : ℝ≥0∞ ↦
+          (challengeQuot : ℝ≥0∞) * ∑ x, weight x + z)
+        exact Finset.sum_congr rfl fun x _ ↦ by
+          by_cases hx : x.val < challengeRem <;> simp [hx]
+  have rhs_eq : ∑ x, uniformChallenge x * weight x =
+      s / scalarFieldOrder := by
+    unfold s uniformChallenge
+    simp only [PMF.uniformOfFintype_apply, card_Fp, div_eq_mul_inv]
+    rw [← Finset.mul_sum]
+    ring
+  rw [lhs_eq, rhs_eq]
+  unfold challenge255Bias
+  have hp0 : ((scalarFieldOrder : ℕ) : ℝ≥0∞) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (NeZero.ne _)
+  have hN0 : ((challengeDigestCard : ℕ) : ℝ≥0∞) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (NeZero.ne _)
+  have e1 : ((challengeQuot : ℝ≥0∞) * s + h) / challengeDigestCard =
+      ((scalarFieldOrder : ℝ≥0∞) * ((challengeQuot : ℝ≥0∞) * s + h)) /
+        ((scalarFieldOrder * challengeDigestCard : ℕ) : ℝ≥0∞) := by
+    rw [Nat.cast_mul]
+    exact (ENNReal.mul_div_mul_left _ _ hp0 (ENNReal.natCast_ne_top _)).symm
+  have e2 : s / scalarFieldOrder =
+      (s * (challengeDigestCard : ℝ≥0∞)) /
+        ((scalarFieldOrder * challengeDigestCard : ℕ) : ℝ≥0∞) := by
+    rw [Nat.cast_mul]
+    exact (ENNReal.mul_div_mul_right _ _ hN0 (ENNReal.natCast_ne_top _)).symm
+  rw [e1, e2, ENNReal.div_add_div_same]
+  refine ENNReal.div_le_div_right ?_ _
+  have hp : 0 < scalarFieldOrder := Nat.pos_of_ne_zero (NeZero.ne _)
+  have hrem : challengeRem ≤ scalarFieldOrder :=
+    (Nat.mod_lt challengeDigestCard hp).le
+  have hdecomp : challengeDigestCard =
+      scalarFieldOrder * challengeQuot + challengeRem :=
+    (Nat.div_add_mod challengeDigestCard scalarFieldOrder).symm
+  have hkey := challenge255_weighted_key_le
+    (p := scalarFieldOrder) (q := challengeQuot) (r := challengeRem)
+    (N := challengeDigestCard) (s := s) (h := h)
+    hdecomp hrem hh_le_r hh_le_s
+  simpa only [Nat.cast_mul, Nat.cast_sub hrem] using hkey
+
+/-- **Joint Challenge255 hybrid.** For a `Q`-bounded adaptive query tree, every final event under
+Challenge255 has probability at most its uniform-answer probability plus
+`Q * challenge255Bias`; later queries and the event may depend on earlier answers. Apply this to
+`OracleComp.dedup [] A` when the original computation can repeat a transcript point. -/
+theorem challenge255_joint_eventBias_le {T α : Type*}
+    {A : OracleComp T Fp α} {Q : ℕ} (hQ : A.QueryBound Q) :
+    PMFEventBiasLE (A.runFreshPMF challenge255) (A.runFreshPMF uniformChallenge)
+      (Q * challenge255Bias) :=
+  A.runFreshPMF_eventBiasLE challenge255_weightedBias_le hQ
 
 set_option exponentiation.threshold 1024 in
 set_option maxRecDepth 8192 in

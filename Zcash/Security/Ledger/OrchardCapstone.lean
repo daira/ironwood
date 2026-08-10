@@ -249,7 +249,7 @@ independent: the reduction sends every step's break to a relation among the same
 Sinsemilla bases, so a break at any step lands in the one event
 `orchardRelationEventUpTo`, on which `ε_sinsemilladlr` is hypothesized once. The
 conservation side collapses the same way onto the one all-prefixes conservation event,
-whose named bound is `ε_bindsig` (#107). -/
+whose named bound is `ε_bindsig`. -/
 theorem orchardBalanceIntegrity_measure_le
     (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr ε_bindsig : ℝ≥0∞}

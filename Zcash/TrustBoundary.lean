@@ -855,11 +855,18 @@ assert_axioms Zcash.Snark.uniformChallenge_szBadSet_union
 assert_axioms Zcash.Snark.exists_accepting_good_challenge
 assert_axioms Zcash.Snark.exists_accepting_good_challenge_quotient
 -- The deployed challenge conversion (`Soundness.Oracle.Challenge255`): one squeeze's exact
--- reduction bias against the uniform idealization, and its transport across `PMFEventBiasLE`.
+-- weighted reduction bias, its adaptive joint hybrid, and transport across `PMFEventBiasLE`.
+assert_axioms Zcash.Snark.PMFWeightedBiasLE
+assert_axioms Zcash.Snark.PMFWeightedBiasLE.eventBiasLE
+assert_axioms Zcash.Snark.PMFEventBiasLE.bind_same
+assert_axioms Zcash.Snark.OracleComp.runFreshPMF
+assert_axioms Zcash.Snark.OracleComp.runFreshPMF_eventBiasLE
 assert_axioms Zcash.Snark.challenge255
 assert_axioms Zcash.Snark.challenge255Bias
 assert_axioms Zcash.Snark.challenge255_apply
 assert_axioms Zcash.Snark.challenge255_eventBias_le
+assert_axioms Zcash.Snark.challenge255_weightedBias_le
+assert_axioms Zcash.Snark.challenge255_joint_eventBias_le
 assert_axioms Zcash.Snark.challenge255Bias_le
 assert_axioms Zcash.Snark.challenge255_badSet_le
 -- Zero-basis acceptance scaffolding (`Soundness.Composition.ZeroBasisAcceptance`): structural,
@@ -870,6 +877,20 @@ assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
 -- bridge a deployment interpretation supplies, one identification field per model floor. The
 -- native owners are the Action circuit's own certificates, reached through the record's type.
 assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
+  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
+  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

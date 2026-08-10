@@ -67,11 +67,15 @@ def isEndpointBaseName (s : String) : Bool :=
   containsSubstring s "fingerprint_matches_positional" ||
   endpointSuffixes.any fun suf => s.endsWith suf || s.endsWith (suf ++ "_for")
 
-/-- The declaration kinds the census considers, matching the script's
-`theorem`/`lemma`/`def`/`abbrev` line forms. -/
+/-- The declaration kinds that can state an endpoint, matching the script's
+`theorem`/`lemma`/`def`/`abbrev`/`axiom`/`opaque` line forms.  In particular, axioms and opaque
+declarations must not bypass the census merely because their bodies have a different environment
+representation from ordinary definitions and theorems. -/
 def isCensusKind : ConstantInfo → Bool
   | .thmInfo _ => true
   | .defnInfo _ => true
+  | .axiomInfo _ => true
+  | .opaqueInfo _ => true
   | _ => false
 
 /-- The module that declared `n` — the module currently elaborating when `n` is local. -/
