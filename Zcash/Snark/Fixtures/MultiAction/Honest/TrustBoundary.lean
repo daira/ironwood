@@ -923,6 +923,8 @@ assert_axioms Zcash.Snark.Fixture2.derivedInstanceCommitment
 -- Cross-capture provenance (`Fixtures/PostNu63.lean`): the point-level equalities that transport
 -- the single-action keygen certificate to this capture, and the URS record equality assembled
 -- from them.
+assert_axioms Zcash.Snark.PostNu63Fixture.captures_urs_point_references_in_bounds +native(
+  Zcash.Snark.PostNu63Fixture.captures_urs_point_references_in_bounds)
 assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_ursG +native(
   Zcash.Snark.PostNu63Fixture.captures_use_same_ursG)
 assert_axioms Zcash.Snark.PostNu63Fixture.captures_use_same_wu +native(

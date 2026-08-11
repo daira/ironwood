@@ -66,6 +66,14 @@ theorem multiAction_uses_canonicalVk :
     Fixture2.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
   native_decide
 
+/-- Every `capturedPoint` reference used to build either captured augmented URS is backed by its
+point table.  The `2^k` generators occupy indices `0, ..., 2^k - 1`, followed by `w` and `u`; this
+separately guards the inner `capturedPoints.getD` from silently substituting the identity. -/
+theorem captures_urs_point_references_in_bounds :
+    2 ^ Fixture.shape.k + 2 ≤ Fixture.capturedPoints.length ∧
+      2 ^ Fixture2.shape.k + 2 ≤ Fixture2.capturedPoints.length := by
+  native_decide
+
 /-- Both captures use the same deterministic Halo2 URS (`g`, then `w` and `u` occupy the first
 `2^11 + 2` entries in each generated concrete-point table).
 
