@@ -8,7 +8,7 @@ import Zcash.Snark.Soundness.StraightLine.Terminal
 # The rewind-free decode at the Action terminal
 
 This bridge feeds one straight-line decode into `ActionTerminal`. The shared executable outcome
-retains either all private witnesses or relation coefficients; `StraightLineActionEvent` prices
+retains either all private witnesses or relation coefficients; `StraightLineEvent` prices
 the remaining challenge exclusions.
 -/
 

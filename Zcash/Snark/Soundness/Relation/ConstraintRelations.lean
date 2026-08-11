@@ -14,8 +14,10 @@ constraint list. On its own that is just a polynomial identity. These theorems s
 the identity *is* the hypothesis the row-level results consume, so a witness satisfying it satisfies
 the permutation argument's copy constraints and the lookup argument's inclusion.
 
-That closes the loop. The capstone hands over `SnarkRelation … circuitSatViaConstraints`
-(`snarkRelation_constraints`), and these read the two arguments' relations back out of it.
+`DeployedConstraintWitness` retains `SnarkRelation … circuitSatViaConstraints` for the decoded
+aggregate. These theorems read the two arguments' relations back out when a consumer needs that
+payload. The current Action knowledge capstones instead consume the retained decode, establish the
+stronger Action semantics in their terminal, and return `ActionBundleWitness` data directly.
 -/
 
 namespace Zcash.Snark

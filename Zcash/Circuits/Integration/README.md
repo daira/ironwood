@@ -62,8 +62,9 @@ The lookup bridge is split deliberately:
 * `ActionTerminal.lean` retains the accepted-node-binding specialization. It
   specializes the verifier-native decoded-model terminal to the circuit-derived
   Action verification key and produces `Action.BundleStatement` or explicit
-  augmented-basis relation data. `StraightLineActionTerminal.lean` executes that
-  terminal on the retained one-run decode, and `StraightLineActionEvent.lean`
+  augmented-basis relation data.
+  `Snark/Soundness/Action/StraightLineTerminal.lean` executes that terminal on the
+  retained one-run decode, and `Snark/Soundness/Action/StraightLineEvent.lean`
   charges its relation branch through one combined constraint-plus-Action finder.
   No Clean type is introduced into
   `Zcash/Snark/Soundness/Canonical/Terminal.lean`.
