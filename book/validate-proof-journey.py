@@ -109,37 +109,49 @@ def validate_map_edge_anchors(errors, formal_edges):
                 fail(errors, f"map edge anchor not found in Lean tree: {source} -> {target}: {symbol}")
 
 
+def git(*args):
+    return subprocess.run(
+        ["git", *args],
+        cwd=REPO_DIR,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
+def source_is_readable(source_ref):
+    # `^{tree}` rather than `^{commit}`: a shallow fetch can leave the commit object present with
+    # its tree absent, and a commit whose tree is missing reads back as a repository where every
+    # source file has vanished. Resolving the tree is what the later `git show` calls need.
+    return git("cat-file", "-e", f"{source_ref}^{{tree}}").returncode == 0
+
+
 def fetch_source_if_missing(source):
     source_ref = source["ref"]
     if source_ref in FETCHED_SOURCES:
         return
     FETCHED_SOURCES.add(source_ref)
-    present = subprocess.run(
-        ["git", "cat-file", "-e", f"{source_ref}^{{commit}}"],
-        cwd=REPO_DIR,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if present.returncode == 0:
+    if source_is_readable(source_ref):
         return
-    # CI checks out a depth-1 clone of the merge commit, so a pinned commit is normally absent and
-    # has to come from its own ref. Fetch it in full: `--depth` leaves the object missing whenever
-    # the pin sits outside the truncated history, which surfaces later as an unreadable source file
-    # rather than as the fetch failure it is. Report a failure here for the same reason.
-    fetched = subprocess.run(
-        ["git", "fetch", "--no-tags", SOURCE_REMOTE, source["fetch"]],
-        cwd=REPO_DIR,
-        check=False,
-        capture_output=True,
-        text=True,
+    # Ask for the pinned commit by name first. A pin that is an ancestor of the fetched branch
+    # rather than its tip is not delivered by fetching that branch into a shallow clone, and no
+    # `--depth` argument fixes that, so requesting the commit itself is what makes the pin
+    # reachable wherever it sits in history. Fetching the recorded ref remains the fallback for
+    # servers that refuse an unadvertised object.
+    attempts = dict.fromkeys([source_ref, source["fetch"]])
+    failures = []
+    for attempt in attempts:
+        fetched = git("fetch", "--no-tags", SOURCE_REMOTE, attempt)
+        if fetched.returncode == 0 and source_is_readable(source_ref):
+            return
+        failures.append(f"{attempt}: {fetched.stderr.strip() or 'pinned commit still unreadable'}")
+    # Reported here rather than left to surface as unreadable source files: a fetch failure and a
+    # renamed file are different defects, and only one of them is the page's to fix.
+    print(
+        f"proof journey validation: could not fetch {source['ref']} for {source['label']} "
+        f"({'; '.join(failures)})",
+        file=sys.stderr,
     )
-    if fetched.returncode != 0:
-        print(
-            f"proof journey validation: could not fetch {source['fetch']} for {source['label']}: "
-            f"{fetched.stderr.strip()}",
-            file=sys.stderr,
-        )
 
 
 def source_text(errors, source, source_path):
@@ -147,13 +159,7 @@ def source_text(errors, source, source_path):
     if key in SOURCE_CACHE:
         return SOURCE_CACHE[key]
     fetch_source_if_missing(source)
-    result = subprocess.run(
-        ["git", "show", f"{source['ref']}:{source_path}"],
-        cwd=REPO_DIR,
-        check=False,
-        capture_output=True,
-        text=True,
-    )
+    result = git("show", f"{source['ref']}:{source_path}")
     if result.returncode != 0:
         fail(errors, f"source file is unavailable at {source['label']}: {source_path}")
         SOURCE_CACHE[key] = None
@@ -261,15 +267,21 @@ def validate_endpoints(errors, data):
         "Zcash/Snark/Soundness/AGM/StraightLineOrchardConsensusBounds.lean",
     ]
     found = set()
+    complete = True
     for source_path in paths:
         text = source_text(errors, source, source_path)
         if text is None:
+            complete = False
             continue
         found.update(ENDPOINT_RE.findall(text))
     for name in sorted(found - set(declared)):
         fail(errors, f"advertised endpoint missing from the journey: {name}")
-    for name in sorted(set(declared) - found):
-        fail(errors, f"journey names a retired endpoint: {name}")
+    # Retirement is only decidable against a complete reading of the declaring files: an
+    # unreadable one makes every declared endpoint look retired, which buries the one error that
+    # explains the rest. That unreadable file has already been reported as its own failure.
+    if complete:
+        for name in sorted(set(declared) - found):
+            fail(errors, f"journey names a retired endpoint: {name}")
     # Each endpoint must also be reachable from the page: named by some stage's theorem anchors.
     anchored = {
         theorem["symbol"]
