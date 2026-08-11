@@ -8,6 +8,7 @@ import Zcash.Snark.Fixtures.MultiAction.Honest.Negative.Sweep
 import Zcash.Snark.Fixtures.MultiAction.Honest.StraightLineKnowledgeError
 import Zcash.Snark.Fixtures.MultiAction.Honest.CapturedZeroFamily
 import Zcash.Snark.Capstones.Action
+import Zcash.Snark.Contract.Action
 import Zcash.Snark.Fixtures.MultiAction.Honest.Boundary
 import Zcash.Snark.Fixtures.PostNu63
 import Zcash.Meta.AxiomCheck
@@ -683,7 +684,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_adaptiveActionStatementSurface_measur
 
 -- Adaptive-statement knowledge soundness binds the statement-selected instance prefix before
 -- `theta` and conservatively charges every stage of the combined finder.
-assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_prob_le_adaptiveStatement_for +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -713,7 +714,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_prob_le_adapt
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_prob_le_adaptiveStatement_certified_for +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_knowledge_error_bound +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -746,7 +747,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_prob_le_adapt
 
 -- The same bound priced at the `2^123` work-factor target, with the extractor's random-oracle and
 -- group-work envelopes and the finder's certified read set discharged alongside it.
-assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_knowledge_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -779,7 +780,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveState
 
 -- The deployment-record consumer adds the kernel-checked joint Challenge255 hybrid and no new
 -- trusted axiom owner beyond the ideal work-factor capstone it transports.
-assert_axioms Zcash.Snark.Capstone.orchard_action_deployedKnowledgeFailure_2pow123_workFactor_prob_le +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -809,7 +810,7 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_deployedKnowledgeFailure_2pow1
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow123_work_generatorRO_for +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow123_knowledge_finite_security +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
@@ -839,7 +840,44 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveState
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.Capstone.orchard_action_knowledgeFailure_adaptiveStatement_certified_2pow125_work_generatorRO_for +native(
+assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security +native(
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
+  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
+  Zcash.Snark.Capstone.actionLookupActivationCount_le,
+  Zcash.Snark.Capstone.actionLookupInputArity_le,
+  Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
+  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
+  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+
+-- The auditor-facing contract records what the endpoint above promises and reuses its proof, so
+-- its trust base is that endpoint's.  Pinned directly because it is a leaf: nothing depends on
+-- it, so coverage reaching it through some other pin does not exist.  The record's derived
+-- lemmas (`acceptFalseStatement_le` and friends) are deliberately not pinned: they are generic
+-- consequences, not deliverable endpoints, and pinning the soundness restatement in particular
+-- would re-advertise the property the Action surface deliberately stopped advertising.
+assert_axioms Zcash.Snark.Contract.actionKnowledgeContract +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
   Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
