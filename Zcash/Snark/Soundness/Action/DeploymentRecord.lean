@@ -27,6 +27,8 @@ namespace Zcash.Snark
 open Zcash.Common
 
 open scoped ENNReal
+open Halo2
+open Zcash.Circuits.Action
 
 local instance deploymentRecordVestaInhabited : Inhabited VestaG := ⟨0⟩
 
@@ -41,7 +43,10 @@ is the GroupHash-as-random-oracle idealization, permanent up to the encoding-dis
 groundwork.  `vkDigestAgreesOnCanonical` binds the family's opaque digest to the deployed one at
 the canonical key only — the capstones claim no cross-key binding.  `acceptsFaithful` is the
 typed post-decode boundary: the byte-level verifier model stays open work
-(`Fingerprint/Match.lean`, *What remains external*). `dlogAdvantageAgrees` prevents the record from
+(`Fingerprint/Match.lean`, *What remains external*).  `instanceColumnsExact` and `numProofs_pos`
+pin the shape of each deployed call behind that boundary: exact ten-row instance columns
+(excluding the trailing-zero commitment alias) and one invocation per present bundle carrying
+its positive action count. `dlogAdvantageAgrees` prevents the record from
 carrying an unrelated advantage function: it must be the one used by `profile`.  Its concrete
 security interpretation remains the permanent external estimate. -/
 structure ActionDeploymentInstantiation {T : Type*} [DecidableEq T] (pp : ProofParams)
@@ -86,6 +91,28 @@ structure ActionDeploymentInstantiation {T : Type*} [DecidableEq T] (pp : ProofP
   /-- Deployed acceptance agrees with the model's checked acceptance — capture faithfulness at
   the typed, post-decode boundary. -/
   acceptsFaithful : ∀ basis O, deployedTypedAccepts basis O ↔ family.accepts basis O
+  /-- The raw instance columns each deployed verifier call supplies, per action. -/
+  deployedInstanceColumns :
+    (AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) →
+      family.Coins → Fin pp.numProofs → List (List Fp)
+  /-- Every action's supplied raw instance is exactly the full ten-row column serializing its
+  typed public inputs (`actionCircuit_publicInputRows_zero`).  This pins the instance
+  construction behind the typed boundary `acceptsFaithful` prices: Halo2's Lagrange commitment
+  zero-pads columns, so a shorter column commits — and verifies — identically to its zero-padding
+  (`commitInstance_append_replicate_zero`, `assembleNonInteractiveInstances?_padColumns`); in
+  particular a nine-row column aliases the ten-row column ending in `disableCrossAddress = 0`.
+  Row-count validation cannot exclude the alias; supplying exact rows does. -/
+  instanceColumnsExact : ∀ basis O (p : Fin pp.numProofs),
+    deployedInstanceColumns basis O p =
+      List.ofFn fun column : Fin (AdaptiveActionStatementShape pp).numInstanceColumns =>
+        actionCircuit.publicInputRows ((family.runOutput basis O).inputs p)
+          (⟨column⟩ : Column .instance)
+  /-- The verifier is invoked once per present Orchard bundle, with the proof count equal to the
+  bundle's action count.  Zero models an absent bundle, never an empty verifier invocation
+  (`book/src/formal-verification/source-map.md`), so a deployment record prices a positive
+  count; that the count equals the deployed bundle's action count is part of the same
+  identification. -/
+  numProofs_pos : 0 < pp.numProofs
   /-- Maximum number of distinct challenge points visited by the complete knowledge-failure
   experiment. -/
   challengeQueryBound : ℕ

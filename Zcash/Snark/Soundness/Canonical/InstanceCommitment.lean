@@ -263,6 +263,20 @@ theorem commitInstance_eq {urs : URS G} {omega : Fp}
   simpa [commitInstance, instanceCoefficients, instanceRowPolynomial] using
     key.commitRows_eq (zeroPaddedRows (n := 2 ^ urs.k) values) blind
 
+/-- Trailing zero rows do not change a committed instance column: the commitment zero-pads every
+column to the domain, so columns differing only by trailing zeros are indistinguishable at
+commitment level.  This is the collision behind the shorter-column alias — a column that stops
+before a trailing flag row commits exactly as the full column carrying that flag as `0`;
+`assembleNonInteractiveInstances?_padColumns` (`Verifier/Deployed.lean`) states the resulting
+acceptance invariance at the raw verifier entry. -/
+theorem commitInstance_append_replicate_zero {urs : URS G} {omega : Fp}
+    (key : LagrangeCommitmentKey urs omega)
+    (values : List Fp) (m : ℕ) (blind : Fp) :
+    key.commitInstance (values ++ List.replicate m 0) blind =
+      key.commitInstance values blind := by
+  unfold commitInstance
+  rw [zeroPaddedRows_append_replicate_zero]
+
 /--
 The full key made by `ofPrefix` commits any column contained in the certified prefix exactly as the
 finite-prefix implementation does.

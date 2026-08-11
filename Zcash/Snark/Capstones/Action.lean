@@ -59,7 +59,12 @@ rather than proved, with its known strengthening named where one exists:
   (`AdaptiveStatementModel.lean`, *Intended instantiation*).
 * *Acceptance* — `DeployedAccepts` starts at typed, post-decode values and prices one proof
   bundle; byte encoding and halo2's optional `BatchVerifier` sit outside the formalized
-  verifier (`Fingerprint/Match.lean`, *What remains external*).
+  verifier (`Fingerprint/Match.lean`, *What remains external*).  The deployment record pins the
+  call shape behind that boundary: exact ten-row instance columns — Lagrange commitment
+  zero-padding makes a shorter column verify as its zero-padding
+  (`assembleNonInteractiveInstances?_padColumns`), aliasing a missing trailing row to
+  `disableCrossAddress = 0` — and a positive per-bundle action count
+  (`instanceColumnsExact`, `numProofs_pos`).
 
 The bounds these endpoints prove are exact inside that model. The machine-readable shape for a
 deployed interpretation is `ActionDeploymentInstantiation`
