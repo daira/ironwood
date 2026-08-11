@@ -364,11 +364,12 @@ Six subtrees carry the heavier machinery:
 
 Where the deployed Action circuit's own statements are stated. `Action.lean` states the
 endpoints — knowledge-soundness bounds for every consensus-valid bundle size, in compositional
-error-formula form, in resource-accounted finite-security form at the `2^123` work factor, and in
+error-formula form, in resource-accounted finite-security form at the `2^123` work factor, in
 the staged-certified forms carrying their group-work accounting at `2^123` and `2^125` adversary
-work. Knowledge soundness is the only property advertised: it implies the plain-soundness
-statement, so that is not stated separately. Legacy fixed-statement endpoints and their events are
-retired.
+work, and in the deployed form that consumes an `ActionDeploymentInstantiation` and charges the
+joint Challenge255 bias explicitly. Knowledge soundness is the only property advertised: it implies
+the plain-soundness statement, so that is not stated separately. Legacy fixed-statement endpoints
+and their events are retired.
 
 `Action.lean` is the only endpoint file here. The `Action/` subdirectory below it holds what
 discharges those endpoints at the captured key: `Base` carries the shape identification the

@@ -63,9 +63,10 @@ cd "$(dirname "$0")/.."
 # `orchard_verifier_*` and `*workFactor*` both currently match nothing and are retained as guards,
 # so a reintroduced name in either family is demanded rather than silently unpinned. The
 # `orchard_verifier_*` rungs were retired with the legacy rewind paths; `*workFactor*` named the
-# Action knowledge capstone's `2^123` instantiation and the consensus-maximum packages until both
-# were renamed onto the `orchard_deployed_*`/`orchard_action_*` prefixes and the `_finite_security`
-# suffix, which is what matches them now.
+# Action knowledge capstone's `2^123` instantiation, the consensus-maximum packages, and the
+# deployment-record transport, until all three were renamed onto the
+# `orchard_deployed_*`/`orchard_action_*` prefixes and the `_finite_security` suffix, which is
+# what matches them now.
 #
 # `_prob_le` is the current spelling for a probability bound, alongside the two older ones; it is
 # matched for the same reason they are. The optional trailing `_for` covers the consensus-generic

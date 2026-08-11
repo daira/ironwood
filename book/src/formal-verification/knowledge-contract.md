@@ -65,33 +65,42 @@ failure, and neither is an accepted run that yielded a witness.
 
 ### 6. What is the error?
 
-The endpoint's compositional formula: the adversary's discrete-log advantage at its query and
-group-work counts, plus $1/|\mathbb{F}|$, plus a per-query term collecting the Schwartz–Zippel
-budgets of each challenge surface. At the $2^{123}$ work-factor target it lands on
-$\mathrm{Adv}_{\mathrm{DLOG}}(2^{126}, 2^{126}) + 2^{-83}$.
+The endpoint's compositional formula: the adversary's
+[discrete-log advantage](definitions.md#adv-dlog) at its query and group-work counts, plus
+$1/|\mathbb{F}|$, plus a per-query term collecting the Schwartz–Zippel budgets of each challenge
+surface. At the $2^{123}$ work-factor target it lands on
+$\mathrm{Adv}_{\mathrm{DLOG}}(2^{126}, 2^{126}) + 2^{-83}$, whose two arguments are the
+random-oracle query count and the group-operation count.
 
 ## What the contract does not say
 
-**Completeness.** That some run accepts, or that an honest prover's proof extracts, is a
-separate property; a contract whose acceptance predicate holds nowhere satisfies every field.
-Read the contract as a bound on the adversary, never as evidence that the circuit works.
+**Completeness is not implied.** That some run accepts, or that an honest prover's proof
+extracts, is a separate property. Nothing here rules out the vacuous case: a contract whose
+acceptance predicate holds nowhere satisfies every field. Read the contract as a bound on the
+adversary, never as evidence that the circuit works.
 
-**Ordinary soundness — because it is free.** On a false statement the extractor must have
-returned `none`, since a returned witness would have entailed it. So `acceptFalseStatement_le`
-gives the soundness bound at the same error for every contract, and no separate endpoint is
-advertised for it.
+**Ordinary soundness is not advertised separately — because it is free.** On a false statement
+the extractor must have returned `none`, since a returned witness would have entailed it. So
+`acceptFalseStatement_le` gives the soundness bound at the same error for every contract, and no
+separate endpoint is advertised for it.
 
-**The ledger.** The contract ends at `ActionBundleWitness`. The formal continuation begins, per
-Action, at `Zcash.Security.Ledger.Bridge.actionSpec_to_ledger`, which consumes the public input,
-private witness, and `ActionSpec` proof — and returns an `ActionBreak` or an existentially
-witnessed ledger statement in `Prop`, not an executable ledger witness. The circuit-level result
-is therefore knowledge soundness while the ledger-level consequence remains ordinary soundness.
+**The ledger security capstones do not follow from it.** The contract ends at
+`ActionBundleWitness`. The formal continuation begins, per Action, at
+`Zcash.Security.Ledger.Bridge.actionSpec_to_ledger`, which consumes the public input, private
+witness, and `ActionSpec` proof — and returns an `ActionBreak` or an existentially witnessed
+ledger statement in `Prop`, not an executable ledger witness. The
+[ledger security capstones](ledger-security-games.md) build on that handoff, and they *depend on*
+knowledge soundness rather than settle for less: they are stated in the witness-level model, over
+ledger actions that already carry witnesses, and extraction is what supplies those for a merely
+proof-carrying bundle. What this contract does not do is discharge that step for the deployed
+circuit — the witness-level model abstracts Halo 2 knowledge soundness away, and relating the two
+is a separate reduction on the different Halo 2 bases.
 
-**The assumptions.** They are the arguments of `actionKnowledgeContract`, not fields of the
-record: a nonzero generator, an injective oracle-parameter query, the family-construction
-obligations, and the generic `AdaptiveStatementDlogProfile`, whose `proverGroupWork` and
-`reductionGroupWork` are caller-supplied labels with `finderAdvantageLE` the corresponding DLOG
-advantage bound. (The operationally accounted route is separate:
+**The assumptions are not fields of the record.** They are the arguments of
+`actionKnowledgeContract`: a nonzero generator, an injective oracle-parameter query, the
+family-construction obligations, and the generic `AdaptiveStatementDlogProfile`, whose
+`proverGroupWork` and `reductionGroupWork` are caller-supplied labels with `finderAdvantageLE`
+the corresponding DLOG advantage bound. (The operationally accounted route is separate:
 `AdaptiveStatementAdversaryCostCertificate` and `CertifiedAdaptiveStatementDlogProfile` feed
 `orchard_action_adaptiveStatement_certified_knowledge_error_bound`.) Two more conditions are
 structural, carried by the adversary's *type*: the algebraic restriction above and the
