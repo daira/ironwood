@@ -6,6 +6,22 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementEvent
 This module defines the complete executable selected-statement witness projection and proves that
 failure of that projection is covered by the combined relation finder and the four statistical
 surfaces.
+
+## Non-vacuity
+
+What runs today: `zeroAdaptiveStatementFamily` inhabits the family interface at every
+parameterization, `Fixtures.MultiAction.Honest.CapturedZeroFamily` discharges the straight-line
+obligations at the captured key's scalar data with eleven live IPA rounds, and
+`capture_deployedAccepts` witnesses acceptance itself on the captured proofs.  No instance yet
+composes the two ends — an accepting run of this extractor.  The captured artifact cannot supply
+one from Lean alone: its points would need coefficients over the modeled basis, and sampled AGM
+bases need not represent captured points.  The route is the degenerate-basis acceptance witness:
+at the all-zero basis every representable point is the identity, so the verifier's final check
+holds on any proof whose assembly succeeds.  `Composition/ZeroBasisAcceptance.lean` proves that
+chain structurally — no computation, no compiler trust — down to two named remainders: assembly
+success at a guard-passing oracle, and the base-provenance walk over `Verifier/Assemble.lean`.
+Full closure on the captured artifact itself would need prover-side annotation export, a
+capture-tool extension on the accepted Rust-side floor.
 -/
 
 namespace Zcash.Snark

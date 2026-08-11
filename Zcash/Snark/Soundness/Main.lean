@@ -32,6 +32,15 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 -- escape branches, with the abstract Orchard ledger relation. On the input side, the deployed Action
 -- key is derived and certified against the capture by `Keygen/Certificate.lean`; identifying that
 -- capture with the deployed Rust artifact and serialization remains external.
+/-- **Deployed acceptance.** `assemble?` succeeds on the typed proof string and the assembled MSM
+evaluates to zero over the URS — the hypothesis every soundness endpoint consumes.
+
+The predicate begins at typed, post-decode values by design: byte parsing, canonical encodings,
+transcript serialization, and Blake2b sit below the accepted formal floor, checked pointwise by
+the fingerprint captures rather than universally refined — a byte-level verifier model remains
+open work (`Fingerprint/Match.lean`, *What remains external*). Acceptance prices one
+proof bundle: halo2's optional `BatchVerifier` aggregation layer is outside the formalized
+verifier. -/
 def DeployedAccepts [DecidableEq G] [Inhabited G] (shape : Shape) (urs : URS G)
     (hk : shape.k = urs.k) (vk : VerifyingKey shape Fp G) (instanceCommitment : Fin shape.numProofs → ℕ → G) (ps : ProofString shape Fp G)
     (ch : Challenges shape.k Fp) : Prop :=

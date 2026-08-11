@@ -73,6 +73,9 @@ import Zcash.Snark.Soundness.AGM.AdaptiveIpaSurfaces
 import Zcash.Snark.Soundness.AGM.AdaptiveRootSurfaces
 import Zcash.Snark.Soundness.Action.AdaptiveStatementReads
 import Zcash.Snark.Soundness.Action.AdaptiveStatementInhabitant
+import Zcash.Snark.Soundness.Oracle.Challenge255
+import Zcash.Snark.Soundness.Composition.ZeroBasisAcceptance
+import Zcash.Snark.Soundness.Action.DeploymentRecord
 
 /-!
 # Trust boundary, build-checked
@@ -851,6 +854,52 @@ assert_axioms Zcash.Snark.uniformChallenge_quotient_szBadSet
 assert_axioms Zcash.Snark.uniformChallenge_szBadSet_union
 assert_axioms Zcash.Snark.exists_accepting_good_challenge
 assert_axioms Zcash.Snark.exists_accepting_good_challenge_quotient
+-- The deployed challenge conversion (`Soundness.Oracle.Challenge255`): one squeeze's exact
+-- weighted reduction bias, its adaptive joint hybrid, and transport across `PMFEventBiasLE`.
+assert_axioms Zcash.Snark.PMFWeightedBiasLE
+assert_axioms Zcash.Snark.PMFWeightedBiasLE.eventBiasLE
+assert_axioms Zcash.Snark.PMFEventBiasLE.bind_same
+assert_axioms Zcash.Snark.OracleComp.runFreshPMF
+assert_axioms Zcash.Snark.OracleComp.runFreshPMF_eventBiasLE
+assert_axioms Zcash.Snark.challenge255
+assert_axioms Zcash.Snark.challenge255Bias
+assert_axioms Zcash.Snark.challenge255_apply
+assert_axioms Zcash.Snark.challenge255_eventBias_le
+assert_axioms Zcash.Snark.challenge255_weightedBias_le
+assert_axioms Zcash.Snark.challenge255_joint_eventBias_le
+assert_axioms Zcash.Snark.challenge255Bias_le
+assert_axioms Zcash.Snark.challenge255_badSet_le
+-- Zero-basis acceptance scaffolding (`Soundness.Composition.ZeroBasisAcceptance`): structural,
+-- computation-free steps toward an accepting run of the adaptive knowledge machinery.
+assert_axioms Zcash.AlgebraicPoint.point_eq_zero_of_zeroBasis
+assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
+-- The deployment-instantiation record (`Soundness.Action.DeploymentRecord`): the machine-readable
+-- bridge a deployment interpretation supplies, one identification field per model floor. The
+-- native owners are the Action circuit's own certificates, reached through the record's type.
+assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
+  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
+  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique
@@ -1686,8 +1735,6 @@ assert_axioms Zcash.Snark.ActionTerminal.actionRunDecode +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.straightLineRunAcceptsAt +native(
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.topLevelStatementOrRelationDecoded +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.topLevelBundleStatementDecoded +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)

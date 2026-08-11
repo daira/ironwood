@@ -124,6 +124,12 @@ fi
 # one. `git clean` keeps target/ so a reused REGEN_WORK_DIR stays warm.
 prepare_orchard() {
   local dest="$WORK_DIR/orchard"
+  # The checkout slot must be a directory the work dir owns: a symlink here would aim the
+  # hard reset and clean below at whatever it points to.
+  if [[ -L "$dest" ]]; then
+    echo "VIOLATION: $dest is a symlink; the work dir must own its checkout" >&2
+    exit 1
+  fi
   if [[ ! -d "$dest/.git" ]]; then
     echo "Cloning orchard from $ORCHARD_URL"
     git clone --quiet "$ORCHARD_URL" "$dest"

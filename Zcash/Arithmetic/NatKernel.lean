@@ -106,7 +106,10 @@ def windowValue (base i : Nat) (terms : List (Nat × P3)) : P3 :=
 def pdoublings (c : Nat) (p : P3) : P3 := (List.range c).foldl (fun a _ => padd a a) p
 
 /-- Windowed Pippenger MSM, window `c`: per-window Array-scatter buckets, bucket
-downsweep, Horner recombination (`c` doublings between adjacent windows). -/
+downsweep, Horner recombination (`c` doublings between adjacent windows). Callers owe `0 < c`:
+at `c = 0` the `Nat`-division window count is `0`, so the fold returns `pid` and every term is
+dropped — the equivalence theorems all require positivity, and every executable call site passes
+`Fast.Msm.defaultWindow` (`= 8`). -/
 def msm (c : Nat) (terms : List (Nat × P3)) : P3 :=
   let numWindows := (256 + c - 1) / c
   let base := 2 ^ c

@@ -95,6 +95,31 @@ def dedup [DecidableEq T] (c : List (T × F)) : OracleComp T F α → OracleComp
       | some p => dedup c (k p.2)
       | none => .query t (fun u => dedup ((t, u) :: c) (k u))
 
+/-- Deduplication preserves lookup-table execution when the initial cache agrees with the table.
+In particular, `dedup []` changes only the query schedule, never the result. -/
+theorem run_dedup [DecidableEq T] (A : OracleComp T F α) (O : T → F)
+    (c : List (T × F)) (hcon : ∀ p ∈ c, O p.1 = p.2) :
+    (dedup c A).run O = A.run O := by
+  induction A generalizing c with
+  | pure a => rfl
+  | query t k ih =>
+      rw [dedup]
+      cases hfind : c.find? (fun p => p.1 = t) with
+      | some p =>
+          have hp := List.find?_some hfind
+          have hpmem := List.mem_of_find?_eq_some hfind
+          have hpt : p.1 = t := by simpa using hp
+          have hval : O t = p.2 := by
+            rw [← hpt]
+            exact hcon p hpmem
+          rw [run_query, ih p.2 c hcon, hval]
+      | none =>
+          rw [run_query, run_query]
+          exact ih (O t) ((t, O t) :: c) fun p hp ↦ by
+            rcases List.mem_cons.mp hp with rfl | hp
+            · rfl
+            · exact hcon p hp
+
 theorem dedup_avoidsCache [DecidableEq T] (c : List (T × F)) (A : OracleComp T F α) :
     AvoidsCache c (dedup c A) := by
   induction A generalizing c with

@@ -26,8 +26,16 @@
 # name does not match a pattern is not an endpoint as far as this check is concerned. New endpoint
 # families must either extend the protocol-family alternatives below or use one of the semantic
 # suffixes `_error_bound`, `_finite_security`, or `_capstone`. The declaration's name must be on
-# the same line as its `theorem`/`def` keyword. Run from the repository root; exits non-zero on
+# the same line as its declaration keyword. Run from the repository root; exits non-zero on
 # violation.
+#
+# The same rule is enforced a second time from the elaborated environment:
+# `Zcash/Meta/EndpointCensus.lean` ports the pattern below to a Lean predicate, the census
+# commands record every pin they elaborate, and `Zcash/CensusCheck.lean` (the `CensusCheck`
+# default target) asserts that no endpoint in the census files' import closure is unpinned. That
+# closes what this line parser cannot see — declarations emitted by custom commands, unrecognized
+# modifiers, or multiline syntax — while this scan keeps the whole file tree in scope, census
+# imports or not. Keep `ENDPOINT_RE` and `Zcash.Meta.isEndpointBaseName` in sync.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -110,7 +118,7 @@ while IFS= read -r file; do
       continue
     fi
     # A top-level declaration: column 0, optional modifiers, then the name.
-    [[ $line =~ ^(private[[:space:]]+|protected[[:space:]]+)?(noncomputable[[:space:]]+|partial[[:space:]]+|unsafe[[:space:]]+)?(theorem|lemma|def|abbrev)[[:space:]]+([A-Za-z0-9_\']+) ]] || continue
+    [[ $line =~ ^(private[[:space:]]+|protected[[:space:]]+)?(noncomputable[[:space:]]+|partial[[:space:]]+|unsafe[[:space:]]+)?(theorem|lemma|def|abbrev|instance|axiom|opaque|inductive|structure|class)[[:space:]]+([A-Za-z0-9_\']+) ]] || continue
     # A private helper is not a deliverable endpoint.
     if [[ ${BASH_REMATCH[1]} == private* ]]; then continue; fi
     name=${BASH_REMATCH[4]}

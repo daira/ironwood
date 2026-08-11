@@ -59,7 +59,9 @@ theorem valid_toPVes_ofPVes_ofAffine (g : G) :
 /-! ## The MSM against a pre-converted basis -/
 
 /-- The kernel MSM against a basis **already** held as canonical-`ℕ` projective triples, plus
-the blind.  The basis conversion is the caller's, so it can be shared across columns. -/
+the blind.  The basis conversion is the caller's, so it can be shared across columns.  So is the
+window: `c = 0` degenerates to the blind alone (`NatKernel.msm`), and the equivalence theorems
+below accordingly require `0 < c`. -/
 def msmNatPre (c : ℕ) (blind : G) (basisN : List P3) (scalars : List ℕ) : G :=
   NatKernel.toG (NatKernel.msm c (scalars.zip basisN)) + blind
 

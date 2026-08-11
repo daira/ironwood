@@ -42,7 +42,9 @@ def computeB {F : Type*} [CommRing F] (x : F) (u : List F) : F :=
 `poly/commitment/verifier.rs`): starting from the multiopen commitment to be opened at `x` to the
 value `v`, it accumulates every term of halo2's IPA verification equation — the value at `g₀`, the
 blinding terms, the per-round `Lⱼ`/`Rⱼ`, and the folded generators. The exact term-by-term form is
-`eval_ipaFold`; `rounds` pairs `(Lⱼ, Rⱼ)` with `u`. -/
+`eval_ipaFold`; `rounds` pairs `(Lⱼ, Rⱼ)` with `u`. Callers owe `rounds.length = u.length = k`:
+`rounds.zip u` truncates to the shorter list while `computeB`/`computeS` consume all of `u`, and
+both call sites discharge the contract by construction (`List.ofFn` over `Fin shape.k`). -/
 def ipaFold {F G : Type*} [Field F] {k : ℕ} (x v c f xi z : F) (u : List F)
     (S : G) (rounds : List (G × G)) (m : Msm k F G) : Msm k F G :=
   let m := m.addToGScalars [-v]

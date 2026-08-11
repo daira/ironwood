@@ -206,11 +206,12 @@ theorem shieldedBalanceCapViolationBefore_subset {VB : Type*}
   rintro ω ⟨i, hik, hω⟩
   exact ⟨i, hik, shieldedBalanceCapViolation_subset perTx i hω⟩
 
-/-- **Balance conservation at every prefix, at no extra cost in `k`.** For any
-adversary, the probability that the pools fail to sum to issuance after one of the
-first `k` transactions is at most a single ε. A naive union bound over the `k`
-prefixes would pay `k · ε`; instead the hypothesis names one ε on the shared
-all-prefixes break event, and every prefix's violation lands there. -/
+/-- **Balance conservation at every prefix, from one bound on the shared break event.** For
+any adversary, the probability that the pools fail to sum to issuance after one of the
+first `k` transactions is at most a single ε — where ε is hypothesized on the shared
+all-prefixes break event, and every prefix's violation lands there. The containment adds
+no factor of `k`; discharging the premise from per-prefix bounds alone would, by the
+union bound (`k · ε₀`). -/
 theorem balanceConservation_measure_le {VB : Type*}
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (perTx : ∀ ω : ValidAnnotated P kv issuance maxActions,
@@ -221,10 +222,10 @@ theorem balanceConservation_measure_le {VB : Type*}
   le_trans
     (MeasureTheory.measure_mono (balanceConservationViolationBefore_subset perTx k)) hvb
 
-/-- **Shielded balance cap at every prefix, at no extra cost in `k`.** For any
-adversary, the probability that the shielded pool exceeds the minted issuance after
-one of the first `k` transactions is at most a single ε, by the same event-sharing
-as balance conservation. -/
+/-- **Shielded balance cap at every prefix, from one bound on the shared break event.**
+For any adversary, the probability that the shielded pool exceeds the minted issuance
+after one of the first `k` transactions is at most a single ε hypothesized on the shared
+all-prefixes break event, by the same event-sharing as balance conservation. -/
 theorem shieldedBalanceCap_measure_le {VB : Type*}
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (perTx : ∀ ω : ValidAnnotated P kv issuance maxActions,
@@ -323,11 +324,10 @@ theorem balanceSubsetViolationUpTo_subset (k : ℕ) :
   · exact Or.inl (Or.inr ⟨i, hik, h⟩)
   · exact Or.inr ⟨i, hik, h⟩
 
-/-- **Balance-subset at every prefix, at no extra cost in `k`.** For any adversary,
-the probability that the nonzero spends escape the earlier positioned outputs at
-some step `i < k` is at most the sum of three ε's — one per arm, each named on that
-arm's shared all-prefixes event. This is the same bound as for a single step,
-independent of `k`. -/
+/-- **Balance-subset at every prefix, from one bound per shared arm event.** For any
+adversary, the probability that the nonzero spends escape the earlier positioned outputs
+at some step `i < k` is at most the sum of three ε's — one per arm, each hypothesized on
+that arm's shared all-prefixes event. The containment adds no factor of `k`. -/
 theorem balanceSubset_measure_le (A : PMF (ValidAnnotated P kv issuance maxActions))
     (k : ℕ) {εm εnc εkb : ℝ≥0∞}
     (hm : A.toOuterMeasure (balanceSubsetBreakEventUpTo k .merkle) ≤ εm)
@@ -462,11 +462,11 @@ theorem balanceIntegrityViolationBefore_subset {VB : Type*}
     · exact absurd (ω.2.transparent_nonneg i) h'
     · exact Or.inr ⟨i, hik, balanceConservationViolation_subset perTx i h'⟩
 
-/-- **Balance integrity at every prefix, at no extra cost in `k`.** For any adversary,
-the probability that balance integrity is violated (the shielded pool goes negative
-or the pools fail to sum to the minted issuance) at some prefix `i < k` is at most
-the three Balance-subset arm ε's plus the transaction-balance premiss arm's ε. This
-is the same bound as for a single prefix, independent of `k`. -/
+/-- **Balance integrity at every prefix, from one bound per shared arm event.** For any
+adversary, the probability that balance integrity is violated (the shielded pool goes
+negative or the pools fail to sum to the minted issuance) at some prefix `i < k` is at
+most the three Balance-subset arm ε's plus the transaction-balance premiss arm's ε, each
+hypothesized on its shared all-prefixes event. The containment adds no factor of `k`. -/
 theorem balanceIntegrity_measure_le {VB : Type*}
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (perTx : ∀ ω : ValidAnnotated P kv issuance maxActions,

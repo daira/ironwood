@@ -1,19 +1,60 @@
 import Zcash.Snark.Capstones.ActionBudgets
+import Zcash.Snark.Soundness.Action.DeploymentRecord
 
 /-!
 # Exact Action knowledge-soundness capstones
 
 Captured checks and executable terminals yield knowledge-soundness bounds against an adversary
 that chooses the public statement and proof together, for every consensus-valid Action bundle
-size. Five endpoints state them: the consensus-generic compositional error formula and its
+size. Six endpoints state them: the consensus-generic compositional error formula and its
 staged-certified counterpart, the instantiation at the `2^123` work-factor target, and the
-conditionally staged-certified forms at `2^123` and `2^125` adversary work.
+conditionally staged-certified forms at `2^123` and `2^125` adversary work, plus a deployed
+Challenge255 transport that consumes `ActionDeploymentInstantiation`.
 
 Knowledge soundness is the only property advertised here.  Ordinary soundness is not stated
 separately because it is the weaker consequence at the same error:
 `ComputedAdaptiveActionStatementFSFamily.acceptFalseStatement_subset_knowledgeFailure` proves the
 accepting-false-statement set is contained in the event these endpoints bound, so a soundness
 bound is `measure_mono` away and carries no independent content.
+
+## Model boundary
+
+The endpoints are theorems inside a stated model; each floor below is accepted and disclosed
+rather than proved, with its known strengthening named where one exists:
+
+* *Adversary class* — adversaries are represented online-AGM programs: every output point
+  carries coefficients over the enumerated augmented basis.  A byte-level prover that fills a
+  proof slot with a fresh point (a hash-to-curve output, say) sits outside the class; the known
+  extension models hash-to-curve as an adversary-queryable, basis-extending oracle
+  (`Soundness/Action/AdaptiveStatementModel.lean`, *Trust boundary*).  Larger algebraic classes
+  — AGM with oblivious sampling — exist and are not modeled here.
+* *Work accounting* — the certified tiers cost a staged program: a manually staged, costed copy
+  of the online-AGM adversary, proven to erase to it, with the finder/extractor/reduction staged
+  around it.  Lean checks the arithmetic of the staged nodes; that the staging omitted no group
+  work — host callbacks and pure continuations perform none — is `StagedGroupWorkFaithful`,
+  assumed for both halves and re-exported in each certified conclusion.  The uncertified tier
+  instead takes the caller-supplied `proverGroupWork`/`reductionGroupWork` values as premises.
+* *URS basis* — the probability space samples the basis through the generator random oracle
+  (`orchardGeneratorROSetup`); identifying the deployed fixed hash-to-curve derivation with that
+  experiment is the GroupHash random-oracle idealization, not a Lean theorem.
+* *Challenges* — squeezes are exactly uniform (`uniformChallenge`).  The deployed conversion
+  reduces a 64-byte digest modulo `p`; its exact reduction bias is priced by
+  `challenge255_weightedBias_le`, and `challenge255_joint_eventBias_le` composes it through an
+  adaptive deduplicated query tree (`Soundness/Oracle/Challenge255.lean`). Idealizing Blake2b as a
+  uniform digest remains external.
+* *DLOG hardness* — each profile takes a caller-supplied advantage bound for its exact relation
+  finder (`AdaptiveStatementDlogProfile`, `CertifiedAdaptiveStatementDlogProfile`); relating that
+  bound to a standard resource-bounded DLOG game and a concrete security estimate is external.
+* *Key digest* — `vkHash` is opaque: one canonical key per basis, no cross-key binding claimed
+  (`AdaptiveStatementModel.lean`, *Intended instantiation*).
+* *Acceptance* — `DeployedAccepts` starts at typed, post-decode values and prices one proof
+  bundle; byte encoding and halo2's optional `BatchVerifier` sit outside the formalized
+  verifier (`Fingerprint/Match.lean`, *What remains external*).
+
+The bounds these endpoints prove are exact inside that model. The machine-readable shape for a
+deployed interpretation is `ActionDeploymentInstantiation`
+(`Soundness/Action/DeploymentRecord.lean`), one identification field per floor; the deployed
+endpoint below consumes it and charges the joint Challenge255 bias explicitly.
 
 Each is censused directly in `Fixtures/MultiAction/Honest/TrustBoundary.lean`.
 -/
@@ -307,6 +348,63 @@ theorem orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_gen
           (adaptiveStatement_pairCount_lt numProofs family) h⟩, ?_⟩
   intro actual εBias hbias
   exact event_measure_le_of_bias hbias _ hprob
+
+/-- **Deployed adaptive-statement knowledge capstone.** A complete deployment record instantiates
+the basis, typed verifier, concrete DLOG profile, and a deduplicated finite failure observer.  The
+proved joint Challenge255 hybrid transports the ideal `2^123` work-factor bound to that observer,
+charging `challengeQueryBound * challenge255Bias` once for the whole adaptive transcript rather
+than assuming an unjustified one-squeeze event bound. -/
+theorem orchard_action_deployedKnowledgeFailure_2pow123_workFactor_prob_le
+    (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
+    {T : Type*} [DecidableEq T]
+    (query : AugmentedIndex actionCircuit.n → T)
+    (family : ComputedAdaptiveActionStatementFSFamily (actionProofParamsFor numProofs))
+    (deployment : ActionDeploymentInstantiation (actionProofParamsFor numProofs) family query
+      (adaptiveStatement_pairCount_lt numProofs family) (2 ^ 123)) :
+    deployment.deployedFailurePMF.toOuterMeasure {true} ≤
+      (deployment.dlogAdvantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) +
+        deployment.challengeQueryBound * challenge255Bias := by
+  have hcapstone :=
+    orchard_action_knowledgeFailure_adaptiveStatement_2pow123_workFactor_generatorRO_for
+      numProofs hn deployment.basisGenerator deployment.basisGenerator_ne_zero query
+      deployment.queryInjective family deployment.profile
+  have hideal :
+      (independentProductPMF (orchardGeneratorROSetup query)
+        (PMF.uniformOfFintype family.Coins)).toOuterMeasure
+          ((fun p ↦ (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
+            family.adaptiveStatementKnowledgeFailureEvent
+              (adaptiveStatement_pairCount_lt numProofs family)) ≤
+        deployment.profile.advantage (2 ^ 126) (2 ^ 126) +
+          1 / (2 ^ 83 : ENNReal) :=
+    hcapstone.1
+  have hpointwise : ∀ basis,
+      PMFEventBiasLE
+        ((OracleComp.dedup [] (deployment.failureObserver basis)).runFreshPMF
+          deployment.deployedChallengeLaw)
+        ((OracleComp.dedup [] (deployment.failureObserver basis)).runFreshPMF uniformChallenge)
+        (deployment.challengeQueryBound * challenge255Bias) := by
+    intro basis
+    rw [deployment.challengeLawIsChallenge255]
+    exact challenge255_joint_eventBias_le (deployment.failureObserverQueryBound basis)
+  let idealObserver : PMF Bool :=
+    ((orchardGeneratorROSetup query).map (orchardGeneratorROBasis query)).bind fun basis ↦
+      (OracleComp.dedup [] (deployment.failureObserver basis)).runFreshPMF uniformChallenge
+  have hjoint :
+      PMFEventBiasLE deployment.deployedFailurePMF
+        idealObserver
+        (deployment.challengeQueryBound * challenge255Bias) := by
+    unfold idealObserver
+    unfold ActionDeploymentInstantiation.deployedFailurePMF
+    rw [deployment.basisIsGeneratorRO]
+    exact PMFEventBiasLE.bind_same hpointwise
+  have hidealObserver :
+      idealObserver.toOuterMeasure {true} ≤
+        deployment.profile.advantage (2 ^ 126) (2 ^ 126) +
+          1 / (2 ^ 83 : ENNReal) := by
+    unfold idealObserver
+    exact deployment.idealFailureMeasure_eq.trans_le hideal
+  rw [deployment.dlogAdvantageAgrees]
+  exact event_measure_le_of_bias hjoint {true} hidealObserver
 
 /-- The selected proof's direct-decode source fits the `2^90` endpoint envelope.  All
 proof-controlled and instance entries have shape-indexed lengths; the sole list-valued input is

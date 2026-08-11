@@ -31,6 +31,19 @@ closed program that constructs the basis, specializes the exact adversary path w
 and group nodes, builds a proof-carrying cache, and consumes that cache in postprocessing. Lean
 derives the counter decomposition from this syntax. Fidelity remains explicit both for the supplied
 adversary and for unreified host computations inside the complete shallow program.
+
+The repository-owned host callbacks have been audited: uses of `CostedVestaComp.pure`, `map`, and
+`bind` in this module only package already-computed values, project fields, transport dependent
+values, sequence costed programs, or branch on group-free data. Vesta additions, negations, scalar
+multiplications, and MSM evaluation in the executable reduction route through the reified
+constructors. The CI check `scripts/check_costed_group_work_census.sh` pins every current host
+callback and its direct raw group-syntax footprint, so extending that surface requires an explicit
+census update.
+
+That census is a review guard, not a proof of operational completeness. In particular, the
+caller-supplied adversary program and indirect generic family hooks are not made group-free by a
+source census; their fidelity remains exactly the `StagedGroupWorkFaithful` premise exposed by the
+certified endpoints.
 -/
 
 namespace Zcash.Snark

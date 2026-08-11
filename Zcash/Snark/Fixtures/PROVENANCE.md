@@ -112,6 +112,15 @@ ChaCha PRG and sampling losses to ε.
 | random single-action | `0x52` | `R` |
 | random two-action | `0x72` | `r` |
 
+### The manifest
+
+`MANIFEST.tsv` records each committed capture's provenance in one machine-checkable row —
+path, sha256, generator, source revision, invocation. `scripts/check_fixture_manifest.sh`
+(run by the fixtures workflow on every push and pull request) verifies the digests and
+rejects any generated-looking artifact that lacks an entry, so the committed bytes stay
+bound to their recorded provenance between full regenerations. Editing a capture means
+regenerating it and updating its manifest row in the same change.
+
 ### Reproducing
 
 ```

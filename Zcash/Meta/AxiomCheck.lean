@@ -5,6 +5,7 @@ import Lean.Compiler.ImplementedByAttr
 import Lean.Compiler.ExternAttr
 import Lean.Compiler.CSimpAttr
 import Mathlib.Util.AssertNoSorry
+import Zcash.Meta.EndpointCensus
 
 /-!
 # `assert_axioms` — a concise, build-checked trust-boundary bound
@@ -87,7 +88,14 @@ declaration). Everything else is censused, so a *new* dependency fails the build
 classified — a new package in the import closure is a trusted-base change, unlike a version bump of
 one already listed. This is where the `@[extern]` `Task.spawn` / `Task.get` reached through
 `List.parMap` land; the kernel sees their reference bodies, `List.parMap_eq_map` closes by `rfl`,
-and `Zcash.TrustBoundary` discloses what the task runtime widens the compiled surface to. -/
+and `Zcash.TrustBoundary` discloses what the task runtime widens the compiled surface to.
+
+Classification is by module-name root, not Lake package provenance — the elaborated environment
+records only module names. A module *named* under an ambient root would therefore inherit
+ambience, but reaching the import closure with one takes a new lakefile library root or
+dependency (every library here roots at `Zcash`), and that lakefile/manifest edit is the same
+review boundary a hostile edit to this very list would cross. Accepted floor: this census is a
+drift ratchet, not a defense against the committer who can change the build surface. -/
 def ambientPackageRoots : Array Name :=
   #[`Init, `Lean, `Std, `Lake, `Batteries, `Mathlib, `Aesop, `Qq, `Plausible, `ProofWidgets,
     `ImportGraph, `LeanSearchClient, `Cli]
@@ -415,6 +423,7 @@ elab "assert_axioms " n:ident native:(nativeFlag)? : command => do
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
   checkCompiledBodyDisclosure n
+  recordCensusPin name
 
 /--
 `assert_computable foo` fails the build unless `foo` is a plain `def` — an actual definition,
@@ -474,5 +483,6 @@ elab "assert_computable " n:ident choice:("+choice")? native:(nativeFlag)? : com
   unless unexpected.isEmpty do
     throwError "{n} depends on unexpected axiom(s): {unexpected.toList}"
   checkCompiledBodyDisclosure n
+  recordCensusPin name
 
 end Zcash.Meta

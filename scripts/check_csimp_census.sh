@@ -10,7 +10,10 @@
 # mentions as exactly `@[csimp]` (backtick-quoted); that exact string is removed
 # before testing, so any remaining attribute syntax (`@[..., csimp, ...]` or
 # `attribute [csimp] name`) is treated as real and must name its declaration on
-# the same line. Matching against the census is by the declaration's final name
+# the same line. An `attribute` command may list several targets; every one is
+# checked, and an unparsable target fails rather than being skipped. The same-line
+# rule is load-bearing: a target continued onto the next line is invisible to a
+# line scanner. Matching against the census is by the declaration's final name
 # component.
 #
 # Scope: this guards against accidental omissions, NOT adversarial code. Run from
@@ -52,22 +55,38 @@ while IFS=: read -r file lineno line; do
   if ! printf '%s' "$stripped" | grep -qE '@\[[^]]*\bcsimp\b|attribute[[:space:]]*\[[^]]*\bcsimp\b'; then
     continue  # only quoted documentation mentions on this line
   fi
-  name=$(printf '%s' "$stripped" | sed -nE "s/.*(theorem|def)[[:space:]]+([A-Za-z0-9_'.]+).*/\2/p")
-  if [[ -z "$name" ]]; then
-    name=$(printf '%s' "$stripped" | sed -nE "s/.*attribute[[:space:]]*\[[^]]*csimp[^]]*\][[:space:]]+([A-Za-z0-9_'.]+).*/\1/p")
+  names=$(printf '%s' "$stripped" | sed -nE "s/.*(theorem|def)[[:space:]]+([A-Za-z0-9_'.]+).*/\2/p")
+  if [[ -z "$names" ]]; then
+    # `attribute [csimp] a b …` applies the attribute to every listed target: collect the whole
+    # target list, and fail on any token the identifier grammar does not cover rather than
+    # silently checking a prefix of the command.
+    targets=$(printf '%s' "$stripped" \
+      | sed -nE "s/.*attribute[[:space:]]*\[[^]]*csimp[^]]*\][[:space:]]+(.*)$/\1/p" \
+      | sed -E 's/--.*$//')
+    ident_re="^[A-Za-z0-9_'.]+$"
+    for target in $targets; do
+      if [[ "$target" =~ $ident_re ]]; then
+        names="$names $target"
+      else
+        echo "VIOLATION: $file:$lineno: unparsable csimp attribute target '$target'" >&2
+        status=1
+      fi
+    done
   fi
-  if [[ -z "$name" ]]; then
+  if [[ -z "${names// /}" ]]; then
     echo "VIOLATION: $file:$lineno: csimp attribute syntax must name its declaration on the same line (write \`@[csimp] theorem <name>\`), and documentation mentions must be quoted as exactly \`@[csimp]\`" >&2
     status=1
     continue
   fi
-  count=$((count + 1))
-  # Herestring rather than a pipe: `grep -q` exits at the first match, which under `pipefail` would
-  # make a *successful* lookup fail the pipeline on the writer's SIGPIPE.
-  if ! grep -qxF "${name##*.}" <<< "$censused"; then
-    echo "VIOLATION: csimp declaration ${name} ($file:$lineno) has no assert_axioms entry in any census file" >&2
-    status=1
-  fi
+  for name in $names; do
+    count=$((count + 1))
+    # Herestring rather than a pipe: `grep -q` exits at the first match, which under `pipefail`
+    # would make a *successful* lookup fail the pipeline on the writer's SIGPIPE.
+    if ! grep -qxF "${name##*.}" <<< "$censused"; then
+      echo "VIOLATION: csimp declaration ${name} ($file:$lineno) has no assert_axioms entry in any census file" >&2
+      status=1
+    fi
+  done
 done <<< "$matches"
 
 if [[ $status -eq 0 ]]; then
