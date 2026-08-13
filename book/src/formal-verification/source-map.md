@@ -425,9 +425,8 @@ them as data (`SpecOrBreak`) rather than assuming them away.
 
 - **`Specs/`** — the value-level protocol specifications the circuits are proven against:
   Orchard data shapes (`Types`), the Pallas curve and its certified arithmetic (`Pallas`,
-  `PallasCert`, `CompEllipticExtras`), bit-range arithmetic (`Bitrange`), and the Sinsemilla
-  hash with its generators and break structure (`Sinsemilla`, `SinsemillaGenerators`,
-  `SinsemillaBreak`).
+  `PallasCert`), bit-range arithmetic (`Bitrange`), and the Sinsemilla hash with its
+  generators and break structure (`Sinsemilla`, `SinsemillaGenerators`, `SinsemillaBreak`).
 - **`Utilities/`** — the shared gadgets: `LookupRangeCheck` (the first lookup-consuming gadget
   ported, generic over `K`), `RunningSum`/`DecomposeRunningSum`, `CondSwap`, and `AddChip`.
 - **`Ecc/`** — the ECC chip. Point witnessing (`WitnessPoint`), complete and incomplete addition

@@ -2263,8 +2263,8 @@ prose:
 
 * The generic theorems (`Circuit.soundness`, `Circuit.soundnessPost`) reach three owners: the
   Pallas point-count witness `Pallas.q_nsmul_Gpt` and the two `windowScalar_ne_zero` facts. (The
-  `y = 0` exclusion `Pallas.neg_five_not_isCube`, declared in `Zcash/Circuits/Specs/Pallas.lean`
-  inside CompElliptic's namespace, is a kernel proof and carries no certificate.)
+  `y = 0` exclusion `Pallas.neg_five_not_isCube`, from CompElliptic, is a kernel proof and
+  carries no certificate.)
 * The six fixed-base window-table certificates (`Certs.*Cert_check`) enter only at the
   fully-instantiated `orchardActionCircuit`, where the deployed bases are supplied.
 
