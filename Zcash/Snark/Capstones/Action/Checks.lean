@@ -1,4 +1,5 @@
 import Zcash.Snark.Capstones.Action.Base
+import Zcash.Circuits.Action.PlannerTrace
 
 /-!
 # The captured checks, scalars, and schedule at the derived key
@@ -124,8 +125,9 @@ private theorem capturedActionDerivedShapeCounts :
       shape.numFixedQueries ∧
     actionCircuit.quotientPieceCount =
       shape.numQuotientPieces :=
-  ⟨by simpa only [CircuitShape.withProofParams_k, actionCircuit.shape_k] using
-      congrArg (fun proofShape : Shape => proofShape.k) actionShape_eq_fixtureShape,
+  ⟨by
+      rw [Zcash.Circuits.Action.actionCircuit_domainExponent_eq]
+      rfl,
     by simpa only [CircuitShape.withProofParams_numAdviceQueries,
         actionCircuit.shape_numAdviceQueries] using
       congrArg (fun proofShape : Shape => proofShape.numAdviceQueries)
@@ -145,7 +147,7 @@ private theorem capturedActionDerivedShapeCounts :
 
 theorem action_domainExponent_eq :
     actionCircuit.domainExponent = 11 := by
-  simpa [shape] using capturedActionDerivedShapeCounts.1
+  exact Zcash.Circuits.Action.actionCircuit_domainExponent_eq
 
 /-- **The captured static checks at the derived key**: the concrete specialization
 of `actionStaticChecks`, with the five decided facts transferred through the captured key's scalar
@@ -188,8 +190,9 @@ def capturedActionXSqueezeSchedule
     DeployedConstraintXSqueezeSchedule family.toRootFamily
       ((20470 : ℕ) / (Fintype.card Fp : ℝ≥0∞)) := by
   have hk : actionCircuit.n - 1 = 2047 := by
-    rw [actionCircuit.n_eq_two_pow_domainExponent, capturedActionDerivedShapeCounts.1]
-    norm_num [shape]
+    rw [actionCircuit.n_eq_two_pow_domainExponent,
+      action_domainExponent_eq]
+    norm_num
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
     (by norm_num) (le_of_eq hk)
@@ -216,7 +219,8 @@ def capturedActionXSqueezeSchedule
         CircuitShape.withProofParams_numQuotientPieces,
         actionCircuit.shape_numQuotientPieces,
         capturedActionDerivedShapeCounts.2.2.2.2, ← hk,
-        actionCircuit.n_eq_two_pow_domainExponent, capturedActionDerivedShapeCounts.1]
+        actionCircuit.n_eq_two_pow_domainExponent,
+        action_domainExponent_eq]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
@@ -235,8 +239,9 @@ theorem actionDerivedShapeCounts (numProofs : ℕ) :
       shape.numQuotientPieces := by
   have h := actionShapeFor_eq_fixtureShape numProofs
   exact
-    ⟨by simpa only [CircuitShape.withProofParams_k, actionCircuit.shape_k] using
-        congrArg (fun proofShape : Shape => proofShape.k) h,
+    ⟨by
+        rw [Zcash.Circuits.Action.actionCircuit_domainExponent_eq]
+        rfl,
       by simpa only [CircuitShape.withProofParams_numAdviceQueries,
           actionCircuit.shape_numAdviceQueries] using
         congrArg (fun proofShape : Shape => proofShape.numAdviceQueries) h,
@@ -295,8 +300,8 @@ def actionXSqueezeSchedule (numProofs : ℕ)
   have hk : actionCircuit.n - 1 =
       2047 := by
     rw [actionCircuit.n_eq_two_pow_domainExponent,
-      (actionDerivedShapeCounts numProofs).1]
-    norm_num [shape]
+      action_domainExponent_eq]
+    norm_num
   have h := deployedConstraintXSqueezeSchedule_of_pinned family.toRootFamily
     (B := 2047) (W := 7) (Dc := 8188) (D := 20470) (Dq := 20470)
     (by norm_num) (le_of_eq hk)
@@ -324,7 +329,7 @@ def actionXSqueezeSchedule (numProofs : ℕ)
         actionCircuit.shape_numQuotientPieces,
         (actionDerivedShapeCounts numProofs).2.2.2.2, ← hk,
         actionCircuit.n_eq_two_pow_domainExponent,
-        (actionDerivedShapeCounts numProofs).1]
+        action_domainExponent_eq]
       exact vk_quotient_tail_le)
     (by norm_num) (by norm_num) (by norm_num) (by norm_num)
     family.constraintXTrace.toPinning
