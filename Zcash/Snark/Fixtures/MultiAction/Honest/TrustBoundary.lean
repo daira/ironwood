@@ -68,7 +68,6 @@ declared-resource endpoint remains pinned alongside the `2^123` and `2^125` stag
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedRelationFinder +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -82,7 +81,6 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProg
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedKnowledgeExtractor +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -661,7 +659,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_adaptiveActionStatementSurface_measur
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -680,7 +677,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_er
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -702,7 +698,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_kn
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -724,7 +719,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_know
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -743,7 +737,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2po
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -762,7 +755,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -788,7 +780,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
 assert_axioms Zcash.Snark.Contract.actionKnowledgeContract +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
-  Zcash.Snark.ActionConstraintBounds.selectorDegree,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
