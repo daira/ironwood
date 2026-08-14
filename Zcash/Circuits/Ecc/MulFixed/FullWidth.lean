@@ -96,6 +96,13 @@ def witnessScalarLoopSynthesisSummary (cfg : Config) (offset : ℕ) :
       [.column .advice cfg.superConfig.window.index] offset 1 1 0 85)
 
 @[synthesis_summary_norm]
+theorem witnessScalarLoopSynthesisSummary_instanceRowExtent_eq
+    (cfg : Config) (offset : ℕ) :
+    (witnessScalarLoopSynthesisSummary cfg offset).instanceRowExtent = 0 := by
+  simp only [witnessScalarLoopSynthesisSummary, synthesis_summary_norm]
+  norm_num
+
+@[synthesis_summary_norm]
 theorem witnessScalarLoop_synthesisSummary_eq
     (cfg : Config)
     (windows : Vector (Witgen.MOver Fp (AssignedCell Fp) (FExpr Fp)) 85)
@@ -225,7 +232,6 @@ theorem processWindowH_synthesisSummary_eq
     omega
   · simp only [processWindowH, processWindowSynthesisSummary, circuit_norm]
   · simp only [processWindowH, processWindowSynthesisSummary, circuit_norm]
-    simp
 
 @[keygen_norm, keygen_output_norm]
 theorem processWindowH_output_x_column (B : FixedBaseData) (cfg : Config)
@@ -637,7 +643,6 @@ theorem innerRegion_synthesisSummary_constantSiteCount
   simp only [innerRegion, RegionCircuit.operations_bind,
     RegionCircuit.operations_pure, FloorPlanner.regionSynthesisSummary_append,
     synthesis_summary_norm]
-
 
 /-- Reduce the witness tables' `getElem!` at the hint digit (`hintWindowVal < 8`). -/
 private theorem ofFn8_get_hint (f : Fin 8 → Fp) (env : Placed ProverEnvironment Fp)
@@ -1587,6 +1592,17 @@ theorem circuitSynthesisSummary_constantSiteCount (config : Config) :
     (circuitSynthesisSummary config).constantSiteCount = 0 := by
   simp only [circuitSynthesisSummary, synthesis_summary_norm,
     innerRegionSynthesisSummary, Add.synthesisSummary]
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_instanceRowExtent_eq (config : Config) :
+    (circuitSynthesisSummary config).instanceRowExtent = 0 := by
+  simp only [circuitSynthesisSummary, innerRegionSynthesisSummary,
+    Add.synthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_tableRowExtent_eq (config : Config) :
+    (circuitSynthesisSummary config).tableRowExtent = 0 := by
+  simp only [circuitSynthesisSummary, synthesis_summary_norm]
 
 /-- Full-width fixed-base multiplication requests no deferred constant allocations. -/
 @[synthesis_summary_norm]

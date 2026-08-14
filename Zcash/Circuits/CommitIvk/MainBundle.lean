@@ -5,7 +5,7 @@ import Zcash.Circuits.CommitIvk.Main
 
 Kept separate from `Main.lean` (the defs/contract layer): this file is the
 kernel-heavy part — the fully proven soundness/completeness theorems and the
-bundled `circuit`. Mirrors `Clean/Ironwood/NoteCommit/MainBundle.lean` at a third
+bundled `circuit`. Mirrors `Zcash/Circuits/NoteCommit/MainBundle.lean` at a third
 of the scale (10 children, one canonicity composite called as a unit).
 -/
 
@@ -266,8 +266,12 @@ theorem soundness (G : Generators) (R : FixedBase) (Q : Point Fp)
     (by with_unfolding_all exact hDv)
     hak hnk
   -- ── land the Spec ──
-  simp only [Spec, Specs.Sinsemilla.HashGuarded]
+  simp only [Spec]
   rw [hiak, hInputNk] at hchunks
+  refine Specs.Sinsemilla.breaksOfGuarded (Or.inl hQ)
+    (fun m hm => G.S_onCurve (chunksOf_mem_lt (by
+      rw [Specs.Sinsemilla.commitIvkChunks] at hm
+      exact hm))) ?_
   intro B hB
   rw [← hchunks] at hB
   obtain ⟨-, hOut⟩ := hContract B hB
@@ -681,6 +685,45 @@ theorem circuit_synthesisSummary_eq (G : Generators) (R : FixedBase)
     (input : Var Inputs Fp) (region : RegionIndex) :
     (circuit G R Q hQ).elaborated.synthesisSummary config input region =
       synthesisSummary config := rfl
+
+@[keygen_norm]
+theorem circuit_inputCells_eq (G : Generators) (R : FixedBase)
+    (Q : Point Fp) (hQ : Q.OnCurve) {config}
+    (configured : (circuit G R Q hQ).Configured config)
+    (input : Var Inputs Fp) :
+    configured.inputCells input = [input.ak.cell, input.nk.cell] := by
+  rfl
+
+/-- The scalar cell returned by CommitIvk is assigned by its commitment child. -/
+theorem circuit_call_output_cell_assigned
+    (G : Generators) (R : FixedBase) (Q : Point Fp) (hQ : Q.OnCurve)
+    (config : Config) (input : Var Inputs Fp) (region : RegionIndex) :
+    ((circuit G R Q hQ).output config input region).cell ∈
+      Operations.assignedCellsFrom
+        (((circuit G R Q hQ).call config input).operations region) region := by
+  have houtput : (circuit G R Q hQ).output config input region =
+      .of (region + 10) 1 config.addConfig.xQR := rfl
+  rw [houtput]
+  rw [FormalCircuit.call_operations]
+  let pcs := (synthPieces config input.ak input.nk).output region
+  let commitInput : Var (Sinsemilla.CommitDomain.Input ns.length) Fp :=
+    { pieces := #v[pcs.a, pcs.b, pcs.c, pcs.d], r := input.rivk }
+  have hcommit := Sinsemilla.CommitDomain.commit_call_output_cells_assigned
+    G ns R Q hQ ns_ne_nil
+    (config.mulConfig, config.hashConfig, config.addConfig)
+    commitInput (region + 7)
+  simp only [circuit, synth, NoteCommit.Main.currentRegion_operations,
+    NoteCommit.Main.currentRegion_output,
+    NoteCommit.Main.currentRegion_nextRegionIndex, Circuit.operations_bind,
+    Circuit.operations_pure, FormalCircuit.output_call',
+    FormalCircuit.nextRegionIndex_call', Operations.assignedCellsFrom_append,
+    Operations.assignedCellsFrom, Operations.regionCount,
+    synthPieces_regionCount, synthPieces_nextRegionIndex,
+    Sinsemilla.CommitDomain.commit_output_cells, List.mem_append,
+    List.not_mem_nil, AssignedCell.of_cell, false_or, or_false,
+    Nat.add_assoc, Nat.reduceAdd, pcs, commitInput]
+    at hcommit ⊢
+  exact Or.inr (Or.inl hcommit.1)
 
 /-- Package CommitIvk from the commitment child and the three arguments registered
 by its own piece/canonicity stages. -/

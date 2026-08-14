@@ -307,6 +307,19 @@ def circuitSynthesisSummary (K : ℕ) (cfg : Config K)
             .selector cfg.qOverflow.index]
           3 0)))
 
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_tableRowExtent_eq (K : ℕ) (cfg : Config K) :
+    (circuitSynthesisSummary K cfg).tableRowExtent = 0 := by
+  simp only [circuitSynthesisSummary,
+    LookupRangeCheck.copyCheckSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_instanceRowExtent_eq (K : ℕ) (cfg : Config K) :
+    (circuitSynthesisSummary K cfg).instanceRowExtent = 0 := by
+  simp only [circuitSynthesisSummary,
+    LookupRangeCheck.copyCheckSynthesisSummary,
+    synthesis_summary_norm]
+
 def circuit (K : ℕ) (hKW : K * numWords K = 130) :
     FormalCircuit Fp (LookupRangeCheck.Config K × Column .advice × Column .advice ×
       Column .advice) (Config K) Inputs unit where
@@ -464,6 +477,13 @@ theorem circuit_synthesisSummary_eq (K : ℕ) (hKW : K * numWords K = 130)
     (cfg : Config K) (input : Var Inputs Fp) (region : RegionIndex) :
     (circuit K hKW).elaborated.synthesisSummary cfg input region =
       circuitSynthesisSummary K cfg := rfl
+
+@[keygen_norm]
+theorem circuit_inputCells (K : ℕ) (hKW : K * numWords K = 130)
+    {cfg : Config K} (configured : (circuit K hKW).Configured cfg)
+    (input : Var Inputs Fp) :
+    configured.inputCells input =
+      [input.alpha.cell, input.z0.cell, input.z130.cell, input.k254.cell] := rfl
 
 end MulOverflow
 

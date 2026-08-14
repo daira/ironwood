@@ -325,6 +325,28 @@ theorem loop_output (n w : ℕ) (cfg : Config) (o : ℕ) (iv : Witgen.MOver Fp (
       = { exit := reads cfg (o + n) self,
           zs := Vector.ofFn (fun j => AssignedCell.of self (o + 1 + j) cfg.z) } := rfl
 
+/-- A nonempty loop assigns the first running-sum cell named by its output. -/
+theorem loop_first_z_cell_assigned (n w : ℕ) (hn : 0 < n)
+    (cfg : Config) (offset : ℕ)
+    (input : Var (Unconstrained field) Fp) (self : RegionIndex) :
+    Cell.of self (offset + 1) cfg.z ∈
+      RegionOperations.assignedCells
+        (((loop n w).call cfg offset input).operations self) self := by
+  rw [FormalRegionCircuit.call_operations]
+  simp only [loop]
+  rw [loopProgram_operations,
+    RegionCircuit.forRange'_operations]
+  have hround := round_output_z_cell_assigned w cfg offset input self
+  simp only [RegionOperations.assignedCells, List.mem_flatMap] at hround ⊢
+  obtain ⟨operation, hoperation, hcell⟩ := hround
+  refine ⟨operation, ?_, hcell⟩
+  rw [List.mem_flatten]
+  refine ⟨((round w).call cfg offset input).operations self, ?_, hoperation⟩
+  rw [List.mem_ofFn]
+  exact ⟨⟨0, hn⟩, by
+    simp only [RegionCircuit.operations_bind, RegionCircuit.operations_pure,
+      List.append_nil, Nat.add_zero, Nat.zero_mul]⟩
+
 /-- What `numBits` constrained double-and-add rounds guarantee: some bit sequence enters the
 running sums, and an in-range accumulator `[m]·base` exits as `[accScalar m bits numBits]·base`. -/
 def RoundInvariant (numBits : ℕ) (z : Fp) (base acc : Point Fp)
@@ -370,6 +392,14 @@ def doubleAndAddSynthesisSummary (n : ℕ) (cfg : Config) (offset : ℕ) :
           .column .advice cfg.xA.index,
           .column .advice cfg.lambda1.index]
         (offset + n + 3) 0))
+
+@[synthesis_summary_norm]
+theorem doubleAndAddSynthesisSummary_instanceRowExtent_eq
+    (n : ℕ) (cfg : Config) (offset : ℕ) :
+    (doubleAndAddSynthesisSummary n cfg offset).instanceRowExtent = 0 := by
+  simp only [doubleAndAddSynthesisSummary, loopSynthesisSummary,
+    synthesis_summary_norm]
+  simp
 
 def double_and_add (n : ℕ) (w : ℕ) :
     FormalRegionCircuit Fp

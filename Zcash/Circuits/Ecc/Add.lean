@@ -358,6 +358,11 @@ def synthesisSummary (config : Config) (offset : ℕ) :
 theorem synthesisSummary_constantSiteCount (config : Config) (offset : ℕ) :
     (synthesisSummary config offset).constantSiteCount = 0 := rfl
 
+@[synthesis_summary_norm]
+theorem synthesisSummary_instanceRowExtent_eq (config : Config) (offset : ℕ) :
+    (synthesisSummary config offset).instanceRowExtent = 0 := by
+  simp only [synthesisSummary, synthesis_summary_norm]
+
 def add : FormalRegionCircuit Fp
     (Column .advice × Column .advice × Column .advice × Column .advice ×
       Column .advice × Column .advice × Column .advice × Column .advice × Column .advice)
@@ -564,6 +569,23 @@ theorem add_output_cells_assigned (config : Config) (offset : ℕ)
     simp only [add, circuit_norm, RegionOperations.assignedCells,
       List.flatMap_cons, RegionOperation.assignedCells, List.singleton_append,
       List.mem_cons, true_or]
+
+/-- Both coordinates returned by the layouter-level complete-addition call are
+assigned in its single region. -/
+theorem addFormal_call_output_cells_assigned
+    (config : Config) (input : Var Inputs Fp) (self : RegionIndex) :
+    let output := addFormal.output config input self
+    output.x.cell ∈ Operations.assignedCellsFrom
+        ((addFormal.call config input).operations self) self ∧
+      output.y.cell ∈ Operations.assignedCellsFrom
+        ((addFormal.call config input).operations self) self := by
+  rw [addFormal_output_cells, FormalCircuit.call_operations]
+  have hassigned := add_output_cells_assigned config 0 input self []
+  rw [FormalRegionCircuit.call_operations] at hassigned
+  simp only [addFormal, FormalRegionCircuit.toFormal, operations_assignRegion,
+    Operations.assignedCellsFrom, List.append_nil]
+  simpa only [add_output_cells, AssignedCell.of_cell,
+    RegionOperations.mem_assignedCellsAfter_iff, List.nil_append] using hassigned
 
 /-- The layouter-level complete addition returns its coordinates in `xQR` and `yQR`. -/
 @[keygen_norm, keygen_output_norm]

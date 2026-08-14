@@ -629,7 +629,6 @@ theorem mswRegionSynthesisSummary_constantSiteCount (cfg : Config) :
   simp only [mswRegionSynthesisSummary, synthesis_summary_norm,
     Add.synthesisSummary]
 
-
 set_option linter.all false in
 /-- The inner region's soundness, standalone (own declaration budget). -/
 private theorem short_inner_soundness (B : FixedBase) (cfg : Config) (offset : ℕ) :
@@ -1840,6 +1839,17 @@ theorem circuit_synthesisSummary_eq
 theorem circuitSynthesisSummary_constantSiteCount
     (config : Config) :
     (circuitSynthesisSummary config).constantSiteCount = 1 := by
+  simp only [circuitSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_instanceRowExtent_eq (config : Config) :
+    (circuitSynthesisSummary config).instanceRowExtent = 0 := by
+  simp only [circuitSynthesisSummary, innerRegionSynthesisSummary,
+    mswRegionSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_tableRowExtent_eq (config : Config) :
+    (circuitSynthesisSummary config).tableRowExtent = 0 := by
   simp only [circuitSynthesisSummary, synthesis_summary_norm]
 
 /-- Short fixed-base multiplication requests exactly its strict decomposition's
