@@ -31,6 +31,7 @@ import Zcash.Security.Common.Birthday
 import Zcash.Security.RedDSA.Basic
 import Zcash.Security.RedDSA.Extraction
 import Zcash.Security.RedDSA.KnowledgeError
+import Zcash.Security.GroupHash.Indiff
 import Zcash.Security.GroupHash.Pasta
 import Zcash.Security.GroupHash.Sampler
 import Zcash.Security.KeyBinding.Basic
