@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Composition.DeployedAcceptance
-import Zcash.Snark.Soundness.FiatShamir.WithReads
+import Zcash.Common.Oracle.WithReads
 
 /-!
 # Runtime helpers for deployed algebraic extraction
@@ -9,6 +9,8 @@ straight-line root containment.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Common
 
 open Classical
 open ComputedAlgebraicFSFamily

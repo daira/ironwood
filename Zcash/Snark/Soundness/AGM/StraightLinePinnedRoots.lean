@@ -17,6 +17,8 @@ from the final proof value alone.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical CompPoly.CPolynomial
 open scoped ENNReal
 

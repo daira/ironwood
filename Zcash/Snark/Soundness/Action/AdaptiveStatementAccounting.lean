@@ -12,6 +12,8 @@ query changes `Q` to `Q + 1`; it does not wrap an already adaptive theorem in an
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Keygen
 open scoped ENNReal
 

@@ -13,6 +13,8 @@ commitment, before any bad-set polynomial is reconstructed.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical CompPoly.CPolynomial Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action

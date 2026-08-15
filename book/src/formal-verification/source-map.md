@@ -42,7 +42,16 @@ directory level, naming the notable modules as entry points.
   verifier stack. `RelationWitness` supplies the combinators for sequencing a computed break branch:
   a conclusion `A ⊕' R` cannot be case-split classically, so composing such reductions — and
   commuting a family of them past `∀` — needs explicit searches rather than `by_cases`. `ParMap` is
-  `List.map` on the task runtime, proven equal to `List.map` definitionally.
+  `List.map` on the task runtime, proven equal to `List.map` definitionally. The `Oracle/` subtree
+  holds the generic oracle-computation machinery shared by the Fiat–Shamir soundness reductions and
+  the group-hash indifferentiability argument, so neither tier owns it: `OracleComp` is the
+  bounded querying-adversary model — an adaptive oracle-query computation with eager whole-table
+  semantics, an explicit query bound, and a per-run read log, plus dedup, domain restriction,
+  query-charge accounting, and escape bounds; `Model` holds the one-sided
+  `PMFEventBiasLE`/`PMFWeightedBiasLE` bias-transport interfaces; `Hybrid` is the adaptive
+  fresh-answer hybrid that turns a single-query bias into the `Q·ε` bound; `LabeledOracleComp` adds
+  labeled query trees and the first-label bad-set bounds; and `WithReads` returns a run's own reads
+  with its output, growing the query bound only by the re-queried family's size.
 - **`Meta/`** — build-time metaprogramming. `AxiomCheck` provides `assert_axioms`, a sibling
   of Mathlib's `assert_no_sorry` that asserts an *upper bound* on a declaration's trusted
   base without hard-coding the pretty-printed axiom list, so the trust pins stay green across
@@ -344,12 +353,13 @@ Six subtrees carry the heavier machinery:
   oracle-domain reduction to finite support (`DomainReduction`), and the adaptive interface and
   pre-IPA query accounting (`Adaptive`, `PreIpa`, `Provenance`). These components use the bounded
   querying-adversary model to price straight-line pinned-root events.
-- **`Oracle/`** — the squeeze idealization and its deployed gap. `Model` models squeezes as a
-  reprogrammable random function with the exactly uniform challenge law and the `PMFEventBiasLE`
-  transport interface; `Challenge255` prices the deployed conversion against that ideal — a
-  uniform 512-bit digest reduced modulo `p` overshoots uniform by exactly
+- **`Oracle/`** — the squeeze idealization and its deployed gap. `ChallengeUniform` gives the
+  exactly-uniform challenge law over `Fp`; `Challenge255` prices the deployed conversion against
+  that ideal — a uniform 512-bit digest reduced modulo `p` overshoots uniform by exactly
   `r(p−r)/(p·2^512) < 2^-260`, stated as the `PMFEventBiasLE` premise the work-factor capstone's
   bias conjunct consumes, with Blake2b's idealization as the uniform digest remaining external.
+  (The generic oracle-computation machinery — `OracleComp`, the adaptive hybrid, and the
+  `PMFEventBiasLE` transport interface — are in `Common/Oracle/`.)
 - **`Multiopen/`** — the multiopen argument's value binding. `Decode` supplies the coefficient and
   Vandermonde primitives; `Opened` defines the augmented opened-batch and member-decode interfaces
   populated by explicit AGM representations; and `Deployed` proves that halo2's `x₄` fold has the

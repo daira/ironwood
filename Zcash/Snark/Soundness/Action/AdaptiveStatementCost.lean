@@ -48,6 +48,8 @@ certified endpoints.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Keygen
 
 local instance adaptiveStatementCostVestaInhabited : Inhabited VestaG := ⟨0⟩

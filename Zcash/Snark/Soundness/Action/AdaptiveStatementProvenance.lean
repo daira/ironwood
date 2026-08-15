@@ -10,6 +10,8 @@ one retained adaptive execution.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Keygen
 
 namespace ComputedAdaptiveActionStatementFSFamily

@@ -19,6 +19,8 @@ sufficient condition rather than the interface.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Zcash.Arithmetic (card_Fp scalarFieldOrder)
 open Classical
 open scoped ENNReal

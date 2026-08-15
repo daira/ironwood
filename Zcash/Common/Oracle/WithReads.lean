@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.OracleComp
 
 /-!
 # Returning a run's own reads with its output
@@ -8,9 +8,7 @@ the output with those answers.  The wrapped output then determines everything th
 events read, and the query bound grows only by the family's size.
 -/
 
-namespace Zcash.Snark
-
-namespace OracleComp
+namespace Zcash.Common.OracleComp
 
 variable {T F α : Type*}
 
@@ -72,6 +70,4 @@ theorem queryBound_withReads {n : ℕ} (pts : α → Fin n → T) {A : OracleCom
       (fun vs => QueryBound.pure _ 0)).mono (by omega)
   exact queryBound_bind hA hf
 
-end OracleComp
-
-end Zcash.Snark
+end Zcash.Common.OracleComp

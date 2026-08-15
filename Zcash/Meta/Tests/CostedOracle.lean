@@ -11,6 +11,8 @@ and silent discharge of either host-language staging obligation.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 /-- error: Unknown constant `Zcash.Snark.CostedLabeledOracleComp.ofLabeled` -/
 #guard_msgs (whitespace := lax) in
 #check CostedLabeledOracleComp.ofLabeled

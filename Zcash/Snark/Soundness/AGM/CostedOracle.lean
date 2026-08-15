@@ -32,6 +32,8 @@ implementation to the staged program remains an explicit modeling boundary.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 /-- Concrete Vesta group-law operations admitted by the staged adversary language.  The MSM node
 carries its terms, so its price cannot be chosen independently of the computation. -/
 inductive VestaGroupOperation where

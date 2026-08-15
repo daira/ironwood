@@ -1,5 +1,5 @@
-import Zcash.Snark.Soundness.Oracle.Model
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.Model
+import Zcash.Common.Oracle.OracleComp
 
 /-!
 # Adaptive challenge-law hybrids
@@ -14,7 +14,7 @@ deployment wrapper does that before applying this theorem, so repeated transcrip
 one answer rather than receiving fresh samples.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Common
 
 open scoped ENNReal
 
@@ -73,4 +73,4 @@ theorem runFreshPMF_eventBiasLE [Fintype F]
 
 end OracleComp
 
-end Zcash.Snark
+end Zcash.Common

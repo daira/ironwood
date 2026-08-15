@@ -11,6 +11,8 @@ follows from the trace's fresh-query property.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Zcash.Arithmetic (Msm Msm.zero Msm.eval Msm.appendTerm Msm.scale Msm.add)
 
 open scoped ENNReal

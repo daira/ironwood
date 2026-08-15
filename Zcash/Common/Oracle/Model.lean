@@ -1,36 +1,21 @@
 import Mathlib.Probability.Distributions.Uniform
-import Zcash.Snark.Verifier.FiatShamir
-import Zcash.Arithmetic
 
 /-!
-# Random-oracle model for Fiat–Shamir
+# One-sided bias interfaces for oracle experiments
 
-Models transcript squeezes as a random function. `PMFEventBiasLE` adds explicit
-challenge-conversion bias when transporting ideal bounds; `Oracle/Challenge255.lean` instantiates
-it at the deployed reduction law. Blake2b randomness, transcript injectivity, the AGM, generator
-random oracle, and DLOG hardness remain assumptions.
+`PMFEventBiasLE` and `PMFWeightedBiasLE` are the one-sided statistical-distance interfaces the
+adaptive hybrid (`Oracle/Hybrid.lean`) and the security capstones consume: `actual` overshoots
+`ideal` by at most `ε`, on every event (`PMFEventBiasLE`) or against every `[0,1]`-valued test
+(`PMFWeightedBiasLE`, the stronger continuation-weighted form).
+
+Generic in the sample space, with no dependency on any transcript type or field. The `Fp`-specific
+uniform-challenge idealization (`uniformChallenge`) and the deployed `Challenge255 → Fp` conversion
+bias live on the Snark side (`Zcash/Snark/Soundness/Oracle/ChallengeUniform.lean` and
+`Challenge255.lean`), since they name concrete deployed objects.
 -/
-namespace Zcash.Snark
+namespace Zcash.Common
 
 open scoped ENNReal
-
-variable {F G : Type*}
-
-/-! ## The uniform-challenge idealization -/
-
-/-- A fresh random-oracle squeeze, modeled as exactly uniform over `Fp`.
-
-This is the ideal law used by the unsuffixed and `generatorRO` theorems.  Halo2's deployed
-`Challenge255 → Fp` conversion is not definitionally this PMF; consumers making a deployed-law
-claim must cross `PMFEventBiasLE` explicitly — `challenge255_eventBias_le` prices that crossing
-for one squeeze. -/
-noncomputable def uniformChallenge : PMF Fp := PMF.uniformOfFintype Fp
-
-/-- A uniform challenge lands in `bad` with probability `|bad| / |Fp|`. -/
-theorem uniformChallenge_badSet (bad : Finset Fp) :
-    uniformChallenge.toOuterMeasure bad = (bad.card : ℝ≥0∞) / Fintype.card Fp := by
-  rw [uniformChallenge, PMF.toOuterMeasure_apply_finset]
-  simp only [PMF.uniformOfFintype_apply, Finset.sum_const, nsmul_eq_mul, div_eq_mul_inv]
 
 /-- `actual` overshoots `ideal` by at most `ε` on every event.  This one-sided statistical-distance
 interface is the exact premise needed to transport a soundness upper bound; it may represent one
@@ -87,4 +72,4 @@ theorem event_measure_le_of_bias {Ω : Type*} {actual ideal : PMF Ω} {ε bound 
     actual.toOuterMeasure event ≤ bound + ε := by
   exact (hbias event).trans (add_le_add hideal le_rfl)
 
-end Zcash.Snark
+end Zcash.Common

@@ -12,7 +12,7 @@ endpoints evaluate.
 namespace Zcash.Snark.Capstone
 
 -- The captured facts these endpoints are stated at.
-open Zcash.Snark.Fixture
+open Zcash.Snark.Fixture Zcash.Common
 
 open Zcash.Snark ComputedAdaptiveActionStatementFSFamily CompPoly.CPolynomial
 open Zcash.Snark.ActionTerminal

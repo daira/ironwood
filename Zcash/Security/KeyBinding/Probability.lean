@@ -1,7 +1,7 @@
 import Zcash.Common.UniformMeasure
 import Zcash.Security.KeyBinding.Basic
 import Zcash.Security.Common.Birthday
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.OracleComp
 
 /-!
 # Key binding in the whole-table random-oracle model
@@ -62,7 +62,7 @@ an `OracleComp` from the Fiat–Shamir layer):
 
 namespace Zcash.Security.KeyBinding
 
-open Finset Zcash.Security.RandomOracle Zcash.Security.Birthday Zcash.Snark
+open Finset Zcash.Security.RandomOracle Zcash.Security.Birthday Zcash.Snark Zcash.Common
 open scoped ENNReal
 
 variable {G F IVK AK NK RIVK ASK QK SK : Type*}

@@ -1,5 +1,6 @@
 import Mathlib.Data.Int.CardIntervalMod
-import Zcash.Snark.Soundness.Oracle.Hybrid
+import Zcash.Common.Oracle.Hybrid
+import Zcash.Snark.Soundness.Oracle.ChallengeUniform
 
 /-!
 # Exact bias of the deployed challenge conversion
@@ -21,6 +22,8 @@ states the event form and `challenge255_weightedBias_le` proves the continuation
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Common
 
 open scoped ENNReal
 open Zcash.Arithmetic (scalarFieldOrder card_Fp)

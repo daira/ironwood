@@ -14,6 +14,8 @@ point.  This file states that concrete coverage predicate and turns it into the 
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical
 
 local instance vestaInhabitedOnlineMembers : Inhabited VestaG := ⟨0⟩

@@ -12,6 +12,8 @@ rewind or fourth-root threshold appears.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical
 open ComputedAlgebraicFSFamily
 open ComputedDeployedRootFSFamily
