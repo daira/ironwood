@@ -48,8 +48,14 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Full history: the proof journey pins its sources to commits, and a pin
+      # that is an ancestor of `main` rather than its tip is absent from the
+      # default depth-1 checkout. Fetching a branch into a shallow clone does
+      # not deepen it, so the pinned commit stays unreadable and the validator
+      # reports every source file as missing.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Install mdbook and plugins
@@ -57,9 +63,9 @@ jobs:
         with:
           tool: mdbook@0.4.52,mdbook-katex@0.9.4,mdbook-mermaid@0.16.2,mdbook-admonish@1.20.0
 
-      - name: Fetch pinned proof-journey source
-        run: git fetch --no-tags https://github.com/zcash/ironwood.git main
-
+      # Sources pinned outside the branches the checkout fetches — a PR head,
+      # say — are fetched by the validator itself, from the pin recorded in the
+      # journey data, so no ref is hardcoded here to drift out of sync with it.
       - name: Validate proof journey data
         run: python3 validate-proof-journey.py
         working-directory: book
