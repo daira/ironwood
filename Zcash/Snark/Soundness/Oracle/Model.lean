@@ -5,7 +5,7 @@ import Zcash.Arithmetic
 /-!
 # Random-oracle model for Fiat–Shamir
 
-Models transcript squeezes as a reprogrammable random function. `PMFEventBiasLE` adds explicit
+Models transcript squeezes as a random function. `PMFEventBiasLE` adds explicit
 challenge-conversion bias when transporting ideal bounds; `Oracle/Challenge255.lean` instantiates
 it at the deployed reduction law. Blake2b randomness, transcript injectivity, the AGM, generator
 random oracle, and DLOG hardness remain assumptions.
@@ -15,24 +15,6 @@ namespace Zcash.Snark
 open scoped ENNReal
 
 variable {F G : Type*}
-
-/-! ## Oracle-table reprogramming -/
-
-/-- Change the oracle's answer at `t` to `c`, leaving all other answers unchanged. -/
-def reprogram [DecidableEq F] [DecidableEq G]
-    (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
-    List (TranscriptElt F G) → F :=
-  fun t' => if t' = t then c else O t'
-
-@[simp] theorem reprogram_self [DecidableEq F] [DecidableEq G]
-    (O : List (TranscriptElt F G) → F) (t : List (TranscriptElt F G)) (c : F) :
-    reprogram O t c t = c := by
-  simp [reprogram]
-
-theorem reprogram_ne [DecidableEq F] [DecidableEq G]
-    {O : List (TranscriptElt F G) → F} {t t' : List (TranscriptElt F G)} {c : F}
-    (h : t' ≠ t) : reprogram O t c t' = O t' := by
-  simp [reprogram, h]
 
 /-! ## The uniform-challenge idealization -/
 
