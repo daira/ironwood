@@ -41,6 +41,8 @@ the basis.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Halo2 Keygen
 open Zcash.Circuits
 open Zcash.Circuits.Action

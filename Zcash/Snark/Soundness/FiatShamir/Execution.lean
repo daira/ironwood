@@ -1,5 +1,5 @@
 import Zcash.Snark.Soundness.Main
-import Zcash.Snark.Soundness.Oracle.Model
+import Zcash.Common.Oracle.Model
 import Zcash.Snark.Soundness.FiatShamir.Ordering
 
 /-!

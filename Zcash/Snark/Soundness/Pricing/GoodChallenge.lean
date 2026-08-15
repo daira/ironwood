@@ -4,7 +4,8 @@ import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
 import Mathlib.Tactic.Ring
 import Zcash.Snark.Soundness.Constraint.Constraints
-import Zcash.Snark.Soundness.Oracle.Model
+import Zcash.Common.Oracle.Model
+import Zcash.Snark.Soundness.Oracle.ChallengeUniform
 
 /-!
 # Schwartz–Zippel good-challenge exclusions from challenge uniformity

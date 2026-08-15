@@ -8,7 +8,7 @@ Model a `Q`-query adversary as an adaptive query tree with eager whole-table sem
 logs support resource accounting; blind escape sets give the adaptive query loss.
 -/
 
-namespace Zcash.Snark
+namespace Zcash.Common
 
 open scoped ENNReal
 
@@ -50,6 +50,20 @@ theorem run_update_of_not_mem_queries [DecidableEq T]
       have hqt : q ≠ t := Ne.symm hfresh.1
       rw [run_query, run_query, Function.update_apply, if_neg hqt]
       exact ih (O q) hfresh.2
+
+/-- Two tables agreeing on every point a computation queries produce the same run and the same
+query log. -/
+theorem run_congr_of_agree {T F α : Type*} (A : OracleComp T F α)
+    (O O' : T → F) (h : ∀ t ∈ A.queries O, O t = O' t) :
+    A.run O = A.run O' ∧ A.queries O = A.queries O' := by
+  induction A with
+  | pure a => exact ⟨rfl, rfl⟩
+  | query t k ih =>
+      have ht : O t = O' t := h t (by simp [OracleComp.queries])
+      obtain ⟨hr, hq⟩ := ih (O t) (fun u hu => h u (by simp [OracleComp.queries, hu]))
+      constructor
+      · rw [OracleComp.run_query, OracleComp.run_query, ← ht, hr]
+      · rw [OracleComp.queries, OracleComp.queries, ← ht, hq]
 
 /-- The machine makes at most `Q` queries on every path (VCVio's structural `IsQueryBound`). The
 Fiat–Shamir reductions charge their query loss against this `Q`. -/
@@ -317,6 +331,125 @@ theorem queryBound_restrictSum {J : Type*} {A : OracleComp (T ⊕ J) F α} {Q : 
       cases t with
       | inl t => exact .query fun u => ih u
       | inr x => exact (ih (j x)).mono (Nat.le_succ Q)
+
+
+/-! ## Domain reindexing, reachable support, and restriction -/
+
+variable {T' : Type*}
+
+/-- Reindex a machine's query points. -/
+def mapDomain (f : T → T') : OracleComp T F α → OracleComp T' F α
+  | .pure a => .pure a
+  | .query t k => .query (f t) fun u => (k u).mapDomain f
+
+@[simp] theorem run_mapDomain (f : T → T') :
+    (A : OracleComp T F α) → (O : T' → F) → (A.mapDomain f).run O = A.run (O ∘ f)
+  | .pure _, _ => rfl
+  | .query t k, O => run_mapDomain f (k (O (f t))) O
+
+theorem queryBound_mapDomain (f : T → T') {A : OracleComp T F α} {Q : ℕ}
+    (h : A.QueryBound Q) : (A.mapDomain f).QueryBound Q := by
+  induction h with
+  | pure a Q => exact .pure a Q
+  | query hk ih => exact .query fun u => ih u
+
+variable [DecidableEq T] [Fintype F]
+
+/-- The finite set of points a machine can ever query, over all tables. -/
+def reachSet : OracleComp T F α → Finset T
+  | .pure _ => ∅
+  | .query t k => insert t (Finset.univ.biUnion fun u : F => (k u).reachSet)
+
+theorem mem_reachSet_query_self (t : T) (k : F → OracleComp T F α) :
+    t ∈ (query t k).reachSet :=
+  Finset.mem_insert_self t _
+
+theorem reachSet_query_subset (t : T) (k : F → OracleComp T F α) (u : F) :
+    (k u).reachSet ⊆ (query t k).reachSet := fun _ hx =>
+  Finset.subset_insert t _
+    (Finset.subset_biUnion_of_mem (fun v : F => (k v).reachSet) (Finset.mem_univ u) hx)
+
+/-- A run depends only on reachable table points. -/
+theorem run_congr_reachSet : (A : OracleComp T F α) → {O O' : T → F} →
+    (∀ t ∈ A.reachSet, O t = O' t) → A.run O = A.run O'
+  | .pure _, _, _, _ => rfl
+  | .query t k, O, O', h => by
+      have ht : O t = O' t := h t (mem_reachSet_query_self t k)
+      simp only [run_query, ht]
+      exact run_congr_reachSet (k (O' t))
+        (fun x hx => h x (reachSet_query_subset t k (O' t) hx))
+
+/-- Restrict a machine to a finite subdomain containing its reachable points. -/
+def restrictTo (S : Finset T) : (A : OracleComp T F α) → A.reachSet ⊆ S →
+    OracleComp {t // t ∈ S} F α
+  | .pure a, _ => .pure a
+  | .query t k, h =>
+      .query ⟨t, h (mem_reachSet_query_self t k)⟩ fun u =>
+        (k u).restrictTo S (fun _ hx => h (reachSet_query_subset t k u hx))
+
+/-- The restriction reproduces the run against any table agreeing on the subdomain. -/
+theorem run_restrictTo (S : Finset T) :
+    (A : OracleComp T F α) → (h : A.reachSet ⊆ S) → (O : {t // t ∈ S} → F) → (Ō : T → F) →
+    (∀ (t : T) (ht : t ∈ S), Ō t = O ⟨t, ht⟩) →
+    (A.restrictTo S h).run O = A.run Ō
+  | .pure _, _, _, _, _ => rfl
+  | .query t k, h, O, Ō, hagree => by
+      simp only [restrictTo, run_query]
+      rw [show O ⟨t, h (mem_reachSet_query_self t k)⟩ = Ō t from
+        (hagree t (h (mem_reachSet_query_self t k))).symm]
+      exact run_restrictTo S (k (Ō t)) _ O Ō hagree
+
+/-- Restriction never adds queries. -/
+theorem queryBound_restrictTo (S : Finset T) {A : OracleComp T F α} {Q : ℕ}
+    (hQ : A.QueryBound Q) : ∀ h : A.reachSet ⊆ S, (A.restrictTo S h).QueryBound Q := by
+  induction hQ with
+  | pure a Q => intro h; exact .pure a Q
+  | query hk ih => intro h; exact .query fun u => ih u _
+
+/-- Split queries between a designated finite domain and the reachable junk points. Queries that
+retract through `ρ` use the designated table; all others use the junk table. -/
+def splitDomain {T_D : Type*} (ι : T_D → T) (ρ : T → Option T_D) (S : Finset T) :
+    (A : OracleComp T F α) → A.reachSet ⊆ S → OracleComp (T_D ⊕ {t // t ∈ S}) F α
+  | .pure a, _ => .pure a
+  | .query t k, h =>
+      .query (match ρ t with
+        | some tD => Sum.inl tD
+        | none => Sum.inr ⟨t, h (mem_reachSet_query_self t k)⟩)
+        fun u => (k u).splitDomain ι ρ S (fun _ hx => h (reachSet_query_subset t k u hx))
+
+/-- The split machine reproduces the run against any full table agreeing with the designated
+table along `ι` and with the junk table elsewhere. -/
+theorem run_splitDomain {T_D : Type*} (ι : T_D → T) (ρ : T → Option T_D) (S : Finset T)
+    (hρ₂ : ∀ t tD, ρ t = some tD → t = ι tD) :
+    (A : OracleComp T F α) → (h : A.reachSet ⊆ S) →
+    (O' : (T_D ⊕ {t // t ∈ S}) → F) → (Ofull : T → F) →
+    (∀ tD, Ofull (ι tD) = O' (Sum.inl tD)) →
+    (∀ (t : T) (ht : t ∈ S), ρ t = none → Ofull t = O' (Sum.inr ⟨t, ht⟩)) →
+    (A.splitDomain ι ρ S h).run O' = A.run Ofull
+  | .pure _, _, _, _, _, _ => rfl
+  | .query t k, h, O', Ofull, hD, hJ => by
+      simp only [splitDomain, run_query]
+      have hans : O' (match ρ t with
+          | some tD => Sum.inl tD
+          | none => Sum.inr ⟨t, h (mem_reachSet_query_self t k)⟩) = Ofull t := by
+        cases hρ : ρ t with
+        | some tD =>
+            simp
+            rw [hρ₂ t tD hρ]
+            exact (hD tD).symm
+        | none =>
+            simp
+            exact (hJ t (h (mem_reachSet_query_self t k)) hρ).symm
+      rw [hans]
+      exact run_splitDomain ι ρ S hρ₂ (k (Ofull t)) _ O' Ofull hD hJ
+
+/-- Splitting never adds queries. -/
+theorem queryBound_splitDomain {T_D : Type*} (ι : T_D → T) (ρ : T → Option T_D)
+    (S : Finset T) {A : OracleComp T F α} {Q : ℕ} (hQ : A.QueryBound Q) :
+    ∀ h : A.reachSet ⊆ S, (A.splitDomain ι ρ S h).QueryBound Q := by
+  induction hQ with
+  | pure a Q => intro h; exact .pure a Q
+  | query hk ih => intro h; exact .query fun u => ih u _
 
 
 end OracleComp
@@ -844,4 +977,4 @@ theorem steeredCharge_sum_mul_le {T F α : Type*} [Fintype T] [DecidableEq T] [F
   simpa using h
 
 
-end Zcash.Snark
+end Zcash.Common

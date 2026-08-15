@@ -16,6 +16,8 @@ AGM reduction consumes, and name the acceptance and binding-attack events on one
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Zcash.Arithmetic (Msm Msm.zero)
 
 open scoped ENNReal

@@ -17,6 +17,8 @@ proves that two tables agreeing on this support produce the same relation and ex
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Zcash.Arithmetic (scalarFieldOrder)
 
 local instance adaptiveStatementReadsVestaInhabited : Inhabited VestaG := ⟨0⟩

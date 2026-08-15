@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.OracleComp
 import Zcash.Snark.Soundness.FiatShamir.Adversary.Adaptive
 import Zcash.Snark.Soundness.FiatShamir.Adversary.PreIpa
 import Zcash.Snark.Soundness.FiatShamir.Adversary.DomainReduction

@@ -24,6 +24,8 @@ concrete Blake2b hashing, or the outer batch wrapper.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open scoped ENNReal
 
 local instance deploymentRecordVestaInhabited : Inhabited VestaG := ⟨0⟩

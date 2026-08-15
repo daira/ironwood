@@ -51,7 +51,7 @@ an extractor that reads them efficient.
 
 namespace Zcash.Security.RedDSA
 
-open Zcash.Snark Zcash.Snark.LabeledOracleComp
+open Zcash.Snark Zcash.Common Zcash.Common.LabeledOracleComp
 open scoped ENNReal
 
 section Composition

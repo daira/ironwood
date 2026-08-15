@@ -15,6 +15,8 @@ shape, where five of the six sets are empty.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Zcash.Arithmetic (Msm)
 
 local instance vestaInhabitedZeroFamilyRoots : Inhabited VestaG := ⟨0⟩

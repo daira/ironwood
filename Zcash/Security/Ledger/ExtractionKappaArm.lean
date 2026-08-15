@@ -44,7 +44,7 @@ event, as in `Ledger/KeyBindingArm.lean`.
 namespace Zcash.Security.Ledger.Model
 
 open Zcash.Security.BindingSignature Zcash.Security.RedDSA Zcash.Snark
-open Zcash.Snark.LabeledOracleComp
+open Zcash.Common Zcash.Common.LabeledOracleComp
 open scoped ENNReal
 
 universe u

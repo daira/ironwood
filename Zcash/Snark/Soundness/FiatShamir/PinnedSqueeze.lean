@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.OracleComp
 
 /-!
 # A pinned, table-reading squeeze
@@ -7,6 +7,8 @@ The one-level Fiat--Shamir squeeze bound used by the additive root analysis.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Common
 
 open scoped ENNReal
 

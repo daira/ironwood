@@ -124,6 +124,45 @@ suffix `_error_bound`, `_finite_security`, `_measure_le`, `_probability_bound`, 
 last keeps new protocol families covered without another prefix-specific regex edit.
 -/
 
+/-! ## Common oracle layer
+
+Generic oracle-computation machinery in `Zcash/Common/Oracle/`, the foundational layer the
+Fiat–Shamir soundness reductions and the group-hash indifferentiability argument build on. -/
+
+-- OracleComp.lean: query trees, dedup, domain restriction, query-charge accounting, escape bounds
+assert_axioms Zcash.Common.OracleComp.queries_queryList
+assert_axioms Zcash.Common.OracleComp.queries_bind
+assert_axioms Zcash.Common.OracleComp.mem_queries_completing
+assert_axioms Zcash.Common.OracleComp.restrictSum
+assert_axioms Zcash.Common.OracleComp.reachSet
+assert_axioms Zcash.Common.OracleComp.run_congr_reachSet
+assert_axioms Zcash.Common.OracleComp.restrictTo
+assert_axioms Zcash.Common.OracleComp.splitDomain
+assert_axioms Zcash.Common.OracleComp.run_congr_of_agree
+assert_axioms Zcash.Common.queryCharge
+assert_axioms Zcash.Common.queryCharge_sum_mul_le
+assert_axioms Zcash.Common.queryCharge_sum_mul_le_table_budget
+assert_axioms Zcash.Common.le_queryCharge_of_mem_queries
+assert_axioms Zcash.Common.mem_queries_dedup
+assert_axioms Zcash.Common.applyUpdates_apply_mem_nodup
+assert_axioms Zcash.Common.steeredCharge_context_sum_mul_le
+assert_axioms Zcash.Common.steeredCharge_context_sum_mul_le_table_budget
+assert_axioms Zcash.Common.steeredCharge_sum_mul_le
+assert_axioms Zcash.Common.escapesDuringC_measure_le
+
+-- Model.lean: the one-sided bias interfaces
+assert_axioms Zcash.Common.PMFWeightedBiasLE
+assert_axioms Zcash.Common.PMFWeightedBiasLE.eventBiasLE
+assert_axioms Zcash.Common.PMFEventBiasLE.bind_same
+
+-- Hybrid.lean: the adaptive fresh-answer hybrid
+assert_axioms Zcash.Common.OracleComp.runFreshPMF
+assert_axioms Zcash.Common.OracleComp.runFreshPMF_eventBiasLE
+
+-- LabeledOracleComp.lean: labeled query trees and the first-label bad-set bounds
+assert_axioms Zcash.Common.LabeledOracleComp.finalBadWithoutRelation_measure_le
+assert_axioms Zcash.Common.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
+
 /-! ## Key binding — computed break reductions -/
 
 assert_computable Zcash.Security.RandomOracle.CollisionUpToSign.ofOpeningBreak +choice
@@ -742,19 +781,6 @@ assert_axioms Zcash.Snark.orchard_uniformURSIdentification_of_generatorRO +nativ
 assert_axioms Zcash.AlgebraicRelationWitness.augment
 assert_axioms Zcash.Snark.bindingWin_unbounded_measure_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.queryCharge
-assert_axioms Zcash.Snark.queryCharge_sum_mul_le
-assert_axioms Zcash.Snark.le_queryCharge_of_mem_queries
-assert_axioms Zcash.Snark.mem_queries_dedup
-assert_axioms Zcash.Snark.applyUpdates_apply_mem_nodup
-assert_axioms Zcash.Snark.queryCharge_sum_mul_le_table_budget
-assert_axioms Zcash.Snark.steeredCharge_context_sum_mul_le
-assert_axioms Zcash.Snark.steeredCharge_context_sum_mul_le_table_budget
-assert_axioms Zcash.Snark.steeredCharge_sum_mul_le
-assert_axioms Zcash.Snark.OracleComp.queries_queryList
-assert_axioms Zcash.Snark.OracleComp.queries_bind
-assert_axioms Zcash.Snark.OracleComp.mem_queries_completing
-assert_axioms Zcash.Snark.OracleComp.restrictSum
 assert_axioms Zcash.Snark.fsWinsFull_restrictSum_le
 assert_axioms Zcash.Snark.uniformURS_basis_transfer +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -770,10 +796,6 @@ assert_axioms Zcash.Snark.constructIntermediateSets_ref_mem
 assert_axioms Zcash.Snark.multiopenMsm_points_mem
 assert_axioms Zcash.Snark.AlgebraicWfProof.ofStandard +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.OracleComp.reachSet
-assert_axioms Zcash.Snark.OracleComp.run_congr_reachSet
-assert_axioms Zcash.Snark.OracleComp.restrictTo
-assert_axioms Zcash.Snark.OracleComp.splitDomain
 assert_axioms Zcash.Snark.finite_domain_restriction
 assert_axioms Zcash.Snark.fsWinsFull_mapDomain_measure_eq
 assert_axioms Zcash.Snark.fsWinsFull_splitDomain
@@ -856,11 +878,6 @@ assert_axioms Zcash.Snark.exists_accepting_good_challenge
 assert_axioms Zcash.Snark.exists_accepting_good_challenge_quotient
 -- The deployed challenge conversion (`Soundness.Oracle.Challenge255`): one squeeze's exact
 -- weighted reduction bias, its adaptive joint hybrid, and transport across `PMFEventBiasLE`.
-assert_axioms Zcash.Snark.PMFWeightedBiasLE
-assert_axioms Zcash.Snark.PMFWeightedBiasLE.eventBiasLE
-assert_axioms Zcash.Snark.PMFEventBiasLE.bind_same
-assert_axioms Zcash.Snark.OracleComp.runFreshPMF
-assert_axioms Zcash.Snark.OracleComp.runFreshPMF_eventBiasLE
 assert_axioms Zcash.Snark.challenge255
 assert_axioms Zcash.Snark.challenge255Bias
 assert_axioms Zcash.Snark.challenge255_apply
@@ -1283,7 +1300,6 @@ assert_axioms Zcash.Snark.SequentialPreXProver.lift_adversary +native(
 assert_axioms Zcash.Snark.SequentialPreXProver.lift_Q +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- Uniform sequential cuts, the first brick: prefix-determinism at every squeeze index
 -- is derived from the prover's execution order, never assumed.
-assert_axioms Zcash.Snark.OracleComp.run_congr_of_agree
 assert_axioms Zcash.Snark.SequentialCut.toPrefixDeterminedAt +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- State surfaces: a semantic exclusion set read off the cut state costs
@@ -2449,16 +2465,25 @@ assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_oversized_
 -- are what the suffix rule demands, not an independent claim.
 
 -- AGM/AdaptiveIpaSurfaces.lean
-
--- AGM/AdaptiveOnline.lean
-assert_axioms Zcash.Snark.LabeledOracleComp.finalBadWithoutRelation_measure_le
-assert_axioms Zcash.Snark.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
-
--- AGM/AdaptiveRootComposition.lean
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveRootSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
 
 -- AGM/DeployedRootSets.lean
 assert_axioms Zcash.Snark.deployedX1AllRootSet_measure_le
@@ -2484,25 +2509,12 @@ assert_axioms Zcash.Snark.memberBindingErrorPolynomial_badSet_measure_le
 assert_axioms Zcash.Snark.nodeBindingErrorPolynomial_badSet_measure_le
 assert_axioms Zcash.Snark.powerErrorPolynomial_badSet_measure_le
 
--- FiatShamir/Adversary/OracleComp.lean
-assert_axioms Zcash.Snark.escapesDuringC_measure_le
-
 -- Pricing/ChallengePricing.lean
 assert_axioms Zcash.Snark.lookup_beta_failure_measure_le
 assert_axioms Zcash.Snark.lookup_gamma_failure_measure_le
 
 -- Common/UniformMeasure.lean
 assert_axioms Zcash.sum_point_mem_measure_le
-
--- Probability-bound leaves matched by the `_probability_bound` suffix. Like the `_measure_le`
--- block above, these are per-challenge surface and residual-event measures inside the Action
--- terminal rather than protocol capstones; their trusted base is already bounded through the
--- Action endpoints that consume them, so the pins are what the suffix rule demands rather than
--- independent claims.
-
--- Soundness/Action/AdaptiveEvent.lean
-
--- Soundness/Action/AdaptiveSurfaces.lean
 
 -- Probability-bound leaves matched by the `_measure_le` suffix: surface and root-set
 -- measures inside the AGM and adaptive-statement layers, pinned because the suffix rule
@@ -2526,22 +2538,7 @@ assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.queriedRootBad
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.queriedSemanticBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statementLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statementPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 /-! ## Probability bounds spelled `_prob_le`
 

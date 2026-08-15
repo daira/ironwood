@@ -21,6 +21,8 @@ chronology layer this rests on.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical CompPoly.CPolynomial
 
 variable {shape : Shape}
@@ -463,20 +465,6 @@ computation up to its `n`-th squeeze query, with every pre-cut query strictly sh
 prefix it is about to squeeze.  Prefix-determinism at `n` — the pricing input the squeeze
 machinery consumes — is derived, never assumed.
 -/
-
-/-- Two tables agreeing on every point a computation queries produce the same run and the same
-query log. -/
-theorem OracleComp.run_congr_of_agree {T F α : Type*} (A : OracleComp T F α)
-    (O O' : T → F) (h : ∀ t ∈ A.queries O, O t = O' t) :
-    A.run O = A.run O' ∧ A.queries O = A.queries O' := by
-  induction A with
-  | pure a => exact ⟨rfl, rfl⟩
-  | query t k ih =>
-      have ht : O t = O' t := h t (by simp [OracleComp.queries])
-      obtain ⟨hr, hq⟩ := ih (O t) (fun u hu => h u (by simp [OracleComp.queries, hu]))
-      constructor
-      · rw [OracleComp.run_query, OracleComp.run_query, ← ht, hr]
-      · rw [OracleComp.queries, OracleComp.queries, ← ht, hq]
 
 /-- **A sequential cut at pre-IPA squeeze index `n`**: the prover's computation up to its `n`-th
 squeeze query.  Purely structural — an internal state, the pre-cut computation, and the squeeze

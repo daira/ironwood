@@ -9,6 +9,8 @@ Each round quadratic is rebuilt from its first-query representations: the multio
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open Classical CompPoly.CPolynomial
 open scoped ENNReal
 
@@ -1206,52 +1208,6 @@ theorem adaptiveIpaBad_eq_of_pinned
   unfold adaptiveIpaQueriedBad adaptiveIpaFallbackBad
   exact adaptiveQueriedIpaSurface_eq_fallback_of_pinned family basis O j
     decoded hdecode pinned
-
-theorem LabeledOracleComp.firstLabelOrFallbackBad_eq_fallback_of_findLabel_eq_none
-    {T F α : Type*} {Label : T → Type*} [DecidableEq T]
-    (A : LabeledOracleComp T F Label α)
-    (bad : (t : T) → Label t → (T → F) → Set F)
-    (fallback : α → T → (T → F) → Set F)
-    (t : T) (O : T → F) (hfind : A.findLabel O t = none) :
-    LabeledOracleComp.firstLabelOrFallbackBad A bad fallback t O =
-      fallback (A.run O) t O := by
-  unfold LabeledOracleComp.firstLabelOrFallbackBad
-  rw [hfind]
-
-theorem LabeledOracleComp.firstLabelOrFallbackBad_eq_bad_of_findLabel_eq_some
-    {T F α : Type*} {Label : T → Type*} [DecidableEq T]
-    (A : LabeledOracleComp T F Label α)
-    (bad : (t : T) → Label t → (T → F) → Set F)
-    (fallback : α → T → (T → F) → Set F)
-    (t : T) (O : T → F) (label : Label t)
-    (hfind : A.findLabel O t = some label) :
-    LabeledOracleComp.firstLabelOrFallbackBad A bad fallback t O = bad t label O := by
-  unfold LabeledOracleComp.firstLabelOrFallbackBad
-  rw [hfind]
-
-theorem LabeledOracleComp.mem_firstLabelOrFallbackBad_of_findLabel_eq_none
-    {T F α : Type*} {Label : T → Type*} [DecidableEq T]
-    (A : LabeledOracleComp T F Label α)
-    (bad : (t : T) → Label t → (T → F) → Set F)
-    (fallback : α → T → (T → F) → Set F)
-    (t : T) (O : T → F) (x : F) (hfind : A.findLabel O t = none)
-    (hx : x ∈ fallback (A.run O) t O) :
-    x ∈ LabeledOracleComp.firstLabelOrFallbackBad A bad fallback t O := by
-  rw [LabeledOracleComp.firstLabelOrFallbackBad_eq_fallback_of_findLabel_eq_none
-    A bad fallback t O hfind]
-  exact hx
-
-theorem LabeledOracleComp.mem_firstLabelOrFallbackBad_of_findLabel_eq_some
-    {T F α : Type*} {Label : T → Type*} [DecidableEq T]
-    (A : LabeledOracleComp T F Label α)
-    (bad : (t : T) → Label t → (T → F) → Set F)
-    (fallback : α → T → (T → F) → Set F)
-    (t : T) (O : T → F) (x : F) (label : Label t)
-    (hfind : A.findLabel O t = some label) (hx : x ∈ bad t label O) :
-    x ∈ LabeledOracleComp.firstLabelOrFallbackBad A bad fallback t O := by
-  rw [LabeledOracleComp.firstLabelOrFallbackBad_eq_bad_of_findLabel_eq_some
-    A bad fallback t O label hfind]
-  exact hx
 
 /-- The explicit formula agrees with the existing straight-line polynomial on final online data. -/
 theorem OnlineMemberProofData.adaptiveIpaRootPolynomial_eq

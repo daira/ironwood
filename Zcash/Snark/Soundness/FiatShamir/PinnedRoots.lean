@@ -14,6 +14,8 @@ answers.  `bad` therefore reads the run output and the whole table; the causal b
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open scoped ENNReal
 open Classical
 

@@ -11,6 +11,8 @@ required.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open scoped ENNReal
 open Classical
 

@@ -23,6 +23,8 @@ it with both sub-proofs live.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open CompPoly.CPolynomial
 open scoped ENNReal
 

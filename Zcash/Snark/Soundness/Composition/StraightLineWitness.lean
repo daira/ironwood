@@ -24,6 +24,8 @@ of this module.
 
 namespace Zcash.Snark
 
+open Zcash.Common
+
 open scoped ENNReal
 open CompPoly.CPolynomial
 

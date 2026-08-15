@@ -1,4 +1,4 @@
-import Zcash.Snark.Soundness.FiatShamir.Adversary.OracleComp
+import Zcash.Common.Oracle.OracleComp
 
 /-!
 # Minimal adaptive Fiat–Shamir interface
@@ -8,6 +8,8 @@ transcripts.
 -/
 
 namespace Zcash.Snark
+
+open Zcash.Common
 
 open scoped ENNReal
 

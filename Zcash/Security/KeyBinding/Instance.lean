@@ -15,7 +15,7 @@ quotients the y-sign).
 
 namespace Zcash.Security
 
-open Zcash.Security.KeyBinding Zcash.Security.Ledger Zcash.Security.RandomOracle Zcash.Snark
+open Zcash.Security.KeyBinding Zcash.Security.Ledger Zcash.Security.RandomOracle Zcash.Snark Zcash.Common
 
 -- A shared universe for the oracle-model types, so the sampling experiment can be
 -- written in `do`-notation: `PMF`'s monad instance fixes one universe for the whole
