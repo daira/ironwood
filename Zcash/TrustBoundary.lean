@@ -2465,14 +2465,25 @@ assert_axioms Zcash.Snark.assembleNonInteractiveInstances?_eq_none_of_oversized_
 -- are what the suffix rule demands, not an independent claim.
 
 -- AGM/AdaptiveIpaSurfaces.lean
-
--- AGM/AdaptiveOnline.lean
-
--- AGM/AdaptiveRootComposition.lean
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveRootSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- AGM/AdaptiveSurfaces.lean
+assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
 
 -- AGM/DeployedRootSets.lean
 assert_axioms Zcash.Snark.deployedX1AllRootSet_measure_le
@@ -2505,16 +2516,6 @@ assert_axioms Zcash.Snark.lookup_gamma_failure_measure_le
 -- Common/UniformMeasure.lean
 assert_axioms Zcash.sum_point_mem_measure_le
 
--- Probability-bound leaves matched by the `_probability_bound` suffix. Like the `_measure_le`
--- block above, these are per-challenge surface and residual-event measures inside the Action
--- terminal rather than protocol capstones; their trusted base is already bounded through the
--- Action endpoints that consume them, so the pins are what the suffix rule demands rather than
--- independent claims.
-
--- Soundness/Action/AdaptiveEvent.lean
-
--- Soundness/Action/AdaptiveSurfaces.lean
-
 -- Probability-bound leaves matched by the `_measure_le` suffix: surface and root-set
 -- measures inside the AGM and adaptive-statement layers, pinned because the suffix rule
 -- demands it rather than as independent claims.
@@ -2537,22 +2538,7 @@ assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.queriedRootBad
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.queriedSemanticBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statementLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statementPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveFallbackIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaFallbackBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaQueriedBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveIpaRootPolynomial_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveLabeledPrefixBad_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurfaceCore_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveQueriedIpaSurface_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX1AllRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX2RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX3RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveX4RootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveXiRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.adaptiveZRootSet_measure_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 /-! ## Probability bounds spelled `_prob_le`
 
