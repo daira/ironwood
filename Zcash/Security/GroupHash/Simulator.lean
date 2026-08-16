@@ -28,7 +28,7 @@ namespace Zcash.Security.GroupHash
 
 open scoped ENNReal
 open CompElliptic.Hashing (pairCount)
-open Zcash.Common (PMFEventBiasLE)
+open Zcash.Common (PMFEventBiasLE tendsto_toOuterMeasure_of_eventBiasLE)
 
 variable {F : Type} [Fintype F] [DecidableEq F]
 variable {G : Type} [AddCommGroup G] [Fintype G] [DecidableEq G]
@@ -482,5 +482,31 @@ theorem fibreSampler_eventBiasLE_simOut [Nonempty F] (f : F → G) {d : ℕ}
               + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S)
             + (1 - acceptProb f d Q) * (1 - acceptProb f d Q)^K := by
             rw [mul_add, add_right_comm]
+
+omit [Fintype G] in
+/-- As the round cap `K` grows, the output law's measure of every event
+tends to the fibre sampler's, for every target `Q`. On a nonempty fibre
+the acceptance probability is positive, so the two-sided bias bound
+`(1 - acceptProb f d Q)^K` squeezes to zero. On an empty fibre the two
+laws are equal outright. -/
+theorem simOut_tendsto_fibreSampler [Nonempty F] (f : F → G) {d : ℕ}
+    [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G)
+    (S : Set (F × F)) :
+    Filter.Tendsto (fun K => (simOut f d Q K).toOuterMeasure S)
+      Filter.atTop (nhds ((fibreSampler f Q).toOuterMeasure S)) := by
+  by_cases hne : (fibre f Q).Nonempty
+  · have hp0 : acceptProb f d Q ≠ 0 := by
+      have hpc : (pairCount f Q : ℝ≥0∞) ≠ 0 := by
+        rw [← fibre_card]
+        exact_mod_cast Finset.card_ne_zero_of_mem hne.choose_spec
+      exact (ENNReal.div_pos hpc (ENNReal.mul_ne_top
+        (ENNReal.natCast_ne_top _) (ENNReal.natCast_ne_top _))).ne'
+    exact tendsto_toOuterMeasure_of_eventBiasLE
+      (simOut_eventBiasLE_fibreSampler f hd Q)
+      (fibreSampler_eventBiasLE_simOut f hd Q)
+      (ENNReal.tendsto_pow_atTop_nhds_zero_of_lt_one
+        (ENNReal.sub_lt_self ENNReal.one_ne_top one_ne_zero hp0)) S
+  · simp only [simOut_empty f d hne]
+    exact tendsto_const_nhds
 
 end Zcash.Security.GroupHash
