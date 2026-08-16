@@ -30,8 +30,8 @@ open scoped ENNReal
 open CompElliptic.Hashing (pairCount)
 open Zcash.Common (PMFEventBiasLE tendsto_toOuterMeasure_of_eventBiasLE)
 
-variable {F : Type} [Fintype F] [DecidableEq F]
-variable {G : Type} [AddCommGroup G] [Fintype G] [DecidableEq G]
+variable {F : Type*} [Fintype F] [DecidableEq F]
+variable {G : Type*} [AddCommGroup G] [Fintype G] [DecidableEq G]
 
 /-- The single-term fibre: the inputs that `f` sends to `P`. -/
 def singleFibre (f : F → G) (P : G) : Finset F :=
