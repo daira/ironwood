@@ -24,9 +24,8 @@ the pair at the same message: in the real world `H(m) = f(u₀) + f(u₁)` by
 construction, and in the ideal world the simulator's pair satisfies the same
 equation with `H = R` exactly. So an `H`-query gives the distinguisher
 nothing that a pair-query does not, and the two-oracle game collapses
-computably to this one-oracle game. (The formal two-oracle reduction is the
-remaining piece of this milestone; `IndiffFromRO` below is the one-oracle
-core it reduces to.)
+computably to this one-oracle game. (The formal reduction is
+`twoOracleIndiffFromRO` in `TwoOracle.lean`.)
 
 `IndiffFromRO f Q δ` says: every `Q`-query distinguisher's acceptance
 probability changes by at most `δ` when the real per-query law (uniform pairs)
