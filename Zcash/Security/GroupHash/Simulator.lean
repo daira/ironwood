@@ -44,6 +44,24 @@ omit [DecidableEq F] [AddCommGroup G] [Fintype G] in
     u ∈ singleFibre f P ↔ f u = P := by
   simp [singleFibre]
 
+omit [AddCommGroup G] [Fintype G] in
+/-- A fibre bound that excludes one input `u₀` gives an unconditional bound
+one larger: `u₀` contributes at most one preimage of its own. This is how
+the deployed instantiations consume CompElliptic's nonzero-preimage counts. -/
+theorem card_singleFibre_le_succ {f : F → G} {u₀ : F} {n : ℕ}
+    (h : ∀ P : G, (Finset.univ.filter fun u => u ≠ u₀ ∧ f u = P).card ≤ n)
+    (P : G) : (singleFibre f P).card ≤ n + 1 := by
+  have hsub : singleFibre f P
+      ⊆ insert u₀ (Finset.univ.filter fun u => u ≠ u₀ ∧ f u = P) := by
+    intro u hu
+    rw [mem_singleFibre] at hu
+    rcases eq_or_ne u u₀ with rfl | hne
+    · exact Finset.mem_insert_self _ _
+    · exact Finset.mem_insert_of_mem
+        (Finset.mem_filter.mpr ⟨Finset.mem_univ _, hne, hu⟩)
+  exact (Finset.card_le_card hsub).trans ((Finset.card_insert_le _ _).trans
+    (Nat.add_le_add_right (h P) 1))
+
 omit [Fintype G] in
 /-- Summing the sizes of the single-term fibres of `Q - f u₀` over `u₀`
 gives `pairCount f Q`. -/
