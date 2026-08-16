@@ -28,6 +28,7 @@ namespace Zcash.Security.GroupHash
 
 open scoped ENNReal
 open CompElliptic.Hashing (pairCount)
+open Zcash.Common (PMFEventBiasLE)
 
 variable {F : Type} [Fintype F] [DecidableEq F]
 variable {G : Type} [AddCommGroup G] [Fintype G] [DecidableEq G]
@@ -411,5 +412,75 @@ theorem simOut_empty [Nonempty F] (f : F → G) (d : ℕ) [NeZero d] {Q : G}
       simp only [simOut, simCapped, rejectionRound_empty f d hempty,
         PMF.pure_bind, Option.elim_none, PMF.map_comp]
       exact simOut_empty f d hempty K
+
+omit [Fintype G] in
+/-- The capped output law overshoots the fibre sampler by at most the
+all-rounds-reject mass `(1 - acceptProb f d Q)^K`, on every event. -/
+theorem simOut_eventBiasLE_fibreSampler [Nonempty F] (f : F → G) {d : ℕ}
+    [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    ∀ K : ℕ, PMFEventBiasLE (simOut f d Q K) (fibreSampler f Q)
+      ((1 - acceptProb f d Q)^K)
+  | 0 => by
+      intro S
+      rw [pow_zero]
+      refine le_trans ?_ le_add_self
+      rw [← (PMF.toOuterMeasure_apply_eq_one_iff (simOut f d Q 0) Set.univ).mpr
+        (Set.subset_univ _)]
+      exact PMF.toOuterMeasure_mono _ (Set.subset_univ _)
+  | K + 1 => by
+      intro S
+      rw [simOut_succ_toOuterMeasure f hd Q K S, pow_succ']
+      calc (1 - acceptProb f d Q) * (simOut f d Q K).toOuterMeasure S
+            + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S
+          ≤ (1 - acceptProb f d Q)
+              * ((fibreSampler f Q).toOuterMeasure S
+                + (1 - acceptProb f d Q)^K)
+            + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S := by
+            gcongr
+            exact simOut_eventBiasLE_fibreSampler f hd Q K S
+        _ = ((1 - acceptProb f d Q) + acceptProb f d Q)
+              * (fibreSampler f Q).toOuterMeasure S
+            + (1 - acceptProb f d Q) * (1 - acceptProb f d Q)^K := by
+            rw [mul_add, add_right_comm, ← add_mul]
+        _ = (fibreSampler f Q).toOuterMeasure S
+            + (1 - acceptProb f d Q) * (1 - acceptProb f d Q)^K := by
+            rw [tsub_add_cancel_of_le (acceptProb_le_one f hd Q), one_mul]
+
+omit [Fintype G] in
+/-- The fibre sampler overshoots the capped output law by at most the
+all-rounds-reject mass `(1 - acceptProb f d Q)^K`, on every event. With
+`simOut_eventBiasLE_fibreSampler` this bounds the two laws' distance on
+events by that mass, in both directions. -/
+theorem fibreSampler_eventBiasLE_simOut [Nonempty F] (f : F → G) {d : ℕ}
+    [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    ∀ K : ℕ, PMFEventBiasLE (fibreSampler f Q) (simOut f d Q K)
+      ((1 - acceptProb f d Q)^K)
+  | 0 => by
+      intro S
+      rw [pow_zero]
+      refine le_trans ?_ le_add_self
+      rw [← (PMF.toOuterMeasure_apply_eq_one_iff (fibreSampler f Q) Set.univ).mpr
+        (Set.subset_univ _)]
+      exact PMF.toOuterMeasure_mono _ (Set.subset_univ _)
+  | K + 1 => by
+      intro S
+      rw [simOut_succ_toOuterMeasure f hd Q K S, pow_succ']
+      calc (fibreSampler f Q).toOuterMeasure S
+          = ((1 - acceptProb f d Q) + acceptProb f d Q)
+              * (fibreSampler f Q).toOuterMeasure S := by
+            rw [tsub_add_cancel_of_le (acceptProb_le_one f hd Q), one_mul]
+        _ = (1 - acceptProb f d Q) * (fibreSampler f Q).toOuterMeasure S
+            + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S :=
+            add_mul _ _ _
+        _ ≤ (1 - acceptProb f d Q)
+              * ((simOut f d Q K).toOuterMeasure S
+                + (1 - acceptProb f d Q)^K)
+            + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S := by
+            gcongr
+            exact fibreSampler_eventBiasLE_simOut f hd Q K S
+        _ = ((1 - acceptProb f d Q) * (simOut f d Q K).toOuterMeasure S
+              + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S)
+            + (1 - acceptProb f d Q) * (1 - acceptProb f d Q)^K := by
+            rw [mul_add, add_right_comm]
 
 end Zcash.Security.GroupHash
