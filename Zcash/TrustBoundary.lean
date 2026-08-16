@@ -76,6 +76,9 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementInhabitant
 import Zcash.Snark.Soundness.Oracle.Challenge255
 import Zcash.Snark.Soundness.Composition.ZeroBasisAcceptance
 import Zcash.Snark.Soundness.Action.DeploymentRecord
+import Zcash.Security.GroupHash.Indiff
+import Zcash.Security.GroupHash.Pasta
+import Zcash.Security.GroupHash.TwoOracle
 
 /-!
 # Trust boundary, build-checked
@@ -162,6 +165,31 @@ assert_axioms Zcash.Common.OracleComp.runFreshPMF_eventBiasLE
 -- LabeledOracleComp.lean: labeled query trees and the first-label bad-set bounds
 assert_axioms Zcash.Common.LabeledOracleComp.finalBadWithoutRelation_measure_le
 assert_axioms Zcash.Common.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
+
+/-! ## Group-hash indifferentiability
+
+The indifferentiability of the Pasta group hashes from a random oracle: the
+one-oracle form at the deployed mappings, the single-query bias feeding it,
+and the collapse of the full two-oracle game onto the one-oracle core. -/
+
+-- Indiff.lean: one-oracle indifferentiability at the deployed mappings
+assert_axioms Zcash.Security.GroupHash.pallas_indiffFromRO +native(
+  CompElliptic.Fields.Pasta.pallasBase)
+assert_axioms Zcash.Security.GroupHash.vesta_indiffFromRO +native(
+  CompElliptic.Fields.Pasta.vestaBase)
+
+-- Pasta.lean: the single-query bias at the deployed mappings, both directions
+assert_axioms Zcash.Security.GroupHash.pallas_weightedBias_real_le +native(
+  CompElliptic.Fields.Pasta.pallasBase)
+assert_axioms Zcash.Security.GroupHash.pallas_weightedBias_ideal_le +native(
+  CompElliptic.Fields.Pasta.pallasBase)
+assert_axioms Zcash.Security.GroupHash.vesta_weightedBias_real_le +native(
+  CompElliptic.Fields.Pasta.vestaBase)
+assert_axioms Zcash.Security.GroupHash.vesta_weightedBias_ideal_le +native(
+  CompElliptic.Fields.Pasta.vestaBase)
+
+-- TwoOracle.lean: the two-oracle → one-oracle collapse
+assert_axioms Zcash.Security.GroupHash.twoOracleIndiffFromRO
 
 /-! ## Key binding — computed break reductions -/
 
@@ -675,9 +703,10 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
   inherit CompElliptic's `native_decide` curve point-count axiom (`+native`).
 
   Note that CompElliptic's witnesses are *not* the bulk of what `+native` covers library-wide.
-  Exactly three owners across the whole census are CompElliptic's: the two curve point counts
-  (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the Tonelli–Shanks root-of-unity data
-  (`Fields.Pasta.pallasBase`, whose certificate sits in a structure-field auto-param). Every other
+  Exactly four owners across the whole census are CompElliptic's: the two curve point counts
+  (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the two Tonelli–Shanks root-of-unity data
+  (`Fields.Pasta.pallasBase` and `Fields.Pasta.vestaBase`, whose certificates sit in
+  structure-field auto-params). Every other
   owner — the six fixed-base window tables, the Action gate-coherence and permutation-domain facts,
   the captured fixture claims, the keygen certificate — is this repository's own. Compiler trust
   here is overwhelmingly first-party, not an inherited leaf; each `+native(...)` list names
