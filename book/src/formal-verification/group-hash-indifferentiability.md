@@ -320,8 +320,9 @@ that treat $\mathsf{hash\_to\_field}$ as a black box, which is where analytical
 effort is most useful to spend. The [Security Models](security-models.md) page
 develops this framing.
 
-† The "any" has a shape requirement: the protocol's security game
-—challenger, adversary, and win condition together— must fold into a single
+<span id="dagger-note"></span>† The "any" has a shape requirement: the
+protocol's security game —challenger, adversary, and win condition
+together— must fold into a single
 distinguisher talking to the two oracles, as the games in this development
 do. Composition can genuinely fail for definitions that restrict the state
 shared between the stages of an adversary (Ristenpart–Shacham–Shrimpton,
@@ -422,8 +423,9 @@ the "[Where the ⅜ comes from](#admonition-where-the-⅜-comes-from)" note abov
 that each point has at most $4$ nonzero preimages under $f$, and
 CompElliptic's `card_mapToCurve_fibre_le` proves the weaker but sufficient
 bound of $10$, again counting nonzero preimages. That is what makes the
-sampler efficient, and is where the simulator's cost analysis will enter
-(a later milestone).
+sampler efficient, and the simulator's cost analysis rests on it
+(`Simulator.lean`, instantiated at the deployed mappings at the constant
+`deployedFibreBound`, which also counts the input $0$).
 
 ## The single-query bias, in detail
 
@@ -520,8 +522,11 @@ It's important to be precise about the status of each part.
   bound (`card_mapToCurve_fibre_le`), the single-query bias in both
   directions (`Sampler.lean`), its composition into the full
   distinguisher-advantage bound at the deployed mappings (`Indiff.lean`),
-  and the collapse of the two-oracle game onto that one-oracle form
-  (`TwoOracle.lean`).
+  the collapse of the two-oracle game onto that one-oracle form
+  (`TwoOracle.lean`), and the rejection-sampling simulator — its round-count
+  laws, its output law's distance to the fibre sampler, and the composition
+  with the simulator as the exhibited ideal-world witness (`Simulator.lean`
+  and the capped section of `Indiff.lean`).
 - **An unformalized mathematical input.** The regularity distance is proved
   relative to the named hypothesis `WeilBounded`, and that hypothesis is
   parameterized: it asserts a constant $C$ with every nontrivial character sum
@@ -545,6 +550,43 @@ It's important to be precise about the status of each part.
   [the note above](#admonition-a-heuristic-not-an-assumption)). The
   indifferentiability argument is what makes that heuristic transfer from
   $\mathsf{hash\_to\_field}$ to the group hash $H$; it does not remove it.
-- **In progress.** Composing the single-query bias into the full
-  distinguisher-advantage bound, and the simulator's cost analysis, are not yet
-  formalized.
+
+## Conclusion
+
+The question this page set out to answer is: "can we formally justify modelling
+the deployed group hash as a random oracle into the curve group, given that
+$\mathsf{hash\_to\_field}$ is so modelled?" The formalization now carries
+the whole argument, machine-checked at the deployed Pallas and Vesta
+instances.
+
+A distinguisher that makes $q$ queries, and sees both the field-element
+hash and the group hash built from it, can tell the real construction from
+a random oracle with advantage at most $q \cdot (\eps + 4/\FieldSize)$
+(`pallas_indiffFromRO`, `vesta_indiffFromRO`, via the two-oracle collapse
+`twoOracleIndiffFromRO`). Here $\eps$ is bounded using the one
+unformalized mathematical input, the Weil-type character-sum bound
+discussed above.
+
+The ideal world in that statement is played by a simulator, and the
+simulator is a real algorithm, not just a distribution: it hashes once,
+then rejection-samples a preimage pair, giving up after $K$ rounds. Its
+cost is pinned down exactly — the chance that it is still running after
+$k$ rounds decays geometrically. The answers it returns differ from the
+idealized ones by at most $(1 - \mathsf{acceptProb})^K$ per query, where
+$\mathsf{acceptProb}$ is a round's chance of accepting, so the cap $K$
+makes that difference as small as desired. The indifferentiability
+statement holds with this algorithmic simulator in place of the idealized
+one, at the cost of that same per-query term
+(`pallas_indiffFromROCapped`, `vesta_indiffFromROCapped`).
+
+Two things remain, and they are named rather than hidden. The Weil-bound
+hypothesis needs its constant derived for the deployed encoding
+([CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)); at
+the deployed sizes, with a constant of the size found for the sibling
+encoding, $\eps$ comes to about $2^{-116}$ — the dominant term of the
+advantage, since $4/\FieldSize$ is roughly $2^{-252}$. And the security
+games that want to use this result need the group hash added to their
+adversary's interface first
+([#188](https://github.com/zcash/ironwood/issues/188)); the composition
+requirement for multi-stage games (the [† note above](#dagger-note))
+applies at each consumption site.
