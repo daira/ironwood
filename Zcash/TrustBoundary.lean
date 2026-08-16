@@ -170,7 +170,8 @@ assert_axioms Zcash.Common.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
 
 The indifferentiability of the Pasta group hashes from a random oracle: the
 one-oracle form at the deployed mappings, the single-query bias feeding it,
-and the collapse of the full two-oracle game onto the one-oracle core. -/
+the collapse of the full two-oracle game onto the one-oracle core, and the
+costed simulator's round-count and output laws at the deployed mappings. -/
 
 -- Indiff.lean: one-oracle indifferentiability at the deployed mappings
 assert_axioms Zcash.Security.GroupHash.pallas_indiffFromRO +native(
@@ -187,6 +188,43 @@ assert_axioms Zcash.Security.GroupHash.vesta_weightedBias_real_le +native(
   CompElliptic.Fields.Pasta.vestaBase)
 assert_axioms Zcash.Security.GroupHash.vesta_weightedBias_ideal_le +native(
   CompElliptic.Fields.Pasta.vestaBase)
+
+-- Pasta.lean: the simulator at the deployed mappings — the round-count
+-- tail and law, the two-sided output-law bias, and the cap-limit. Unlike
+-- the bias pins above, these also carry the curve-group certificates: the
+-- simulator's target arithmetic (`Q - f u₀`) uses the point group.
+assert_axioms Zcash.Security.GroupHash.pallas_simCapped_tail +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.pallas_simCapped_round_law +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.pallas_simOut_eventBiasLE +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.pallas_simOut_tendsto +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.vesta_simCapped_tail +native(
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.vesta_simCapped_round_law +native(
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.vesta_simOut_eventBiasLE +native(
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.vesta_simOut_tendsto +native(
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
 
 -- TwoOracle.lean: the two-oracle → one-oracle collapse
 assert_axioms Zcash.Security.GroupHash.twoOracleIndiffFromRO
@@ -703,14 +741,15 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
   inherit CompElliptic's `native_decide` curve point-count axiom (`+native`).
 
   Note that CompElliptic's witnesses are *not* the bulk of what `+native` covers library-wide.
-  Exactly four owners across the whole census are CompElliptic's: the two curve point counts
-  (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the two Tonelli–Shanks root-of-unity data
-  (`Fields.Pasta.pallasBase` and `Fields.Pasta.vestaBase`, whose certificates sit in
-  structure-field auto-params). Every other
-  owner — the six fixed-base window tables, the Action gate-coherence and permutation-domain facts,
-  the captured fixture claims, the keygen certificate — is this repository's own. Compiler trust
-  here is overwhelmingly first-party, not an inherited leaf; each `+native(...)` list names
-  precisely which certificates its entry rests on.
+  Exactly six owners across the whole census are CompElliptic's: the four curve point counts
+  (`Pallas.q_nsmul_Gpt` and `Vesta.p_nsmul_Gpt`, with `Pallas.q_nsmul_isoGpt` and
+  `Vesta.p_nsmul_isoGpt` for the isogenous partner curves) and the two Tonelli–Shanks
+  root-of-unity data (`Fields.Pasta.pallasBase` and `Fields.Pasta.vestaBase`, whose certificates
+  sit in structure-field auto-params). Every other owner — the six fixed-base window tables, the
+  Action gate-coherence and permutation-domain facts, the captured fixture claims, the keygen
+  certificate — is this repository's own. Compiler trust here is overwhelmingly first-party, not
+  an inherited leaf; each `+native(...)` list names precisely which certificates its entry rests
+  on.
 * **Theorems** — the probability-layer bounds, the knowledge-soundness and binding endpoints across
   all adversary models, the DL capstones, and the run-time/query-charge lemmas — get
   `assert_axioms`, bounding the trusted base at the standard tier (`propext` / `Classical.choice` /
