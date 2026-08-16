@@ -331,6 +331,42 @@ theorem acceptProb_le_one (f : F → G) {d : ℕ}
   exact_mod_cast pairCount_le f hd Q
 
 omit [Fintype G] in
+/-- Below the cap, the round count is geometric: for `i+1 < K` the capped
+simulator consumes exactly `i+1` rounds (`i` rejections and then an
+acceptance) with probability `acceptProb f d Q * (1 - acceptProb f d Q)^i`.
+This is the difference of the consecutive tails at `i` and `i+1`. -/
+theorem simCapped_round_law [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) {K i : ℕ}
+    (h : i+1 < K) :
+    (simCapped f d Q K).toOuterMeasure {x | x.2 = i+1}
+      = acceptProb f d Q * (1 - acceptProb f d Q)^i := by
+  have hdisj : Disjoint {x : (F × F) × ℕ | x.2 = i+1} {x | i+1 < x.2} := by
+    rw [Set.disjoint_left]
+    intro x hx hx'
+    simp only [Set.mem_setOf_eq] at hx hx'
+    omega
+  have hadd : (simCapped f d Q K).toOuterMeasure {x | i < x.2}
+      = (simCapped f d Q K).toOuterMeasure {x | x.2 = i+1}
+        + (simCapped f d Q K).toOuterMeasure {x | i+1 < x.2} := by
+    have hsplit : {x : (F × F) × ℕ | i < x.2}
+        = {x | x.2 = i+1} ∪ {x | i+1 < x.2} := by
+      ext x
+      simp only [Set.mem_setOf_eq, Set.mem_union]
+      omega
+    rw [hsplit, PMF.toOuterMeasure_apply, PMF.toOuterMeasure_apply,
+      PMF.toOuterMeasure_apply, ← ENNReal.tsum_add]
+    exact tsum_congr fun x =>
+      congrFun (Set.indicator_union_of_disjoint hdisj _) x
+  rw [simCapped_tail f hd Q K i (by omega), simCapped_tail f hd Q K (i+1) h,
+    show (1 - acceptProb f d Q)^i
+        = acceptProb f d Q * (1 - acceptProb f d Q)^i
+          + (1 - acceptProb f d Q)^(i+1) from by
+      rw [pow_succ', ← add_mul,
+        add_tsub_cancel_of_le (acceptProb_le_one f hd Q), one_mul]] at hadd
+  exact ((ENNReal.add_left_inj (ENNReal.pow_ne_top
+    (ne_top_of_le_ne_top ENNReal.one_ne_top tsub_le_self))).mp hadd).symm
+
+omit [Fintype G] in
 /-- The mass one round accepts inside an event `S`: the acceptance
 probability times the fibre sampler's measure of `S`. -/
 theorem accepted_mass [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
