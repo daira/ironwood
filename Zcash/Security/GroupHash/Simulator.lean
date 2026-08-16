@@ -206,6 +206,21 @@ theorem rejectionRound_apply_none [Nonempty F] (f : F → G) {d : ℕ} [NeZero d
       simp [Nat.cast_eq_zero, Fintype.card_ne_zero, NeZero.ne d])
   exact ENNReal.eq_sub_of_add_eq hne htotal
 
+omit [DecidableEq F] [Fintype G] in
+/-- Toward a target `Q` with an empty fibre, a round is surely a rejection:
+every single-term fibre of `Q - f u₀` is empty, so no slot can accept. -/
+theorem rejectionRound_empty [Nonempty F] (f : F → G) (d : ℕ) [NeZero d]
+    {Q : G} (hempty : ¬ (fibre f Q).Nonempty) :
+    rejectionRound f d Q = PMF.pure none := by
+  have hsf : ∀ u₀ : F, singleFibre f (Q - f u₀) = ∅ := by
+    intro u₀
+    rw [← Finset.not_nonempty_iff_eq_empty]
+    rintro ⟨u₁, hu₁⟩
+    exact hempty ⟨(u₀, u₁), mem_fibre_iff_snd.mpr hu₁⟩
+  rw [rejectionRound]
+  simp [hsf]
+  exact PMF.map_const _ _
+
 /-- The capped simulator: up to `K` rejection rounds toward the target `Q`,
 then the uniform-pair fallback. Returns the sample together with the number
 of rounds consumed (the fallback consumes all `K`). -/
@@ -355,5 +370,20 @@ theorem accepted_mass [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
 noncomputable def simOut [Nonempty F] (f : F → G) (d : ℕ) [NeZero d]
     (Q : G) (K : ℕ) : PMF (F × F) :=
   (simCapped f d Q K).map Prod.fst
+
+omit [DecidableEq F] [Fintype G] in
+/-- Toward a target with an empty fibre, the capped output law is exactly
+the fibre sampler at every cap `K`: every round rejects, so the run always
+ends in the fallback draw, which is `fibreSampler f Q`'s fallback too. -/
+theorem simOut_empty [Nonempty F] (f : F → G) (d : ℕ) [NeZero d] {Q : G}
+    (hempty : ¬ (fibre f Q).Nonempty) :
+    ∀ K : ℕ, simOut f d Q K = fibreSampler f Q
+  | 0 => by
+      rw [simOut, simCapped, PMF.map_comp, fibreSampler, dif_neg hempty]
+      exact PMF.map_id _
+  | K + 1 => by
+      simp only [simOut, simCapped, rejectionRound_empty f d hempty,
+        PMF.pure_bind, Option.elim_none, PMF.map_comp]
+      exact simOut_empty f d hempty K
 
 end Zcash.Security.GroupHash
