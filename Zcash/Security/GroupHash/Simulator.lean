@@ -22,6 +22,19 @@ The simulator is capped at `K` rounds, since an uncapped rejection loop is
 not a finite computation. When all `K` rounds reject, it falls back to a
 uniform pair. The fallback also covers the group elements whose fibre is
 empty, which no round can accept.
+
+The module proves this sampler's cost and output laws. The round count's
+tail below the cap is exactly `(1 - acceptProb f d Q)^k` (`simCapped_tail`),
+the count's law there is geometric (`simCapped_round_law`), and a run never
+exceeds the cap (`simCapped_snd_le`). The output law and `fibreSampler f Q`
+are within `(1 - acceptProb f d Q)^K` of each other on every event, in both
+directions (`simOut_eventBiasLE_fibreSampler`,
+`fibreSampler_eventBiasLE_simOut`). On an empty fibre they are equal
+(`simOut_empty`). As the cap grows, the output law converges to the fibre
+sampler on every event (`simOut_tendsto_fibreSampler`). Averaging over the
+uniform target draw, the fresh-query law `simLaw f d K` sits within
+`simLawBias f d K` of `idealLaw f` (`simLaw_eventBiasLE_idealLaw` and its
+converse).
 -/
 
 namespace Zcash.Security.GroupHash
