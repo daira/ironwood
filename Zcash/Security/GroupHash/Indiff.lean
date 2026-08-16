@@ -79,34 +79,47 @@ theorem indiffFromRO_of_regularity [Nonempty F] [Nonempty G] (f : F → G)
   exact ⟨runFreshPMF_eventBiasLE (weightedBias_real_le f hdev) hQ,
     runFreshPMF_eventBiasLE (weightedBias_ideal_le f hdev) hQ⟩
 
+/-- The transport term rounds up to `4/#F`: dropping the subtracted `2`
+simplifies the endpoint bounds. -/
+theorem transport_term_le (α : Type*) [Fintype α] [Nonempty α] :
+    (4 * Fintype.card α - 2) / (Fintype.card α : ℝ)^2
+      ≤ 4 / Fintype.card α := by
+  have hx : (0 : ℝ) < Fintype.card α := Nat.cast_pos.mpr Fintype.card_pos
+  calc (4 * Fintype.card α - 2) / (Fintype.card α : ℝ)^2
+      ≤ 4 * Fintype.card α / (Fintype.card α : ℝ)^2 := by
+        gcongr
+        linarith
+    _ = 4 / (Fintype.card α : ℝ) := by
+        rw [sq, ← div_div, mul_div_assoc, div_self hx.ne', mul_one]
+
 /-- **Indifferentiability at the deployed Pallas mapping.** The named
 Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
 character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
 absorb the regularity distance that `C` induces. Then `q` queries distinguish
-with advantage at most `q · (ε + (4·#F − 2) / (#F)²)`. -/
+with advantage at most `q · (ε + 4/#F)`. -/
 theorem pallas_indiffFromRO {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
       / (Fintype.card PallasBaseField : ℝ)^2 ≤ ε^2) :
     IndiffFromRO Pallas.mapToCurve q
-      (q * ENNReal.ofReal (ε + (4 * Fintype.card PallasBaseField - 2)
-        / (Fintype.card PallasBaseField : ℝ)^2)) :=
+      (q * ENNReal.ofReal (ε + 4 / Fintype.card PallasBaseField)) :=
   indiffFromRO_of_regularity Pallas.mapToCurve q
-    (pallas_regularityDistance_le h hε hbound)
+    ((pallas_regularityDistance_le h hε hbound).trans
+      (by gcongr ε + ?_; exact transport_term_le PallasBaseField))
 
 /-- **Indifferentiability at the deployed Vesta mapping.** The named
 Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
 character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
 absorb the regularity distance that `C` induces. Then `q` queries distinguish
-with advantage at most `q · (ε + (4·#F − 2) / (#F)²)`. -/
+with advantage at most `q · (ε + 4/#F)`. -/
 theorem vesta_indiffFromRO {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
       / (Fintype.card VestaBaseField : ℝ)^2 ≤ ε^2) :
     IndiffFromRO Vesta.mapToCurve q
-      (q * ENNReal.ofReal (ε + (4 * Fintype.card VestaBaseField - 2)
-        / (Fintype.card VestaBaseField : ℝ)^2)) :=
+      (q * ENNReal.ofReal (ε + 4 / Fintype.card VestaBaseField)) :=
   indiffFromRO_of_regularity Vesta.mapToCurve q
-    (vesta_regularityDistance_le h hε hbound)
+    ((vesta_regularityDistance_le h hε hbound).trans
+      (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
 
 end Zcash.Security.GroupHash
