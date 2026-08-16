@@ -279,6 +279,77 @@ theorem simCapped_tail [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
         simCapped_tail f hd Q K k (Nat.lt_of_succ_lt_succ h),
         rejectionRound_apply_none f hd Q]
 
+omit [DecidableEq F] [Fintype G] in
+/-- A capped run consumes at most `K` rounds; the fallback consumes all of
+them. -/
+theorem simCapped_snd_le [Nonempty F] (f : F → G) {d : ℕ} [NeZero d] (Q : G) :
+    ∀ K : ℕ, ∀ x ∈ (simCapped f d Q K).support, x.2 ≤ K
+  | 0 => by
+      intro x hx
+      rw [simCapped, PMF.support_map] at hx
+      obtain ⟨y, -, rfl⟩ := hx
+      exact le_refl 0
+  | K + 1 => by
+      intro x hx
+      rw [simCapped, PMF.support_bind] at hx
+      obtain ⟨r, -, hx⟩ := Set.mem_iUnion₂.mp hx
+      cases r with
+      | none =>
+          rw [Option.elim_none, PMF.support_map] at hx
+          obtain ⟨y, hy, rfl⟩ := hx
+          exact Nat.succ_le_succ (simCapped_snd_le f Q K y hy)
+      | some p =>
+          rw [Option.elim_some, PMF.support_pure, Set.mem_singleton_iff] at hx
+          subst hx
+          exact Nat.succ_le_succ (Nat.zero_le K)
+
+omit [Fintype G] in
+/-- Under the fibre-size hypothesis the acceptance probability is a genuine
+probability. -/
+theorem acceptProb_le_one (f : F → G) {d : ℕ}
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    acceptProb f d Q ≤ 1 := by
+  rw [acceptProb]
+  refine ENNReal.div_le_of_le_mul ?_
+  rw [one_mul, ← Nat.cast_mul]
+  exact_mod_cast pairCount_le f hd Q
+
+omit [Fintype G] in
+/-- The mass one round accepts inside an event `S`: the acceptance
+probability times the fibre sampler's measure of `S`. -/
+theorem accepted_mass [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) (S : Set (F × F)) :
+    (∑ p : F × F, rejectionRound f d Q (some p)
+        * S.indicator (fun _ => (1 : ℝ≥0∞)) p)
+      = acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S := by
+  have hstep : ∀ p : F × F, rejectionRound f d Q (some p)
+      * S.indicator (fun _ => (1 : ℝ≥0∞)) p
+      = (if p ∈ fibre f Q then S.indicator (fun _ => (1 : ℝ≥0∞)) p else 0)
+        * ((Fintype.card F : ℝ≥0∞) * d)⁻¹ := by
+    intro p
+    rw [rejectionRound_apply_some f hd Q p]
+    by_cases hf : p ∈ fibre f Q
+    · rw [if_pos hf, if_pos hf, mul_comm]
+    · rw [if_neg hf, if_neg hf, zero_mul, zero_mul]
+  rw [Finset.sum_congr rfl fun p _ => hstep p, ← Finset.sum_mul,
+    ← Finset.sum_filter, Finset.filter_mem_eq_inter, Finset.univ_inter]
+  by_cases hne : (fibre f Q).Nonempty
+  · have hpc : (pairCount f Q : ℝ≥0∞) ≠ 0 := by
+      rw [← fibre_card]
+      exact_mod_cast Finset.card_ne_zero_of_mem hne.choose_spec
+    rw [fibreSampler_toOuterMeasure f hne S, acceptProb, div_eq_mul_inv,
+      show (pairCount f Q : ℝ≥0∞) * ((Fintype.card F : ℝ≥0∞) * d)⁻¹
+          * ((∑ p ∈ fibre f Q, S.indicator (fun _ => (1 : ℝ≥0∞)) p)
+            * (pairCount f Q : ℝ≥0∞)⁻¹)
+        = ((pairCount f Q : ℝ≥0∞) * (pairCount f Q : ℝ≥0∞)⁻¹)
+          * ((∑ p ∈ fibre f Q, S.indicator (fun _ => (1 : ℝ≥0∞)) p)
+            * ((Fintype.card F : ℝ≥0∞) * d)⁻¹) from by ring,
+      ENNReal.mul_inv_cancel hpc (ENNReal.natCast_ne_top _), one_mul]
+  · have hfe : fibre f Q = ∅ := Finset.not_nonempty_iff_eq_empty.mp hne
+    have hpc : pairCount f Q = 0 := by rw [← fibre_card, hfe, Finset.card_empty]
+    rw [hfe, acceptProb, hpc]
+    simp
+
 /-- The distribution of the pair that `simCapped` returns for the target
 `Q` at round cap `K`, ignoring how many rounds it took. -/
 noncomputable def simOut [Nonempty F] (f : F → G) (d : ℕ) [NeZero d]

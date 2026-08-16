@@ -149,6 +149,33 @@ theorem fibreSampler_apply_empty [Nonempty F] (f : F → G) {Q : G} (p : F × F)
   rw [fibreSampler, dif_neg hempty, PMF.uniformOfFintype_apply]
 
 omit [DecidableEq F] [Fintype G] in
+/-- The fibre sampler's measure of an event, when the fibre is nonempty: the
+event's share of the fibre. -/
+theorem fibreSampler_toOuterMeasure [Nonempty F] (f : F → G) {Q : G}
+    (hne : (fibre f Q).Nonempty) (S : Set (F × F)) :
+    (fibreSampler f Q).toOuterMeasure S
+      = (∑ p ∈ fibre f Q, S.indicator (fun _ => (1 : ℝ≥0∞)) p)
+        * (pairCount f Q : ℝ≥0∞)⁻¹ := by
+  classical
+  rw [PMF.toOuterMeasure_apply, tsum_fintype]
+  calc ∑ x : F × F, S.indicator (fibreSampler f Q) x
+      = ∑ x ∈ fibre f Q, S.indicator (fibreSampler f Q) x := by
+        refine (Finset.sum_subset (Finset.subset_univ _) fun x _ hx => ?_).symm
+        by_cases hs : x ∈ S
+        · rw [Set.indicator_of_mem hs, fibreSampler_apply_not_mem f hne hx]
+        · rw [Set.indicator_of_notMem hs]
+    _ = ∑ x ∈ fibre f Q, S.indicator (fun _ => (1 : ℝ≥0∞)) x
+          * (pairCount f Q : ℝ≥0∞)⁻¹ := by
+        refine Finset.sum_congr rfl fun x hx => ?_
+        by_cases hs : x ∈ S
+        · rw [Set.indicator_of_mem hs, Set.indicator_of_mem hs,
+            fibreSampler_apply_mem f hx, one_mul]
+        · rw [Set.indicator_of_notMem hs, Set.indicator_of_notMem hs, zero_mul]
+    _ = (∑ p ∈ fibre f Q, S.indicator (fun _ => (1 : ℝ≥0∞)) p)
+          * (pairCount f Q : ℝ≥0∞)⁻¹ := by
+        rw [Finset.sum_mul]
+
+omit [DecidableEq F] [Fintype G] in
 /-- The sampler's weight on `p`, split into its fibre-uniform part (nonzero only
 on the fibre containing `p`) and its empty-fibre fallback part. -/
 theorem fibreSampler_apply_eq [Nonempty F] (f : F → G) (Q : G) (p : F × F) :
