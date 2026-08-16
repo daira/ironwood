@@ -563,4 +563,34 @@ theorem simOut_tendsto_fibreSampler [Nonempty F] (f : F → G) {d : ℕ}
   · simp only [simOut_empty f d hne]
     exact tendsto_const_nhds
 
+/-- The capped simulator's answer law on a fresh query: draw the target `Q`
+uniformly (the one `R`-query), then run the rejection sampler at cap `K`.
+This is the algorithmic counterpart of `idealLaw f`. -/
+noncomputable def simLaw [Nonempty F] [Nonempty G] (f : F → G) (d : ℕ)
+    [NeZero d] (K : ℕ) : PMF (F × F) :=
+  (PMF.uniformOfFintype G).bind fun Q => simOut f d Q K
+
+/-- The average bias between the capped simulator's fresh-query law and
+`idealLaw f`: each target `Q` contributes its all-rounds-reject mass
+`(1 - acceptProb f d Q)^K` at its uniform weight. -/
+noncomputable def simLawBias [Nonempty G] (f : F → G) (d : ℕ) [NeZero d]
+    (K : ℕ) : ℝ≥0∞ :=
+  ∑ Q : G, (PMF.uniformOfFintype G) Q * (1 - acceptProb f d Q)^K
+
+/-- The capped simulator's fresh-query law overshoots `idealLaw f` by at
+most the average bias `simLawBias f d K`, on every event. -/
+theorem simLaw_eventBiasLE_idealLaw [Nonempty F] [Nonempty G] (f : F → G)
+    {d : ℕ} [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (K : ℕ) :
+    PMFEventBiasLE (simLaw f d K) (idealLaw f) (simLawBias f d K) :=
+  PMFEventBiasLE.bind_average fun Q =>
+    simOut_eventBiasLE_fibreSampler f hd Q K
+
+/-- `idealLaw f` overshoots the capped simulator's fresh-query law by at
+most the average bias `simLawBias f d K`, on every event. -/
+theorem idealLaw_eventBiasLE_simLaw [Nonempty F] [Nonempty G] (f : F → G)
+    {d : ℕ} [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (K : ℕ) :
+    PMFEventBiasLE (idealLaw f) (simLaw f d K) (simLawBias f d K) :=
+  PMFEventBiasLE.bind_average fun Q =>
+    fibreSampler_eventBiasLE_simOut f hd Q K
+
 end Zcash.Security.GroupHash
