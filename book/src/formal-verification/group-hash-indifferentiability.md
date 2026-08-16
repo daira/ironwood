@@ -381,8 +381,9 @@ $(\FieldSize)^2$ turns the count into the probability that the two-term sum land
 on $Q$, so the sum is the $L^1$ distance between that output distribution and the
 uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
 $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
-absolute differences of the probabilities they assign. At the deployed sizes
-$\eps$ is about $2^{-116}$.
+absolute differences of the probabilities they assign. At the deployed
+sizes, a Weil constant of the order that the established analyses give for
+sibling encodings would put $\eps$ near $2^{-116}$.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -520,11 +521,24 @@ It's important to be precise about the status of each part.
   distinguisher-advantage bound at the deployed mappings (`Indiff.lean`),
   and the collapse of the two-oracle game onto that one-oracle form
   (`TwoOracle.lean`).
-- **An unformalized mathematical input.** The Weil bound on the character sums of
-  $f$ is a well-established but currently unformalized fact. It is not formalized
-  because important pieces of the underlying mathematics are not yet present in
-  Mathlib — but it is not in doubt. The regularity distance is proved relative to
-  it, stated as the named hypothesis `WeilBounded`.
+- **An unformalized mathematical input.** The regularity distance is proved
+  relative to the named hypothesis `WeilBounded`, and that hypothesis is
+  parameterized: it asserts a constant $C$ with every nontrivial character sum
+  of the zero-repaired mapping at most $C \cdot \sqrt{\FieldSize}$, and the
+  final advantage scales with $C^2$. Supplying such a constant is where the
+  deep number theory lives. The Weil bound (the Riemann hypothesis for curves
+  over finite fields, proved by Weil in 1948) bounds character sums along
+  covering curves of the encoding, once a per-encoding genus computation is
+  done. Proving the Weil bound in general requires machinery that is not yet
+  in Mathlib, which is why the hypothesis is named rather than discharged.
+  [Farashahi–Fouque–Shparlinski–Tibouchi–Voloch](https://eprint.iacr.org/2010/539)
+  carry this out for a sibling of the deployed encoding — simplified SWU with
+  $Z = -1$, over fields of size $\equiv 3 \pmod 4$, with a quadratic-residue
+  sign rule — and obtain $|S_f(\chi)| \le 52\sqrt{\FieldSize} + 151$ from
+  genus-8 coverings. The deployed variant differs in all three parameters, so
+  its constant has not been derived, here or (as far as we know) in the
+  literature. Discharging the hypothesis means redoing that genus computation
+  for the deployed branch curves, not citing the Weil bound.
 - **A modelling choice, not a theorem.** That $\mathsf{hash\_to\_field}$ behaves
   like a random oracle is a heuristic (see
   [the note above](#admonition-a-heuristic-not-an-assumption)). The
