@@ -171,7 +171,8 @@ assert_axioms Zcash.Common.LabeledOracleComp.firstLabelOrFallbackBad_measure_le
 The indifferentiability of the Pasta group hashes from a random oracle: the
 one-oracle form at the deployed mappings, the single-query bias feeding it,
 the collapse of the full two-oracle game onto the one-oracle core, and the
-costed simulator's round-count and output laws at the deployed mappings. -/
+rejection-sampling simulator's round-count and output laws at the deployed
+mappings. -/
 
 -- Indiff.lean: one-oracle indifferentiability at the deployed mappings
 assert_axioms Zcash.Security.GroupHash.pallas_indiffFromRO +native(
@@ -190,7 +191,8 @@ assert_axioms Zcash.Security.GroupHash.vesta_weightedBias_ideal_le +native(
   CompElliptic.Fields.Pasta.vestaBase)
 
 -- Pasta.lean: the simulator at the deployed mappings — the round-count
--- tail and law, the two-sided output-law bias, and the cap-limit. Unlike
+-- tail and law, the two-sided output-law bias, and the `K → ∞`
+-- convergence. Unlike
 -- the bias pins above, these also carry the curve-group certificates: the
 -- simulator's target arithmetic (`Q - f u₀`) uses the point group.
 assert_axioms Zcash.Security.GroupHash.pallas_simCapped_tail +native(
@@ -222,6 +224,17 @@ assert_axioms Zcash.Security.GroupHash.vesta_simOut_eventBiasLE +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
 assert_axioms Zcash.Security.GroupHash.vesta_simOut_tendsto +native(
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
+
+-- Indiff.lean: indifferentiability with the capped simulator in the ideal
+-- world, at the deployed mappings
+assert_axioms Zcash.Security.GroupHash.pallas_indiffFromROCapped +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
+assert_axioms Zcash.Security.GroupHash.vesta_indiffFromROCapped +native(
   CompElliptic.Fields.Pasta.vestaBase,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
