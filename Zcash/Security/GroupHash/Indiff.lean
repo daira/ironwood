@@ -122,4 +122,82 @@ theorem vesta_indiffFromRO {C ε : ℝ} (q : ℕ)
     ((vesta_regularityDistance_le h hε hbound).trans
       (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
 
+/-! ## The composition with the capped simulator
+
+Indifferentiability relates the deployed construction to a random oracle
+through an exhibited ideal-world simulator. `IndiffFromRO` exhibits the
+idealized one, answering with `idealLaw f` itself; the capped simulator
+answers with `simLaw f d K` instead, and the two laws differ on events by
+at most `simLawBias f d K`, the uniform average of the per-target
+all-rounds-reject mass. Charging that difference once per query, on top
+of the regularity budget, gives the same indifferentiability statement
+with the algorithmic simulator as the exhibited witness. -/
+
+/-- **One-oracle indifferentiability from a random oracle, witnessed by
+the capped simulator.** As `IndiffFromRO`, but the ideal world's
+simulator is the capped algorithm: it answers from `simLaw f d K` rather
+than the mathematical `idealLaw f`. -/
+def IndiffFromROCapped [Nonempty F] [Nonempty G] (f : F → G) (d : ℕ)
+    [NeZero d] (K q : ℕ) (δ : ℝ≥0∞) : Prop :=
+  ∀ {M : Type} (A : OracleComp M (F × F) Bool), A.QueryBound q →
+    PMFEventBiasLE (runFreshPMF (PMF.uniformOfFintype (F × F)) A)
+        (runFreshPMF (simLaw f d K) A) δ
+      ∧ PMFEventBiasLE (runFreshPMF (simLaw f d K) A)
+        (runFreshPMF (PMF.uniformOfFintype (F × F)) A) δ
+
+/-- **The capped multi-query composition**: a regularity distance of `ε`
+gives indifferentiability against the capped simulator at
+`q · (ε + simLawBias f d K)`. Each query is charged the single-query bias
+plus the capped simulator's average bias. -/
+theorem indiffFromROCapped_of_regularity [Nonempty F] [Nonempty G]
+    (f : F → G) {d : ℕ} [NeZero d]
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) {ε : ℝ} (q K : ℕ)
+    (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
+        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+    IndiffFromROCapped f d K q
+      (q * (ENNReal.ofReal ε + simLawBias f d K)) := by
+  intro M A hQ
+  have hswap := (simLaw_eventBiasLE_idealLaw f hd K).weightedBiasLE
+  have hswap' := (idealLaw_eventBiasLE_simLaw f hd K).weightedBiasLE
+  constructor
+  · have h₁ := runFreshPMF_eventBiasLE (weightedBias_real_le f hdev) hQ
+    have h₂ := runFreshPMF_eventBiasLE hswap' hQ
+    have := h₁.trans h₂
+    rwa [← mul_add,
+      add_comm (simLawBias f d K) (ENNReal.ofReal ε)] at this
+  · have h₁ := runFreshPMF_eventBiasLE hswap hQ
+    have h₂ := runFreshPMF_eventBiasLE (weightedBias_ideal_le f hdev) hQ
+    have := h₁.trans h₂
+    rwa [← mul_add] at this
+
+/-- **Indifferentiability at the deployed Pallas mapping, witnessed by the
+capped simulator**: the `IndiffFromRO` budget plus the capped simulator's
+average bias, per query. -/
+theorem pallas_indiffFromROCapped {C ε : ℝ} (q K : ℕ)
+    (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
+    (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
+      / (Fintype.card PallasBaseField : ℝ)^2 ≤ ε^2) :
+    IndiffFromROCapped Pallas.mapToCurve deployedFibreBound K q
+      (q * (ENNReal.ofReal (ε + 4 / Fintype.card PallasBaseField)
+        + simLawBias Pallas.mapToCurve deployedFibreBound K)) :=
+  indiffFromROCapped_of_regularity Pallas.mapToCurve
+    pallas_singleFibre_card_le q K
+    ((pallas_regularityDistance_le h hε hbound).trans
+      (by gcongr ε + ?_; exact transport_term_le PallasBaseField))
+
+/-- **Indifferentiability at the deployed Vesta mapping, witnessed by the
+capped simulator**: the `IndiffFromRO` budget plus the capped simulator's
+average bias, per query. -/
+theorem vesta_indiffFromROCapped {C ε : ℝ} (q K : ℕ)
+    (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
+    (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
+      / (Fintype.card VestaBaseField : ℝ)^2 ≤ ε^2) :
+    IndiffFromROCapped Vesta.mapToCurve deployedFibreBound K q
+      (q * (ENNReal.ofReal (ε + 4 / Fintype.card VestaBaseField)
+        + simLawBias Vesta.mapToCurve deployedFibreBound K)) :=
+  indiffFromROCapped_of_regularity Vesta.mapToCurve
+    vesta_singleFibre_card_le q K
+    ((vesta_regularityDistance_le h hε hbound).trans
+      (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
+
 end Zcash.Security.GroupHash
