@@ -45,6 +45,72 @@ theorem PMFWeightedBiasLE.eventBiasLE {Ω : Type*} [Fintype Ω]
     hbias (fun x ↦ if x ∈ S then 1 else 0) (fun x ↦ by
       by_cases hx : x ∈ S <;> simp [hx])
 
+/-- On a finite space an event bound is already a weighted bound, at the same `ε`: against a
+`[0,1]`-valued test, `actual` can overshoot `ideal` by no more than it does on the event where
+it exceeds `ideal` pointwise. -/
+theorem PMFEventBiasLE.weightedBiasLE {Ω : Type*} [Fintype Ω]
+    {actual ideal : PMF Ω} {ε : ℝ≥0∞}
+    (hbias : PMFEventBiasLE actual ideal ε) :
+    PMFWeightedBiasLE actual ideal ε := by
+  classical
+  intro w hw
+  have hpt : ∀ x, actual x * w x
+      ≤ ideal x * w x + if ideal x < actual x then actual x - ideal x else 0 := by
+    intro x
+    by_cases hx : ideal x < actual x
+    · rw [if_pos hx]
+      calc actual x * w x
+          = (ideal x + (actual x - ideal x)) * w x := by
+            rw [add_tsub_cancel_of_le hx.le]
+        _ = ideal x * w x + (actual x - ideal x) * w x := add_mul _ _ _
+        _ ≤ ideal x * w x + (actual x - ideal x) := by
+            gcongr
+            exact mul_le_of_le_one_right' (hw x)
+    · rw [if_neg hx, add_zero]
+      gcongr
+      exact not_lt.mp hx
+  calc ∑ x, actual x * w x
+      ≤ ∑ x, (ideal x * w x
+          + if ideal x < actual x then actual x - ideal x else 0) :=
+        Finset.sum_le_sum fun x _ ↦ hpt x
+    _ = ∑ x, ideal x * w x
+        + ∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x,
+            (actual x - ideal x) := by
+        rw [Finset.sum_add_distrib, ← Finset.sum_filter]
+    _ ≤ ∑ x, ideal x * w x + ε := by
+        gcongr
+        have hBne : (∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x,
+              ideal x) ≠ ∞ :=
+          ne_top_of_le_ne_top ENNReal.one_ne_top
+            ((ENNReal.sum_le_tsum _).trans_eq ideal.tsum_coe)
+        rw [← ENNReal.add_le_add_iff_right hBne,
+          show (∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x,
+                (actual x - ideal x))
+              + ∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x, ideal x
+            = ∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x, actual x
+            from by
+          rw [← Finset.sum_add_distrib]
+          exact Finset.sum_congr rfl fun x hx ↦
+            tsub_add_cancel_of_le (Finset.mem_filter.mp hx).2.le]
+        calc (∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x, actual x)
+            = actual.toOuterMeasure
+                ↑(Finset.univ.filter fun x ↦ ideal x < actual x) :=
+              (actual.toOuterMeasure_apply_finset _).symm
+          _ ≤ ideal.toOuterMeasure
+                ↑(Finset.univ.filter fun x ↦ ideal x < actual x) + ε :=
+              hbias _
+          _ = (∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x, ideal x)
+              + ε := by
+              rw [ideal.toOuterMeasure_apply_finset]
+          _ = ε + ∑ x ∈ Finset.univ.filter fun x ↦ ideal x < actual x,
+              ideal x := add_comm _ _
+
+/-- Bias bounds chain, adding their budgets. -/
+theorem PMFEventBiasLE.trans {Ω : Type*} {p₁ p₂ p₃ : PMF Ω} {ε₁ ε₂ : ℝ≥0∞}
+    (h₁ : PMFEventBiasLE p₁ p₂ ε₁) (h₂ : PMFEventBiasLE p₂ p₃ ε₂) :
+    PMFEventBiasLE p₁ p₃ (ε₂ + ε₁) := fun S ↦
+  (h₁ S).trans (by rw [← add_assoc]; gcongr ?_ + ε₁; exact h₂ S)
+
 /-- Mixing pointwise-biased experiments with the same outer distribution preserves their bias.
 This transports a per-parameter event bound to the corresponding joint experiment. -/
 theorem PMFEventBiasLE.bind_same {α β : Type*} [Fintype β] {μ : PMF β}
@@ -64,6 +130,23 @@ theorem PMFEventBiasLE.bind_same {α β : Type*} [Fintype β] {μ : PMF β}
         have h := μ.tsum_coe
         rwa [tsum_fintype] at h
       rw [hmass, one_mul]
+
+/-- Mixing experiments whose event bounds vary with the parameter averages their biases: the
+joint experiment's budget is the mixture's mean `∑ b, μ b * ε b`. `PMFEventBiasLE.bind_same`
+is the constant-`ε` case. -/
+theorem PMFEventBiasLE.bind_average {α β : Type*} [Fintype β] {μ : PMF β}
+    {actual ideal : β → PMF α} {ε : β → ℝ≥0∞}
+    (hbias : ∀ b, PMFEventBiasLE (actual b) (ideal b) (ε b)) :
+    PMFEventBiasLE (μ.bind actual) (μ.bind ideal) (∑ b, μ b * ε b) := by
+  intro S
+  simp only [PMF.toOuterMeasure_bind_apply, tsum_fintype]
+  calc
+    ∑ b, μ b * (actual b).toOuterMeasure S ≤
+        ∑ b, μ b * ((ideal b).toOuterMeasure S + ε b) :=
+      Finset.sum_le_sum fun b _ ↦ mul_le_mul_right (hbias b S) _
+    _ = ∑ b, μ b * (ideal b).toOuterMeasure S + ∑ b, μ b * ε b := by
+      simp_rw [mul_add]
+      rw [Finset.sum_add_distrib]
 
 /-- Transport an ideal-experiment event bound to an explicitly related actual distribution. -/
 theorem event_measure_le_of_bias {Ω : Type*} {actual ideal : PMF Ω} {ε bound : ℝ≥0∞}
