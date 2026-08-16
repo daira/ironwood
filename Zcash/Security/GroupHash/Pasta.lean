@@ -53,9 +53,10 @@ theorem pallas_eq_zeroRepaired_off_zero :
       = zeroRepaired Pallas.mapToCurve u :=
   fun _ hu => (if_neg hu).symm
 
-/-- **The deployed-map regularity premiss for Pallas**: from the Weil bound on
-the zero-repaired mapping, the deployed mapping's regularity distance is at
-most `ε + (4·#F − 2)/(#F)²`, by the transport across the single input `0`. -/
+/-- **The deployed-map regularity premiss for Pallas**: from a Weil-type bound
+with constant `C` on the zero-repaired mapping, the deployed mapping's
+regularity distance is at most `ε + (4·#F − 2)/(#F)²`, by the transport
+across the single input `0`. -/
 theorem pallas_regularityDistance_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
@@ -69,7 +70,7 @@ theorem pallas_regularityDistance_le {C ε : ℝ}
     pallas_eq_zeroRepaired_off_zero h hε hbound
 
 /-- **The single-query bias at the deployed Pallas mapping, real overshooting
-ideal**, under the named Weil-bound hypothesis. -/
+ideal**, under the named Weil-bound hypothesis (constant `C`). -/
 theorem pallas_weightedBias_real_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
@@ -82,7 +83,7 @@ theorem pallas_weightedBias_real_le {C ε : ℝ}
   weightedBias_real_le _ (pallas_regularityDistance_le h hε hbound)
 
 /-- **The single-query bias at the deployed Pallas mapping, ideal overshooting
-real**, under the named Weil-bound hypothesis. -/
+real**, under the named Weil-bound hypothesis (constant `C`). -/
 theorem pallas_weightedBias_ideal_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
@@ -102,9 +103,10 @@ theorem vesta_eq_zeroRepaired_off_zero :
       = zeroRepaired Vesta.mapToCurve u :=
   fun _ hu => (if_neg hu).symm
 
-/-- **The deployed-map regularity premiss for Vesta**: from the Weil bound on
-the zero-repaired mapping, the deployed mapping's regularity distance is at
-most `ε + (4·#F − 2)/(#F)²`, by the transport across the single input `0`. -/
+/-- **The deployed-map regularity premiss for Vesta**: from a Weil-type bound
+with constant `C` on the zero-repaired mapping, the deployed mapping's
+regularity distance is at most `ε + (4·#F − 2)/(#F)²`, by the transport
+across the single input `0`. -/
 theorem vesta_regularityDistance_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
@@ -118,7 +120,7 @@ theorem vesta_regularityDistance_le {C ε : ℝ}
     vesta_eq_zeroRepaired_off_zero h hε hbound
 
 /-- **The single-query bias at the deployed Vesta mapping, real overshooting
-ideal**, under the named Weil-bound hypothesis. -/
+ideal**, under the named Weil-bound hypothesis (constant `C`). -/
 theorem vesta_weightedBias_real_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
@@ -131,7 +133,7 @@ theorem vesta_weightedBias_real_le {C ε : ℝ}
   weightedBias_real_le _ (vesta_regularityDistance_le h hε hbound)
 
 /-- **The single-query bias at the deployed Vesta mapping, ideal overshooting
-real**, under the named Weil-bound hypothesis. -/
+real**, under the named Weil-bound hypothesis (constant `C`). -/
 theorem vesta_weightedBias_ideal_le {C ε : ℝ}
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4

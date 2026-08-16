@@ -11,7 +11,7 @@ import Zcash.Common.Oracle.Hybrid
 This composes the single-query bias of `GroupHash/Sampler.lean` through the
 adaptive hybrid `runFreshPMF_eventBiasLE`: a distinguisher making at most `q`
 fresh queries tells the real world from the ideal world with advantage at most
-`q · ε`, where `ε` is the regularity distance.
+`q·ε`, where `ε` is the regularity distance.
 
 ## The one-oracle game
 
@@ -68,7 +68,7 @@ def IndiffFromRO [Nonempty F] [Nonempty G] (f : F → G) (q : ℕ) (δ : ℝ≥0
 
 omit [DecidableEq F] in
 /-- **The multi-query composition**: a regularity distance of `ε` gives
-indifferentiability at `q · ε`, by charging the single-query bias once per
+indifferentiability at `q·ε`, by charging the single-query bias once per
 query node of the adaptive tree (`runFreshPMF_eventBiasLE`). -/
 theorem indiffFromRO_of_regularity [Nonempty F] [Nonempty G] (f : F → G)
     {ε : ℝ} (q : ℕ)
@@ -79,9 +79,11 @@ theorem indiffFromRO_of_regularity [Nonempty F] [Nonempty G] (f : F → G)
   exact ⟨runFreshPMF_eventBiasLE (weightedBias_real_le f hdev) hQ,
     runFreshPMF_eventBiasLE (weightedBias_ideal_le f hdev) hQ⟩
 
-/-- **Indifferentiability at the deployed Pallas mapping**, under the named
-Weil-bound hypothesis on the zero-repaired mapping: `q` queries distinguish
-with advantage at most `q · (ε + (4·#F − 2)/(#F)²)`. -/
+/-- **Indifferentiability at the deployed Pallas mapping.** The named
+Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
+character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
+absorb the regularity distance that `C` induces. Then `q` queries distinguish
+with advantage at most `q · (ε + (4·#F − 2) / (#F)²)`. -/
 theorem pallas_indiffFromRO {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
@@ -92,9 +94,11 @@ theorem pallas_indiffFromRO {C ε : ℝ} (q : ℕ)
   indiffFromRO_of_regularity Pallas.mapToCurve q
     (pallas_regularityDistance_le h hε hbound)
 
-/-- **Indifferentiability at the deployed Vesta mapping**, under the named
-Weil-bound hypothesis on the zero-repaired mapping: `q` queries distinguish
-with advantage at most `q · (ε + (4·#F − 2)/(#F)²)`. -/
+/-- **Indifferentiability at the deployed Vesta mapping.** The named
+Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
+character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
+absorb the regularity distance that `C` induces. Then `q` queries distinguish
+with advantage at most `q · (ε + (4·#F − 2) / (#F)²)`. -/
 theorem vesta_indiffFromRO {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
