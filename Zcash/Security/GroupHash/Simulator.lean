@@ -169,6 +169,43 @@ theorem rejectionRound_apply_some [Nonempty F] (f : F → G) {d : ℕ} [NeZero d
       ENNReal.mul_inv (Or.inl hFne) (Or.inl hFnt)]
   · rw [if_neg fun hc => hp (mem_fibre_iff_snd.mpr hc.2), if_neg hp]
 
+/-- The per-round acceptance probability: `pairCount f Q / (#F·d)`. -/
+noncomputable def acceptProb (f : F → G) (d : ℕ) (Q : G) : ℝ≥0∞ :=
+  (pairCount f Q : ℝ≥0∞) / ((Fintype.card F : ℝ≥0∞) * d)
+
+omit [Fintype G] in
+/-- Under the fibre-size hypothesis, the pair count is at most `#F·d`. -/
+theorem pairCount_le (f : F → G) {d : ℕ}
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    pairCount f Q ≤ Fintype.card F * d := by
+  rw [← sum_singleFibre_card]
+  calc ∑ u₀, (singleFibre f (Q - f u₀)).card
+      ≤ ∑ _u₀ : F, d := Finset.sum_le_sum fun u₀ _ => hd _
+    _ = Fintype.card F * d := by
+        rw [Finset.sum_const, smul_eq_mul, Finset.card_univ]
+
+omit [Fintype G] in
+/-- One round rejects with probability exactly `1 - acceptProb f d Q`. -/
+theorem rejectionRound_apply_none [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    rejectionRound f d Q none = 1 - acceptProb f d Q := by
+  have htotal := (rejectionRound f d Q).tsum_coe
+  rw [tsum_fintype, Fintype.sum_option] at htotal
+  have hsum : ∑ p : F × F, rejectionRound f d Q (some p) = acceptProb f d Q := by
+    calc ∑ p : F × F, rejectionRound f d Q (some p)
+        = ∑ p : F × F, if p ∈ fibre f Q
+            then ((Fintype.card F : ℝ≥0∞) * d)⁻¹ else 0 := by
+          exact Finset.sum_congr rfl fun p _ => rejectionRound_apply_some f hd Q p
+      _ = ∑ p ∈ fibre f Q, ((Fintype.card F : ℝ≥0∞) * d)⁻¹ := by
+          rw [← Finset.sum_filter, Finset.filter_mem_eq_inter, Finset.univ_inter]
+      _ = acceptProb f d Q := by
+          rw [Finset.sum_const, fibre_card, acceptProb, div_eq_mul_inv, nsmul_eq_mul]
+  rw [hsum] at htotal
+  have hne : acceptProb f d Q ≠ ∞ :=
+    ENNReal.div_ne_top (ENNReal.natCast_ne_top _) (by
+      simp [Nat.cast_eq_zero, Fintype.card_ne_zero, NeZero.ne d])
+  exact ENNReal.eq_sub_of_add_eq hne htotal
+
 /-- The capped simulator: up to `K` rejection rounds toward the target `Q`,
 then the uniform-pair fallback. Returns the sample together with the number
 of rounds consumed (the fallback consumes all `K`). -/
