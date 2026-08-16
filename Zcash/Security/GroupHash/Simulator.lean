@@ -213,9 +213,71 @@ noncomputable def simCapped [Nonempty F] (f : F → G) (d : ℕ) [NeZero d]
     (Q : G) : ℕ → PMF ((F × F) × ℕ)
   | 0 => (PMF.uniformOfFintype (F × F)).map fun p => (p, 0)
   | K + 1 => (rejectionRound f d Q).bind fun r =>
-      match r with
-      | some p => PMF.pure (p, 1)
-      | none => (simCapped f d Q K).map fun x => (x.1, x.2 + 1)
+      r.elim ((simCapped f d Q K).map fun x => (x.1, x.2 + 1))
+        fun p => PMF.pure (p, 1)
+
+omit [DecidableEq F] [Fintype G] in
+/-- One step of the capped simulator, decomposed under an event `S`: the
+rejection branch continues into `simCapped f d Q K` against the shifted
+event, and each acceptance contributes its mass when `(p, 1)` lands in `S`. -/
+theorem simCapped_succ_toOuterMeasure [Nonempty F] (f : F → G) {d : ℕ}
+    [NeZero d] (Q : G) (K : ℕ) (S : Set ((F × F) × ℕ)) :
+    (simCapped f d Q (K+1)).toOuterMeasure S
+      = rejectionRound f d Q none
+          * (simCapped f d Q K).toOuterMeasure ((fun x => (x.1, x.2 + 1)) ⁻¹' S)
+        + ∑ p : F × F, rejectionRound f d Q (some p)
+            * S.indicator (fun _ => (1 : ℝ≥0∞)) (p, 1) := by
+  classical
+  rw [simCapped, PMF.toOuterMeasure_bind_apply, tsum_fintype, Fintype.sum_option]
+  simp only [Option.elim_none, Option.elim_some, PMF.toOuterMeasure_map_apply,
+    PMF.toOuterMeasure_pure_apply, Set.indicator_apply]
+
+omit [DecidableEq F] [Fintype G] in
+/-- A capped run with at least one round available consumes at least one
+round: acceptance uses one, and the rejection branch shifts the count up. -/
+theorem simCapped_succ_snd_pos [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
+    (Q : G) (K : ℕ) : ∀ x ∈ (simCapped f d Q (K+1)).support, 0 < x.2 := by
+  intro x hx
+  rw [simCapped, PMF.support_bind] at hx
+  obtain ⟨r, -, hx⟩ := Set.mem_iUnion₂.mp hx
+  cases r with
+  | none =>
+      rw [Option.elim_none, PMF.support_map] at hx
+      obtain ⟨y, -, rfl⟩ := hx
+      exact Nat.succ_pos _
+  | some p =>
+      rw [Option.elim_some, PMF.support_pure, Set.mem_singleton_iff] at hx
+      subst hx
+      exact Nat.zero_lt_one
+
+omit [Fintype G] in
+/-- The tail of the round count: for `k < K`, the capped simulator consumes
+more than `k` rounds exactly when its first `k` rounds all reject, with
+probability `(1 - acceptProb f d Q)^k`. -/
+theorem simCapped_tail [Nonempty F] (f : F → G) {d : ℕ} [NeZero d]
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) :
+    ∀ K k : ℕ, k < K →
+      (simCapped f d Q K).toOuterMeasure {x | k < x.2}
+        = (1 - acceptProb f d Q)^k
+  | K + 1, 0, _ => by
+      rw [pow_zero]
+      exact (PMF.toOuterMeasure_apply_eq_one_iff _ _).mpr
+        (simCapped_succ_snd_pos f Q K)
+  | K + 1, k + 1, h => by
+      rw [pow_succ', simCapped_succ_toOuterMeasure]
+      have hpre : (fun x : (F × F) × ℕ => (x.1, x.2 + 1)) ⁻¹'
+          {x : (F × F) × ℕ | k+1 < x.2} = {x | k < x.2} := by
+        ext x
+        simp
+      have hsum : (∑ p : F × F, rejectionRound f d Q (some p)
+            * Set.indicator {x : (F × F) × ℕ | k+1 < x.2}
+                (fun _ => (1 : ℝ≥0∞)) (p, 1))
+          = 0 :=
+        Finset.sum_eq_zero fun p _ => by
+          rw [Set.indicator_of_notMem (by simp), mul_zero]
+      rw [hpre, hsum, add_zero,
+        simCapped_tail f hd Q K k (Nat.lt_of_succ_lt_succ h),
+        rejectionRound_apply_none f hd Q]
 
 /-- The distribution of the pair that `simCapped` returns for the target
 `Q` at round cap `K`, ignoring how many rounds it took. -/
