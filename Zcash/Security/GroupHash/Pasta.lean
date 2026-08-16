@@ -5,6 +5,7 @@ import CompElliptic.Hashing.SignedLift
 import CompElliptic.Hashing.TwoTermUniformity
 import CompElliptic.Hashing.WellDistributed
 import Zcash.Security.GroupHash.Sampler
+import Zcash.Security.GroupHash.Simulator
 
 /-!
 # The single-query bias at the deployed Pasta group hashes
@@ -34,6 +35,15 @@ bias directions at the deployed mapping (`pallas_weightedBias_real_le`,
 `pallas_weightedBias_ideal_le`, and the Vesta twins), all under the named
 `WeilBounded` hypothesis: established mathematics, but an unformalized input
 (see CompElliptic's `WellDistributed.lean`).
+
+`GroupHash/Simulator.lean`'s rejection sampler is also instantiated here.
+Its one counting input is an unconditional single-fibre bound: CompElliptic
+counts the nonzero preimages of a point
+(`Pallas.card_mapToCurve_fibre_le` and the Vesta twin), and the input `0`
+adds at most one more. `deployedFibreBound` names the resulting bound, and
+the deployed mappings satisfy the simulator's fibre-size hypothesis at that
+constant. The round-count tails and law, the two-sided output-law bias, and
+the `K → ∞` convergence then instantiate directly.
 -/
 
 namespace Zcash.Security.GroupHash
@@ -143,5 +153,115 @@ theorem vesta_weightedBias_ideal_le {C ε : ℝ}
       (ENNReal.ofReal (ε + (4 * Fintype.card VestaBaseField - 2)
         / (Fintype.card VestaBaseField : ℝ)^2)) :=
   weightedBias_ideal_le _ (vesta_regularityDistance_le h hε hbound)
+
+/-! ## The simulator at the deployed mappings -/
+
+/-- The single-fibre bound at the deployed mappings: CompElliptic counts at
+most `10` nonzero preimages per point, and the input `0` can add one more.
+The definition localizes the constant, so a tightened CompElliptic count
+(the optimum is `4`) changes it in one place. -/
+def deployedFibreBound : ℕ := 11
+
+instance : NeZero deployedFibreBound := ⟨by decide⟩
+
+/-- The deployed Pallas mapping has at most `deployedFibreBound` preimages
+per point: the nonzero ones counted by `Pallas.card_mapToCurve_fibre_le`,
+and possibly `0`. This discharges the simulator's fibre-size hypothesis. -/
+theorem pallas_singleFibre_card_le (P : SWPoint Pallas.curve) :
+    (singleFibre Pallas.mapToCurve P).card ≤ deployedFibreBound :=
+  card_singleFibre_le_succ (fun Q => Pallas.card_mapToCurve_fibre_le Q) P
+
+/-- The deployed Pallas round-count tail: below the cap `K`, more than `k`
+rounds are consumed with probability exactly
+`(1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^k`. -/
+theorem pallas_simCapped_tail (Q : SWPoint Pallas.curve) {K k : ℕ}
+    (h : k < K) :
+    (simCapped Pallas.mapToCurve deployedFibreBound Q K).toOuterMeasure {x | k < x.2}
+      = (1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^k :=
+  simCapped_tail Pallas.mapToCurve pallas_singleFibre_card_le Q K k h
+
+/-- The deployed Pallas round-count law: below the cap the round count is
+geometric. -/
+theorem pallas_simCapped_round_law (Q : SWPoint Pallas.curve) {K i : ℕ}
+    (h : i+1 < K) :
+    (simCapped Pallas.mapToCurve deployedFibreBound Q K).toOuterMeasure {x | x.2 = i+1}
+      = acceptProb Pallas.mapToCurve deployedFibreBound Q
+        * (1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^i :=
+  simCapped_round_law Pallas.mapToCurve pallas_singleFibre_card_le Q h
+
+/-- The deployed Pallas output law at cap `K` and the fibre sampler are
+within `(1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^K` of each other on every
+event, in both directions. -/
+theorem pallas_simOut_eventBiasLE (Q : SWPoint Pallas.curve) (K : ℕ) :
+    Zcash.Common.PMFEventBiasLE (simOut Pallas.mapToCurve deployedFibreBound Q K)
+      (fibreSampler Pallas.mapToCurve Q)
+      ((1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^K)
+    ∧ Zcash.Common.PMFEventBiasLE (fibreSampler Pallas.mapToCurve Q)
+      (simOut Pallas.mapToCurve deployedFibreBound Q K)
+      ((1 - acceptProb Pallas.mapToCurve deployedFibreBound Q)^K) :=
+  ⟨simOut_eventBiasLE_fibreSampler Pallas.mapToCurve
+      pallas_singleFibre_card_le Q K,
+   fibreSampler_eventBiasLE_simOut Pallas.mapToCurve
+      pallas_singleFibre_card_le Q K⟩
+
+/-- As its cap grows, the deployed Pallas simulator's output law converges
+to the fibre sampler on every event, for every target. -/
+theorem pallas_simOut_tendsto (Q : SWPoint Pallas.curve)
+    (S : Set (PallasBaseField × PallasBaseField)) :
+    Filter.Tendsto
+      (fun K => (simOut Pallas.mapToCurve deployedFibreBound Q K).toOuterMeasure S)
+      Filter.atTop
+      (nhds ((fibreSampler Pallas.mapToCurve Q).toOuterMeasure S)) :=
+  simOut_tendsto_fibreSampler Pallas.mapToCurve pallas_singleFibre_card_le Q S
+
+/-- The deployed Vesta mapping has at most `deployedFibreBound` preimages
+per point: the nonzero ones counted by `Vesta.card_mapToCurve_fibre_le`,
+and possibly `0`. This discharges the simulator's fibre-size hypothesis. -/
+theorem vesta_singleFibre_card_le (P : SWPoint Vesta.curve) :
+    (singleFibre Vesta.mapToCurve P).card ≤ deployedFibreBound :=
+  card_singleFibre_le_succ (fun Q => Vesta.card_mapToCurve_fibre_le Q) P
+
+/-- The deployed Vesta round-count tail: below the cap `K`, more than `k`
+rounds are consumed with probability exactly
+`(1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^k`. -/
+theorem vesta_simCapped_tail (Q : SWPoint Vesta.curve) {K k : ℕ}
+    (h : k < K) :
+    (simCapped Vesta.mapToCurve deployedFibreBound Q K).toOuterMeasure {x | k < x.2}
+      = (1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^k :=
+  simCapped_tail Vesta.mapToCurve vesta_singleFibre_card_le Q K k h
+
+/-- The deployed Vesta round-count law: below the cap the round count is
+geometric. -/
+theorem vesta_simCapped_round_law (Q : SWPoint Vesta.curve) {K i : ℕ}
+    (h : i+1 < K) :
+    (simCapped Vesta.mapToCurve deployedFibreBound Q K).toOuterMeasure {x | x.2 = i+1}
+      = acceptProb Vesta.mapToCurve deployedFibreBound Q
+        * (1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^i :=
+  simCapped_round_law Vesta.mapToCurve vesta_singleFibre_card_le Q h
+
+/-- The deployed Vesta output law at cap `K` and the fibre sampler are
+within `(1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^K` of each other on every
+event, in both directions. -/
+theorem vesta_simOut_eventBiasLE (Q : SWPoint Vesta.curve) (K : ℕ) :
+    Zcash.Common.PMFEventBiasLE (simOut Vesta.mapToCurve deployedFibreBound Q K)
+      (fibreSampler Vesta.mapToCurve Q)
+      ((1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^K)
+    ∧ Zcash.Common.PMFEventBiasLE (fibreSampler Vesta.mapToCurve Q)
+      (simOut Vesta.mapToCurve deployedFibreBound Q K)
+      ((1 - acceptProb Vesta.mapToCurve deployedFibreBound Q)^K) :=
+  ⟨simOut_eventBiasLE_fibreSampler Vesta.mapToCurve
+      vesta_singleFibre_card_le Q K,
+   fibreSampler_eventBiasLE_simOut Vesta.mapToCurve
+      vesta_singleFibre_card_le Q K⟩
+
+/-- As its cap grows, the deployed Vesta simulator's output law converges
+to the fibre sampler on every event, for every target. -/
+theorem vesta_simOut_tendsto (Q : SWPoint Vesta.curve)
+    (S : Set (VestaBaseField × VestaBaseField)) :
+    Filter.Tendsto
+      (fun K => (simOut Vesta.mapToCurve deployedFibreBound Q K).toOuterMeasure S)
+      Filter.atTop
+      (nhds ((fibreSampler Vesta.mapToCurve Q).toOuterMeasure S)) :=
+  simOut_tendsto_fibreSampler Vesta.mapToCurve vesta_singleFibre_card_le Q S
 
 end Zcash.Security.GroupHash
