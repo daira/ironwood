@@ -29,8 +29,8 @@ The machinery mirrors the single-oracle layer index-wise:
   transporting budgets;
 - `runFreshPMF` gives every query node a fresh answer from a per-index law,
   and `runFreshPMF_eventBiasLE` is the joint adaptive hybrid: per-index
-  one-squeeze biases `ε i` under budgets `Q i` compose to an event bias of at
-  most `∑ i, Q i * ε i`, even when later queries depend on earlier answers.
+  one-squeeze biases `ε i` under budgets `q i` compose to an event bias of at
+  most `∑ i, q i * ε i`, even when later queries depend on earlier answers.
 
 ## Why not generalize `OracleComp`?
 
@@ -81,13 +81,13 @@ def runTables : MultiOracleComp spec α → (∀ i, spec.domain i → spec.range
     (k : spec.range i → MultiOracleComp spec α) (O : ∀ i, spec.domain i → spec.range i) :
     (query i t k).runTables O = (k (O i t)).runTables O := rfl
 
-/-- The computation makes at most `Q i` queries to oracle `i` on every path
+/-- The computation makes at most `q i` queries to oracle `i` on every path
 (the per-index budget of VCVio's `IsQueryBound`). -/
 inductive QueryBound [DecidableEq ι] : MultiOracleComp spec α → (ι → ℕ) → Prop
-  | pure (a : α) (Q : ι → ℕ) : QueryBound (.pure a) Q
+  | pure (a : α) (q : ι → ℕ) : QueryBound (.pure a) q
   | query {i : ι} {t : spec.domain i} {k : spec.range i → MultiOracleComp spec α}
-      {Q : ι → ℕ} (h : ∀ r, QueryBound (k r) Q) :
-      QueryBound (.query i t k) (Function.update Q i (Q i + 1))
+      {q : ι → ℕ} (h : ∀ r, QueryBound (k r) q) :
+      QueryBound (.query i t k) (Function.update q i (q i + 1))
 
 /-- Implement every oracle of the source family by a single query to a target
 family: oracle `i`'s queries go to oracle `π i`, with points translated by `σ`
@@ -121,23 +121,23 @@ theorem queryBound_mapQuery [Fintype ι] [DecidableEq ι] {ι' : Type*}
     [DecidableEq ι'] {spec' : OracleSpec ι'} (π : ι → ι')
     (σ : ∀ i, spec.domain i → spec'.domain (π i))
     (ρ : ∀ i, spec'.range (π i) → spec.range i)
-    {A : MultiOracleComp spec α} {Q : ι → ℕ} (hQ : A.QueryBound Q) :
+    {A : MultiOracleComp spec α} {q : ι → ℕ} (hq : A.QueryBound q) :
     (A.mapQuery π σ ρ).QueryBound
-      (fun j => ∑ i ∈ Finset.univ.filter (fun i => π i = j), Q i) := by
-  induction hQ with
-  | pure a Q => exact .pure _ _
-  | @query i t k Q hk ih =>
+      (fun j => ∑ i ∈ Finset.univ.filter (fun i => π i = j), q i) := by
+  induction hq with
+  | pure a q => exact .pure _ _
+  | @query i t k q hk ih =>
       have hmem : i ∈ Finset.univ.filter (fun i' => π i' = π i) := by simp
       have hupd : (fun j => ∑ i' ∈ Finset.univ.filter (fun i' => π i' = j),
-          Function.update Q i (Q i + 1) i')
+          Function.update q i (q i + 1) i')
           = Function.update
-              (fun j => ∑ i' ∈ Finset.univ.filter (fun i' => π i' = j), Q i')
+              (fun j => ∑ i' ∈ Finset.univ.filter (fun i' => π i' = j), q i')
               (π i)
-              ((∑ i' ∈ Finset.univ.filter (fun i' => π i' = π i), Q i') + 1) := by
+              ((∑ i' ∈ Finset.univ.filter (fun i' => π i' = π i), q i') + 1) := by
         funext j
         rcases eq_or_ne j (π i) with rfl | hj
         · rw [Function.update_self, Finset.sum_update_of_mem hmem]
-          have hsum := Finset.add_sum_erase _ Q hmem
+          have hsum := Finset.add_sum_erase _ q hmem
           rw [Finset.erase_eq] at hsum
           omega
         · rw [Function.update_apply, if_neg hj]
@@ -156,7 +156,7 @@ noncomputable def runFreshPMF (law : ∀ i, PMF (spec.range i)) :
 
 /-- **Adaptive joint hybrid over an oracle family.** Per-index weighted
 one-squeeze biases accumulate at most once per visited query node, so budgets
-`Q i` compose them to an event bias of at most `∑ i, Q i * ε i` — even when
+`q i` compose them to an event bias of at most `∑ i, q i * ε i` — even when
 later query points, oracle choices, and continuations depend on earlier
 answers. The proof follows the single-oracle `runFreshPMF_eventBiasLE`, with
 the per-node charge landing on the queried index. -/
@@ -164,20 +164,20 @@ theorem runFreshPMF_eventBiasLE [Fintype ι] [DecidableEq ι]
     [∀ i, Fintype (spec.range i)]
     {actual ideal : ∀ i, PMF (spec.range i)} {ε : ι → ℝ≥0∞}
     (hstep : ∀ i, PMFWeightedBiasLE (actual i) (ideal i) (ε i))
-    {A : MultiOracleComp spec α} {Q : ι → ℕ} (hQ : A.QueryBound Q) :
+    {A : MultiOracleComp spec α} {q : ι → ℕ} (hq : A.QueryBound q) :
     PMFEventBiasLE (A.runFreshPMF actual) (A.runFreshPMF ideal)
-      (∑ i, (Q i : ℝ≥0∞) * ε i) := by
-  induction hQ with
-  | pure a Q =>
+      (∑ i, (q i : ℝ≥0∞) * ε i) := by
+  induction hq with
+  | pure a q =>
       intro S
       exact le_add_right le_rfl
-  | @query i t k Q hk ih =>
+  | @query i t k q hk ih =>
       intro S
       simp only [runFreshPMF, PMF.toOuterMeasure_bind_apply, tsum_fintype]
       have hcontinuation :
           ∑ r, actual i r * (runFreshPMF actual (k r)).toOuterMeasure S ≤
             ∑ r, actual i r * ((runFreshPMF ideal (k r)).toOuterMeasure S +
-              ∑ j, (Q j : ℝ≥0∞) * ε j) :=
+              ∑ j, (q j : ℝ≥0∞) * ε j) :=
         Finset.sum_le_sum fun r _ => mul_le_mul_right (ih r S) _
       refine hcontinuation.trans ?_
       simp_rw [mul_add]
@@ -191,12 +191,12 @@ theorem runFreshPMF_eventBiasLE [Fintype ι] [DecidableEq ι]
         (fun r => (PMF.toOuterMeasure_mono _ (Set.subset_univ _)).trans_eq (by
           rw [PMF.toOuterMeasure_apply, Set.indicator_univ]
           exact (runFreshPMF ideal (k r)).tsum_coe))
-      have hupd : ∑ j, (Function.update Q i (Q i + 1) j : ℝ≥0∞) * ε j
-          = (∑ j, (Q j : ℝ≥0∞) * ε j) + ε i := by
+      have hupd : ∑ j, (Function.update q i (q i + 1) j : ℝ≥0∞) * ε j
+          = (∑ j, (q j : ℝ≥0∞) * ε j) + ε i := by
         have hmem : i ∈ (Finset.univ : Finset ι) := Finset.mem_univ i
-        rw [show (fun j => (Function.update Q i (Q i + 1) j : ℝ≥0∞) * ε j)
-            = Function.update (fun j => (Q j : ℝ≥0∞) * ε j) i
-                (((Q i : ℝ≥0∞) + 1) * ε i) by
+        rw [show (fun j => (Function.update q i (q i + 1) j : ℝ≥0∞) * ε j)
+            = Function.update (fun j => (q j : ℝ≥0∞) * ε j) i
+                (((q i : ℝ≥0∞) + 1) * ε i) by
           funext j
           rcases eq_or_ne j i with rfl | hj
           · rw [Function.update_self, Function.update_self]
@@ -204,17 +204,17 @@ theorem runFreshPMF_eventBiasLE [Fintype ι] [DecidableEq ι]
             ring
           · rw [Function.update_apply, if_neg hj, Function.update_apply, if_neg hj]]
         rw [Finset.sum_update_of_mem hmem, add_mul, one_mul,
-          ← Finset.add_sum_erase _ (fun j => (Q j : ℝ≥0∞) * ε j) hmem, Finset.erase_eq]
+          ← Finset.add_sum_erase _ (fun j => (q j : ℝ≥0∞) * ε j) hmem, Finset.erase_eq]
         ring
       rw [hupd]
       calc
         ∑ r, actual i r * (runFreshPMF ideal (k r)).toOuterMeasure S
-            + ∑ j, (Q j : ℝ≥0∞) * ε j
+            + ∑ j, (q j : ℝ≥0∞) * ε j
           ≤ (∑ r, ideal i r * (runFreshPMF ideal (k r)).toOuterMeasure S + ε i)
-              + ∑ j, (Q j : ℝ≥0∞) * ε j :=
+              + ∑ j, (q j : ℝ≥0∞) * ε j :=
             add_le_add hweight le_rfl
         _ = ∑ r, ideal i r * (runFreshPMF ideal (k r)).toOuterMeasure S
-              + ((∑ j, (Q j : ℝ≥0∞) * ε j) + ε i) := by ring
+              + ((∑ j, (q j : ℝ≥0∞) * ε j) + ε i) := by ring
 
 end MultiOracleComp
 

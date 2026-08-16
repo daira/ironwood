@@ -81,32 +81,32 @@ def collapse (f : F → G) {α : Type*}
 
 /-- `toOracleComp` transports the single-oracle budget. -/
 theorem queryBound_toOracleComp {R α : Type*} {c : MultiOracleComp (oneSpec M R) α}
-    {Q : Unit → ℕ} (h : c.QueryBound Q) : (toOracleComp c).QueryBound (Q ()) := by
+    {q : Unit → ℕ} (h : c.QueryBound q) : (toOracleComp c).QueryBound (q ()) := by
   induction h with
-  | pure a Q => exact .pure a (Q ())
-  | @query i t k Q hk ih =>
+  | pure a q => exact .pure a (q ())
+  | @query i t k q hk ih =>
       cases i
       simp only [toOracleComp, Function.update_self]
       exact .query ih
 
-/-- The collapsed pair-only distinguisher makes at most `Q .pair + Q .hash`
+/-- The collapsed pair-only distinguisher makes at most `q .pair + q .hash`
 queries — the hash budget folds onto the pair oracle. -/
 theorem collapse_queryBound (f : F → G) {α : Type*}
-    {B : MultiOracleComp (twoSpec M F G) α} {Q : TwoOracle → ℕ} (hB : B.QueryBound Q) :
-    (collapse f B).QueryBound (Q .pair + Q .hash) :=
+    {B : MultiOracleComp (twoSpec M F G) α} {q : TwoOracle → ℕ} (hB : B.QueryBound q) :
+    (collapse f B).QueryBound (q .pair + q .hash) :=
   queryBound_toOracleComp (MultiOracleComp.queryBound_mapQuery
     (spec := twoSpec M F G) (spec' := oneSpec M (F × F))
     (fun _ => ()) (fun _ => id) (hashFromPair f) hB)
 
 /-- **Two-oracle indifferentiability from the one-oracle bound.** A deduplicated
-two-oracle distinguisher with per-oracle budget `Q` distinguishes the real and
+two-oracle distinguisher with per-oracle budget `q` distinguishes the real and
 ideal worlds by at most `δ`, whenever the one-oracle `IndiffFromRO` holds at the
-folded budget `Q .pair + Q .hash`. Both worlds derive the hash answer from the
+folded budget `q .pair + q .hash`. Both worlds derive the hash answer from the
 pair at the same message, so the hash oracle is eliminated by the collapse. -/
 theorem twoOracleIndiffFromRO [DecidableEq M] [Fintype F] [DecidableEq F] [Nonempty F]
-    [Fintype G] [DecidableEq G] [Nonempty G] (f : F → G) {Q : TwoOracle → ℕ} {δ : ℝ≥0∞}
-    (hIndiff : IndiffFromRO f (Q .pair + Q .hash) δ)
-    {B : MultiOracleComp (twoSpec M F G) Bool} (hB : B.QueryBound Q) :
+    [Fintype G] [DecidableEq G] [Nonempty G] (f : F → G) {q : TwoOracle → ℕ} {δ : ℝ≥0∞}
+    (hIndiff : IndiffFromRO f (q .pair + q .hash) δ)
+    {B : MultiOracleComp (twoSpec M F G) Bool} (hB : B.QueryBound q) :
     PMFEventBiasLE (((collapse f B).dedup []).runFreshPMF (PMF.uniformOfFintype (F × F)))
         (((collapse f B).dedup []).runFreshPMF (idealLaw f)) δ
       ∧ PMFEventBiasLE (((collapse f B).dedup []).runFreshPMF (idealLaw f))
