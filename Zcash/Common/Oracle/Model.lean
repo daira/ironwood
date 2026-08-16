@@ -72,4 +72,31 @@ theorem event_measure_le_of_bias {Ω : Type*} {actual ideal : PMF Ω} {ε bound 
     actual.toOuterMeasure event ≤ bound + ε := by
   exact (hbias event).trans (add_le_add hideal le_rfl)
 
+/-- A distribution's measure of any event is at most the total mass `1`. -/
+theorem _root_.PMF.toOuterMeasure_apply_le_one {Ω : Type*} (p : PMF Ω) (S : Set Ω) :
+    p.toOuterMeasure S ≤ 1 :=
+  le_of_le_of_eq (PMF.toOuterMeasure_mono _ (Set.subset_univ _))
+    ((PMF.toOuterMeasure_apply_eq_one_iff p Set.univ).mpr (Set.subset_univ _))
+
+/-- Two-sided event bias with vanishing `ε` forces convergence: when a family of
+distributions and a fixed ideal overshoot each other by at most `ε i` on every event, in
+both `PMFEventBiasLE` directions, and `ε` tends to `0` along the family's filter, the
+family's measure of every event tends to the ideal's. -/
+theorem tendsto_toOuterMeasure_of_eventBiasLE {Ω ι : Type*} {l : Filter ι}
+    {actual : ι → PMF Ω} {ideal : PMF Ω} {ε : ι → ℝ≥0∞}
+    (hup : ∀ i, PMFEventBiasLE (actual i) ideal (ε i))
+    (hdown : ∀ i, PMFEventBiasLE ideal (actual i) (ε i))
+    (hε : Filter.Tendsto ε l (nhds 0)) (S : Set Ω) :
+    Filter.Tendsto (fun i ↦ (actual i).toOuterMeasure S) l
+      (nhds (ideal.toOuterMeasure S)) := by
+  have hI : ideal.toOuterMeasure S ≠ ∞ :=
+    ne_top_of_le_ne_top ENNReal.one_ne_top (ideal.toOuterMeasure_apply_le_one S)
+  refine tendsto_of_tendsto_of_tendsto_of_le_of_le
+    (g := fun i ↦ ideal.toOuterMeasure S - ε i)
+    (h := fun i ↦ ideal.toOuterMeasure S + ε i) ?_ ?_ ?_ ?_
+  · simpa using ENNReal.Tendsto.sub tendsto_const_nhds hε (Or.inl hI)
+  · simpa using Filter.Tendsto.add tendsto_const_nhds hε
+  · exact fun i ↦ tsub_le_iff_right.mpr (hdown i S)
+  · exact fun i ↦ hup i S
+
 end Zcash.Common
