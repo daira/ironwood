@@ -371,6 +371,32 @@ noncomputable def simOut [Nonempty F] (f : F → G) (d : ℕ) [NeZero d]
     (Q : G) (K : ℕ) : PMF (F × F) :=
   (simCapped f d Q K).map Prod.fst
 
+omit [Fintype G] in
+/-- One step of the output law is an affine combination: with the rejection
+mass `1 - acceptProb f d Q` the sampler behaves as at cap `K`, and with the
+acceptance mass `acceptProb f d Q` it samples `fibreSampler f Q`. -/
+theorem simOut_succ_toOuterMeasure [Nonempty F] (f : F → G) {d : ℕ}
+    [NeZero d] (hd : ∀ P : G, (singleFibre f P).card ≤ d) (Q : G) (K : ℕ)
+    (S : Set (F × F)) :
+    (simOut f d Q (K+1)).toOuterMeasure S
+      = (1 - acceptProb f d Q) * (simOut f d Q K).toOuterMeasure S
+        + acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S := by
+  simp only [simOut, PMF.toOuterMeasure_map_apply]
+  rw [simCapped_succ_toOuterMeasure, rejectionRound_apply_none f hd Q]
+  have hpre : (fun x : (F × F) × ℕ => (x.1, x.2 + 1)) ⁻¹' (Prod.fst ⁻¹' S)
+      = Prod.fst ⁻¹' S := rfl
+  have hsum : (∑ p : F × F, rejectionRound f d Q (some p)
+        * Set.indicator (Prod.fst ⁻¹' S) (fun _ => (1 : ℝ≥0∞)) (p, 1))
+      = acceptProb f d Q * (fibreSampler f Q).toOuterMeasure S := by
+    rw [← accepted_mass f hd Q S]
+    refine Finset.sum_congr rfl fun p _ => ?_
+    by_cases hp : p ∈ S
+    · rw [Set.indicator_of_mem (show (p, 1) ∈ Prod.fst ⁻¹' S from hp),
+        Set.indicator_of_mem hp]
+    · rw [Set.indicator_of_notMem (show (p, 1) ∉ Prod.fst ⁻¹' S from hp),
+        Set.indicator_of_notMem hp]
+  rw [hpre, hsum]
+
 omit [DecidableEq F] [Fintype G] in
 /-- Toward a target with an empty fibre, the capped output law is exactly
 the fibre sampler at every cap `K`: every round rejects, so the run always
