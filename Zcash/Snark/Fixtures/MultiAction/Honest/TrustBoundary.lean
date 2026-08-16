@@ -67,7 +67,6 @@ declared-resource endpoint remains pinned alongside the `2^123` and `2^125` stag
 -- safe computable definitions and fails this census.
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedRelationFinder +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -80,7 +79,6 @@ assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProg
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.costedProgrammedCachedKnowledgeExtractor +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -658,7 +656,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_adaptiveActionStatementSurface_measur
 -- `theta` and conservatively charges every stage of the combined finder.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -676,7 +673,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_er
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -697,7 +693,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_kn
 -- group-work envelopes and the finder's certified read set discharged alongside it.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -718,7 +713,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_know
 -- trusted axiom owner beyond the ideal work-factor capstone it transports.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -736,7 +730,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2po
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -754,7 +747,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
@@ -779,7 +771,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
 -- would re-advertise the property the Action surface deliberately stopped advertising.
 assert_axioms Zcash.Snark.Contract.actionKnowledgeContract +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
   Zcash.Snark.Capstone.resolverPermutationCell_card_eq,
