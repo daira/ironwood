@@ -96,8 +96,9 @@ The basic idea of having two different cases depending on whether a given input
 yields solutions for a square root, however, is exactly what RFC 9380's
 "[Simplified SWU](https://www.rfc-editor.org/rfc/rfc9380.html#name-simplified-shallue-van-de-w)"
 construction does. For now we will ignore a complication that arises for short
-Weierstrass curves with $a = 0$, like Pallas and Vesta; we'll get to that
-later. Then, ignoring negligible cases we have:
+Weierstrass curves with $a = 0$, like Pallas and Vesta; we'll get to that in
+[its own section](#the-detour-through-an-isogenous-curve). Then, ignoring
+negligible cases we have:
 
 $$f(u) = \begin{cases}
   g(u),&\textsf{for half of the } u \\
@@ -185,10 +186,91 @@ all of our security arguments. For a clean abstraction we would like a mapping
 that cannot be distinguished, when applied to $\mathsf{hash\_to\_field}$
 outputs, from a uniform mapping onto the whole group.
 
-We've now established the motivation for using the $H(m) = f(u_0) + f(u_1)$
-construction, instead of a mapping from a single field element. The rest of
-this page is about why that construction works, specifically why it can
-reasonably be modelled as a random oracle.
+## The detour through an isogenous curve
+
+Now for the complication we deferred. The formulas of Simplified SWU require
+the curve coefficients to satisfy $a \neq 0$ and $b \neq 0$. Pallas and Vesta
+both have the curve equation $y^2 = x^3 + 5$, i.e. $a = 0$. This is not by
+coincidence; the same Complex Multiplication structure that allows us to
+find a cycle of curves is what blocks Simplified SWU from working.
+
+```admonish info title="One symmetry, two effects"
+The short Weierstrass form with $a = 0$ corresponds to curves with
+$j$-invariant $0$, that is, with Complex Multiplication by $\mathbb{Z}[\zeta_3]$
+and an automorphism group of order $6$: there are exactly six invertible mappings
+from the curve to itself that preserve the group structure, namely
+$(x, y) \mapsto (\zeta_3^k \cdot x, \pm y)$. (These stay on the curve because
+$x$ appears only cubed, and $(\zeta_3^k)^3 = 1$.)
+
+Daira-Emma Hopwood's ZK Study Club talk
+"Optimizing Halo and Constructing Graphs of Elliptic Curves"
+([part 1](https://www.youtube.com/watch?v=q7bAYgxkHUE),
+[bonus session](https://www.youtube.com/watch?v=IQVGIqcdxL4),
+[slides](https://raw.githubusercontent.com/daira/halographs/master/halographs.pdf))
+explains why the Pasta curves have this form: the two curves of a 2-cycle
+necessarily share their CM discriminant, and with known methods a cycle can only
+feasibly be found when that discriminant is tiny (the Pasta search fixed the
+smallest, $D = -3$, which is exactly the case $j = 0$). Slides 8 and 9 give a
+nice visual form of the argument.
+
+Simplified SWU, for its part, obtains its branch pair by *solving for the
+$x$-coordinate* at which the scaling defect
+
+$$g(\lambda x) - \lambda^3 g(x) = a \lambda (1 - \lambda^2) \cdot x + b (1 - \lambda^3)$$
+
+vanishes, where $\lambda = Z \cdot u^2$. The $x$-coefficient is proportional
+to $a$, so on a $j = 0$ curve there is nothing to solve for: every
+$x$-scaling is an isomorphism onto a sextic twist, making the defect
+constant in $x$, and it vanishes only when the scaling is one of the extra
+automorphisms — which $\lambda$, a nonsquare, never is.
+```
+
+RFC 9380 (section 6.6.3) resolves this with a detour: run Simplified SWU on
+an auxiliary curve with $a \neq 0$ that is *isogenous* to the target. An
+isogeny is a mapping from one curve to another, given by rational maps on
+the coordinates, that preserves the identity point. In general it need not
+be invertible; over the algebraic closure, a degree-$3$ isogeny is
+$3$-to-$1$. For Pallas and Vesta, the auxiliary curves are the ones that
+the protocol specification and the `pasta_curves` crate call iso-Pallas
+and iso-Vesta respectively. Having used Simplified SWU to obtain a point
+on the auxiliary curve, we apply the isogeny (here of degree 3; the Pasta
+curves were chosen to make the degree as low as possible), in order to land
+on the intended curve.
+
+For the analysis on this page the detour is short, at least conceptually.
+An isogeny is always a group homomorphism, and for these particular curve
+pairs it is a bijection on the rational points. (Isogenous curves have
+equally many rational points, and the kernels of these particular isogenies
+contain no rational point other than the identity.) A bijective relabelling
+of the outputs neither merges nor splits fibres, so the branch structure,
+the preimage counts, and the oddness that the character-sum analysis below
+relies on, all transport across unchanged. The formalization defines $f$
+(`mapToCurve`) as the composition and states the counting theorems directly
+on that mapping.
+
+Because the isogeny is a homomorphism, there are two equivalent ways to
+compute <span style="white-space: nowrap">$f(u_0) + f(u_1)$:</span>
+either by adding the two Simplified SWU outputs on the auxiliary curve and
+applying the isogeny once, or by mapping each point across the isogeny and
+then adding. The former method is used by RFC 9380 and `hashtocurve.sage`;
+the latter by `pasta_curves`. The two orders agree exactly
+(`mapHashOutputsToCurve_eq`), so nothing depends on the choice.
+
+Although a correctly constructed isogeny is *always* a homomorphism
+(Silverman, *The Arithmetic of Elliptic Curves*, Theorem III.4.8), Mathlib
+does not prove that or have the necessary machinery to do so in general.
+Instead we prove that the particular rational maps given in the protocol
+specification ([§5.4.9.8](https://zips.z.cash/protocol/protocol.pdf#concretegrouphashpallasandvesta))
+and `hashtocurve.sage` are bijective (`iso_map_bijective`) and are
+homomorphisms (`iso_map_add`). The latter turns out to be quite involved,
+requiring a careful choice of coordinates to make it feasible to prove the
+necessary identities using Mathlib's `linear_combination` tactic. The
+details are explained in `Homomorphism.lean`.
+
+We've now described the deployed construction in full, and established the
+motivation for using $H(m) = f(u_0) + f(u_1)$ instead of a mapping from a
+single field element. The rest of this page is about why that construction
+works, specifically why it can reasonably be modelled as a random oracle.
 
 ## Uniformity is not enough
 
@@ -219,8 +301,8 @@ worlds it is in:
 The construction is $(q, \eps)$-**indifferentiable** if some simulator makes
 every distinguisher's advantage at most $\eps$ after $q$ queries. The point
 of establishing this is the Maurer–Renner–Holenstein composition theorem:
-any protocol proven secure with an ideal $R$ in place of the group hash
-stays secure with the real $H$ — provided one is content to model
+any<sup>†</sup> protocol proven secure with an ideal $R$ in place of the
+group hash stays secure with the real $H$ — provided one is content to model
 $\mathsf{hash\_to\_field}$ as a random oracle. So indifferentiability is what
 lets the rest of the security development treat the group hash as a random
 oracle without having to reason about $\mathsf{hash\_to\_field}$ again.
@@ -235,6 +317,16 @@ guarantee real-world security on its own; it restricts attention to adversaries
 that treat $\mathsf{hash\_to\_field}$ as a black box, which is where analytical
 effort is most useful to spend. The [Security Models](security-models.md) page
 develops this framing.
+
+† The "any" has a shape requirement: the protocol's security game
+—challenger, adversary, and win condition together— must fold into a single
+distinguisher talking to the two oracles, as the games in this development
+do. Composition can genuinely fail for definitions that restrict the state
+shared between the stages of an adversary (Ristenpart–Shacham–Shrimpton,
+[Careful with Composition: Limitations of Indifferentiability and Universal Composability](https://eprint.iacr.org/2011/339)).
+The boundary is made precise, as a restriction on the memory available to
+the simulator, in Demay–Gaži–Hirt–Maurer,
+[Resource-Restricted Indifferentiability](https://eprint.iacr.org/2012/613).
 ```
 
 ## The simulator is forced
@@ -290,6 +382,32 @@ $p$ and $q$ on a finite set is $\sum_x |p(x) - q(x)|$, the total of the absolute
 differences of the probabilities they assign. At the deployed sizes $\eps$ is
 about $2^{-116}$.
 
+```admonish info title="Characters, for readers who know the DFT"
+The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
+$a \mapsto e^{2\pi i \cdot ka/N}$, one per frequency $k$. What makes those
+waves work is not anything analytic about the exponential — it is the
+identity
+$e^{2\pi i \cdot k(a+b)/N} = e^{2\pi i \cdot ka/N} \cdot e^{2\pi i \cdot kb/N}$,
+which turns addition of signal positions into multiplication of wave values.
+A character keeps exactly that property and discards the rest. For
+$\mathbb{Z}/N$ the characters are precisely the $N$ reference waves of the
+DFT; for a general finite abelian group there are exactly as many characters
+as group elements, and they support the same Fourier toolkit — in particular
+*orthogonality* (a nontrivial wave sums to zero over a full period) and
+*Parseval* (total energy is the same in the signal and frequency domains).
+Curve points under point addition are a finite abelian group, so all of this
+applies to them directly; no geometry enters.
+
+The regularity proof is then the standard DFT pipeline for a convolution:
+the distribution of $f(u_0) + f(u_1)$ for independent uniform $u_0, u_1$ is
+the convolution of two copies of the distribution of $f(u)$, and convolution
+in the signal domain is multiplication in the frequency domain, so the
+transform of $\mathsf{pairCount}\, f$ at frequency $\psi$ is the *square*
+$S(\psi)^2$ — just as convolving a signal with itself squares its spectrum.
+The Weil bound says every nontrivial frequency is small; squaring, Parseval,
+and Cauchy–Schwarz then yield the regularity distance.
+```
+
 ### The second ingredient: preimage sampling
 
 For each $Q$, the simulator must sample a pair uniformly from the fibre
@@ -297,7 +415,8 @@ $\{(u_0, u_1) \mid f(u_0) + f(u_1) = Q\}$. Sampling one coordinate is easy: draw
 $u_0$ uniformly. Then the second coordinate must satisfy $f(u_1) = Q - f(u_0)$,
 so $u_1$ ranges over the preimages of $Q - f(u_0)$ under the single map $f$.
 That single-term fibre has at most a constant number of elements — we saw in
-the note above that each point has at most $4$ preimages under $f$, and
+the "[Where the ⅜ comes from](#admonition-where-the-⅜-comes-from)" note above
+that each point has at most $4$ preimages under $f$, and
 CompElliptic's `card_mapToCurve_fibre_le` proves the weaker but sufficient
 bound of $10$. That is what makes the sampler efficient, and is where the
 simulator's cost analysis will enter (a later milestone).
@@ -381,7 +500,7 @@ at $\eps$.
 
 A single-query bound does not immediately bound a distinguisher that makes many
 adaptive queries — later queries may depend on earlier answers. The adaptive
-hybrid `runFreshPMF_eventBiasLE` (in `Zcash/Snark/Soundness/Oracle/`) bridges the
+hybrid `runFreshPMF_eventBiasLE` (in `Zcash/Common/Oracle/`) bridges the
 gap: it charges the one-squeeze bias once per query node, so a $Q$-query tree
 turns a single-query bias $\eps$ into an overall bias of at most $Q \cdot \eps$,
 even when the query tree is fully adaptive. Repeated queries to the same point
@@ -394,15 +513,19 @@ It's important to be precise about the status of each part.
 
 - **Formalized and machine-checked.** The regularity distance
   (`TwoTermUniformity`, conditional on the Weil bound), the single-term fibre
-  bound (`card_mapToCurve_fibre_le`), and the single-query bias in both
-  directions (`Sampler.lean`).
+  bound (`card_mapToCurve_fibre_le`), the single-query bias in both
+  directions (`Sampler.lean`), its composition into the full
+  distinguisher-advantage bound at the deployed mappings (`Indiff.lean`),
+  and the collapse of the two-oracle game onto that one-oracle form
+  (`TwoOracle.lean`).
 - **An unformalized mathematical input.** The Weil bound on the character sums of
   $f$ is a well-established but currently unformalized fact. It is not formalized
   because important pieces of the underlying mathematics are not yet present in
   Mathlib — but it is not in doubt. The regularity distance is proved relative to
   it, stated as the named hypothesis `WeilBounded`.
 - **A modelling choice, not a theorem.** That $\mathsf{hash\_to\_field}$ behaves
-  like a random oracle is a heuristic (see the note above). The
+  like a random oracle is a heuristic (see
+  [the note above](#admonition-a-heuristic-not-an-assumption)). The
   indifferentiability argument is what makes that heuristic transfer from
   $\mathsf{hash\_to\_field}$ to the group hash $H$; it does not remove it.
 - **In progress.** Composing the single-query bias into the full
