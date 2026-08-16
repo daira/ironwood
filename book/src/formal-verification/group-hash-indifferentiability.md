@@ -57,13 +57,15 @@ for $y$, roughly half of them should have two solutions, and a negligible
 proportion (only the case
 <span style="white-space: nowrap">$y^2 = 0 = x^3 + a \cdot x + b$</span>, which
 may not happen at all for a particular curve) have one solution. That is in fact
-what happens in practice. If the curve has $N$ points with $q = |\Field|$, and
+what happens in practice. If the curve has $N$ points, and
 $N$ is odd —as it is for Pallas and Vesta— then the number of
 $x$-coordinates that correspond to a point on the curve is exactly $(N - 1)/2$.
-The *proportion* that correspond to a point is $(N - 1)/2q$.
+The *proportion* that correspond to a point is $(N - 1)/(2 \cdot \FieldSize)$,
+writing $\FieldSize$ for the number of elements of $\Field$.
 The [Hasse bound](https://en.wikipedia.org/wiki/Hasse%27s_theorem_on_elliptic_curves),
-$|N - (q + 1)| \leq 2\sqrt{\mathstrut q}$, makes the heuristic precise:
-$(N - 1)/2q$ is within $1/\sqrt{\mathstrut q}$ of $1/2$.
+$|N - (\FieldSize + 1)| \leq 2\sqrt{\FieldSize}$, makes the
+heuristic precise: $(N - 1)/(2 \cdot \FieldSize)$ is within
+$1/\sqrt{\FieldSize}$ of $\fraction{1}{2}$.
 
 For fixed generators, having a group hash that is not a total function is not
 so much of a problem: we can extend it to a total function by repeated hashing with
@@ -141,7 +143,7 @@ About $\fraction{3}{8}$ of the output space is reached
 —with 2 or 4 preimages per reached point excluding exceptional cases— and
 the remaining $\fraction{5}{8}$ by neither map. (These proportions are heuristic;
 we confirmed them by exact computation on small curves, and they can be proven
-with error $O(1/\sqrt{\mathstrut q})$ by counting points on the branch varieties —
+with error $O(1/\sqrt{\FieldSize})$ by counting points on the branch varieties —
 Lang–Weil, "Number of Points of Varieties in Finite Fields",
 *Amer. J. Math.* 76(4), 1954, [doi:10.2307/2372655](https://doi.org/10.2307/2372655).
 A modern exposition of that paper is Tao,
@@ -358,10 +360,10 @@ circle. The *character sum* of $f$ at $\psi$ is
 $$S(\psi) = \sum_{u \in \Field} \psi(f(u)),$$
 
 the character added up over all outputs of $f$. The trivial character
-$\psi \equiv 1$ gives $S(\psi) = |\Field|$; a *Weil bound* bounds the size
-$|S(\psi)|$ of the nontrivial characters, from which such character-sum bounds
-follow. The name "Weil bound" is from André Weil's proof of the Riemann hypothesis
-for algebraic curves over finite fields
+$\psi \equiv 1$ gives $S(\psi) = \FieldSize$; a *Weil bound* bounds the
+absolute value $|S(\psi)|$ at the nontrivial characters, from which such
+character-sum bounds follow. The name "Weil bound" is from André Weil's
+proof of the Riemann hypothesis for algebraic curves over finite fields
 ([Sur les courbes algébriques et les variétés qui s'en déduisent](http://denise.vella.chemla.free.fr/Weil-courbes-varietes.pdf), 1948).
 A modern presentation of the elliptic-curve case is Kohel–Shparlinski,
 [On Exponential Sums and Group Generators for Elliptic Curves over Finite Fields](https://www.i2m.univ-amu.fr/perso/david.kohel/pub/character.pdf), *ANTS-IV*, *LNCS* 1838, 2000.
@@ -371,16 +373,16 @@ exactly when all its nontrivial character sums vanish — so small nontrivial
 character sums mean close to uniform. That is what lets a Weil bound control
 the *regularity distance*
 
-$$\sum_{Q} \left| \frac{\mathsf{pairCount}\, f\, Q}{|\Field|^2} - \frac{1}{|\Group|} \right| \le \eps,$$
+$$\sum_{Q} \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \eps,$$
 
 where $\mathsf{pairCount}\, f\, Q$ counts the pairs $(u_0, u_1)$ with
 $f(u_0) + f(u_1) = Q$ — the size of the *fibre* of $Q$. Dividing by
-$|\Field|^2$ turns the count into the probability that the two-term sum lands
+$(\FieldSize)^2$ turns the count into the probability that the two-term sum lands
 on $Q$, so the sum is the $L^1$ distance between that output distribution and the
 uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
-$p$ and $q$ on a finite set is $\sum_x |p(x) - q(x)|$, the total of the absolute
-differences of the probabilities they assign. At the deployed sizes $\eps$ is
-about $2^{-116}$.
+$\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
+absolute differences of the probabilities they assign. At the deployed sizes
+$\eps$ is about $2^{-116}$.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -460,14 +462,14 @@ $Q = f(u_0) + f(u_1)$. Take a nonempty fibre of $Q$, with
 $k = \mathsf{pairCount}\, f\, Q \ge 1$ pairs. Every pair in it looks identical
 in both worlds:
 
-- the ideal world puts $\frac{1}{|\Group| \cdot k}$ on each pair — it spreads
-  the $\frac{1}{|\Group|}$ that $R$ gives to $Q$ uniformly over the $k$ pairs;
-- the real world puts $\frac{1}{|\Field|^2}$ on each pair.
+- the ideal world puts $\frac{1}{\GroupSize \cdot k}$ on each pair — it spreads
+  the $\frac{1}{\GroupSize}$ that $R$ gives to $Q$ uniformly over the $k$ pairs;
+- the real world puts $\frac{1}{(\FieldSize)^2}$ on each pair.
 
 So the absolute difference is one constant across all $k$ pairs of the fibre,
 and summed over the fibre it is
 
-$$k \cdot \left| \frac{1}{|\Group| \cdot k} - \frac{1}{|\Field|^2} \right| = \left| \frac{1}{|\Group|} - \frac{k}{|\Field|^2} \right|,$$
+$$k \cdot \left| \frac{1}{\GroupSize \cdot k} - \frac{1}{(\FieldSize)^2} \right| = \left| \frac{1}{\GroupSize} - \frac{k}{(\FieldSize)^2} \right|,$$
 
 a single term of the regularity distance. The $k$ cancels inside the first
 fraction. The fibre size enters only as $\mathsf{pairCount}\, f\, Q$ in that
@@ -485,14 +487,14 @@ ideal law's probabilities, which shrinks $\text{real} - \text{ideal}$. So this
 direction is bounded by the nonempty part of the regularity distance alone.
 
 When the **ideal** law overshoots the real one, the fallback contributes a
-*fallback mass* $\frac{e}{|\Group|}$, spread over all pairs, where $e$ is the
+*fallback mass* $\frac{e}{\GroupSize}$, spread over all pairs, where $e$ is the
 number of group elements the two-term sum misses — the mass $R$ sends to those
 missed elements. That mass is exactly the empty-fibre part of the *same*
 regularity distance: an empty fibre has $\mathsf{pairCount}\, f\, Q = 0$, so
-its term is $\left| 0 - \frac{1}{|\Group|} \right| = \frac{1}{|\Group|}$, and
-there are $e$ of them, totalling $\frac{e}{|\Group|}$. So the nonempty part
+its term is $\left| 0 - \frac{1}{\GroupSize} \right| = \frac{1}{\GroupSize}$, and
+there are $e$ of them, totalling $\frac{e}{\GroupSize}$. So the nonempty part
 and the fallback mass together are the *whole* regularity distance
-$\sum_Q \left| \frac{\mathsf{pairCount}\, f\, Q}{|\Field|^2} - \frac{1}{|\Group|} \right| \le \eps$.
+$\sum_Q \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \eps$.
 The fallback fills in the terms the nonempty part left out, and the bound stays
 at $\eps$.
 
@@ -501,8 +503,8 @@ at $\eps$.
 A single-query bound does not immediately bound a distinguisher that makes many
 adaptive queries — later queries may depend on earlier answers. The adaptive
 hybrid `runFreshPMF_eventBiasLE` (in `Zcash/Common/Oracle/`) bridges the
-gap: it charges the one-squeeze bias once per query node, so a $Q$-query tree
-turns a single-query bias $\eps$ into an overall bias of at most $Q \cdot \eps$,
+gap: it charges the one-squeeze bias once per query node, so a $q$-query tree
+turns a single-query bias $\eps$ into an overall bias of at most $q \cdot \eps$,
 even when the query tree is fully adaptive. Repeated queries to the same point
 are first collapsed by `dedup`, so a point asked twice keeps one answer rather
 than drawing a fresh one.

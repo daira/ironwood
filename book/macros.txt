@@ -17,6 +17,10 @@
 \Fp:{\mathbb{F}_p}
 \Fq:{\mathbb{F}_q}
 
+\card:{\kern-0.05em\textsf{\#}{#1}}
+\GroupSize:{\card{\Group}}
+\FieldSize:{\card{\Field}}
+
 \Domain:{M}
 
 # Indifferentiability
