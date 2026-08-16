@@ -419,10 +419,11 @@ $u_0$ uniformly. Then the second coordinate must satisfy $f(u_1) = Q - f(u_0)$,
 so $u_1$ ranges over the preimages of $Q - f(u_0)$ under the single map $f$.
 That single-term fibre has at most a constant number of elements — we saw in
 the "[Where the ⅜ comes from](#admonition-where-the-⅜-comes-from)" note above
-that each point has at most $4$ preimages under $f$, and
+that each point has at most $4$ nonzero preimages under $f$, and
 CompElliptic's `card_mapToCurve_fibre_le` proves the weaker but sufficient
-bound of $10$. That is what makes the sampler efficient, and is where the
-simulator's cost analysis will enter (a later milestone).
+bound of $10$, again counting nonzero preimages. That is what makes the
+sampler efficient, and is where the simulator's cost analysis will enter
+(a later milestone).
 
 ## The single-query bias, in detail
 
