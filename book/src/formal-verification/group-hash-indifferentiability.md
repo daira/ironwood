@@ -383,8 +383,8 @@ on $Q$, so the sum is the $L^1$ distance between that output distribution and th
 uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
 $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
 absolute differences of the probabilities they assign. At the deployed
-sizes, a Weil constant of the order that the established analyses give for
-sibling encodings would put $\eps$ near $2^{-116}$.
+sizes, the Weil constant calculated for the deployed encoding puts $\eps$ near
+$2^{-120}$, as discussed in the next section.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -411,6 +411,37 @@ $S(\psi)^2$ — just as convolving a signal with itself squares its spectrum.
 The Weil bound says every nontrivial frequency is small; squaring, Parseval,
 and Cauchy–Schwarz then yield the regularity distance.
 ```
+
+#### Calculating the Weil constant
+
+The regularity distance is proved relative to the named hypothesis `WeilBounded`.
+That hypothesis is parameterized: it asserts a constant $C$ with every nontrivial
+character sum of the zero-repaired mapping at most $C \cdot \sqrt{\FieldSize}$,
+and the final advantage scales with $C^2$.
+
+The Weil bound places a bound on character sums along covering curves of the
+encoding, once $C$ is calculated via a per-encoding genus computation. Proving
+this result in general requires machinery that is not yet in Mathlib, which is
+why the hypothesis is named rather than discharged; that is where the deep
+number theory lives.
+
+The calculation of the constant $C$ for a specific encoding and curves, on the
+other hand, is relatively straightforward. For example,
+[Farashahi–Fouque–Shparlinski–Tibouchi–Voloch](https://eprint.iacr.org/2010/539)
+carry out this calculation for a sibling of the deployed encoding —simplified SWU
+with $Z = -1$, over fields of size $\equiv 3 \pmod 4$, with a quadratic-residue
+sign rule— and obtain $|S_f(\chi)| \le 52\sqrt{\FieldSize} + 151$ from genus-8
+coverings.
+
+The deployed variant differs in all three parameters. The Weil bound for both
+Pallas and Vesta has been calculated as $|S_f(\chi)| \le 10\sqrt{\FieldSize} + 1$
+from genus-6 coverings (see zcash/pasta's
+[`weilbound.sage`](https://github.com/zcash/pasta/blob/master/weilbound.sage)).
+However, this has not yet been formally proven in CompElliptic (see its
+[`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md)
+and [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)).
+Discharging the `WeilBounded` hypothesis means performing that proof *and*
+citing the general Weil bound result.
 
 ### The second ingredient: preimage sampling
 
@@ -545,23 +576,10 @@ It's important to be precise about the status of each part.
   with the simulator as the exhibited ideal-world witness (`Simulator.lean`
   and the capped section of `Indiff.lean`).
 - **An unformalized mathematical input.** The regularity distance is proved
-  relative to the named hypothesis `WeilBounded`, and that hypothesis is
-  parameterized: it asserts a constant $C$ with every nontrivial character sum
-  of the zero-repaired mapping at most $C \cdot \sqrt{\FieldSize}$, and the
-  final advantage scales with $C^2$. Supplying such a constant is where the
-  deep number theory lives. The Weil bound (the Riemann hypothesis for curves
-  over finite fields, proved by Weil in 1948) bounds character sums along
-  covering curves of the encoding, once a per-encoding genus computation is
-  done. Proving the Weil bound in general requires machinery that is not yet
-  in Mathlib, which is why the hypothesis is named rather than discharged.
-  [Farashahi–Fouque–Shparlinski–Tibouchi–Voloch](https://eprint.iacr.org/2010/539)
-  carry this out for a sibling of the deployed encoding — simplified SWU with
-  $Z = -1$, over fields of size $\equiv 3 \pmod 4$, with a quadratic-residue
-  sign rule — and obtain $|S_f(\chi)| \le 52\sqrt{\FieldSize} + 151$ from
-  genus-8 coverings. The deployed variant differs in all three parameters, so
-  its constant has not been derived, here or (as far as we know) in the
-  literature. Discharging the hypothesis means redoing that genus computation
-  for the deployed branch curves, not citing the Weil bound.
+  relative to the named hypothesis `WeilBounded`, which is parameterized as
+  discussed in [Calculating the Weil constant](#calculating-the-weil-constant).
+  As stated there, discharging the hypothesis requires formalizing the bound
+  calculation *and* citing the general Weil bound result.
 - **A modelling choice, not a theorem.** That $\mathsf{hash\_to\_field}$ behaves
   like a random oracle is a heuristic (see
   [the note above](#admonition-a-heuristic-not-an-assumption)). The
@@ -582,7 +600,9 @@ a random oracle with advantage at most $q \cdot (\eps + 4/\FieldSize)$
 (`pallas_indiffFromRO`, `vesta_indiffFromRO`, via the two-oracle collapse
 `twoOracleIndiffFromRO`). Here $\eps$ is bounded using the one
 unformalized mathematical input, the Weil-type character-sum bound
-discussed above.
+discussed above. At the deployed Pallas and Vesta group hashes, the
+calculated bound puts $\eps$ near $2^{-120}$ — the dominant term of the
+advantage, since $4/\FieldSize$ is roughly $2^{-252}$.
 
 The ideal world in that statement is played by a simulator, and the
 simulator is a real algorithm, not just a distribution: it hashes once,
@@ -594,16 +614,16 @@ $\mathsf{acceptProb}$ is a round's chance of accepting, so the cap $K$
 makes that difference as small as desired. The indifferentiability
 statement holds with this algorithmic simulator in place of the idealized
 one, at the cost of that same per-query term
-(`pallas_indiffFromROCapped`, `vesta_indiffFromROCapped`).
+(`pallas_indiffFromROCapped`, `vesta_indiffFromROCapped`), conditional
+on the Weil bound hypothesis.
 
-Two things remain, and they are named rather than hidden. The Weil-bound
-hypothesis needs its constant derived for the deployed encoding
-([CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)); at
-the deployed sizes, with a constant of the size found for the sibling
-encoding, $\eps$ comes to about $2^{-116}$ — the dominant term of the
-advantage, since $4/\FieldSize$ is roughly $2^{-252}$. And the security
-games that want to use this result need the group hash added to their
-adversary's interface first
-([#188](https://github.com/zcash/ironwood/issues/188)); the composition
-requirement for multi-stage games (the [† note above](#dagger-note))
-applies at each consumption site.
+Two things remain, both tracked in issues:
+
+* The Weil-bound hypothesis's constant has been calculated but is not yet
+  formally proven. [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)
+  tracks the remaining steps to a fully rigorous account.
+* The security games that want to use this result need the group hash
+  added to their adversary's interface first
+  ([#188](https://github.com/zcash/ironwood/issues/188)). The composition
+  requirement for multi-stage games (the [† note above](#dagger-note))
+  applies at each consumption site.
