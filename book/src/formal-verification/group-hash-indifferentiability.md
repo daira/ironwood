@@ -437,11 +437,15 @@ The deployed variant differs in all three parameters. The Weil bound for both
 Pallas and Vesta has been calculated as $|S_f(\chi)| \le 10\sqrt{\FieldSize} + 1$
 from genus-6 coverings (see zcash/pasta's
 [`weilbound.sage`](https://github.com/zcash/pasta/blob/master/weilbound.sage)).
-However, this has not yet been formally proven in CompElliptic (see its
-[`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md)
-and [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)).
-Discharging the `WeilBounded` hypothesis means performing that proof *and*
-citing the general Weil bound result.
+The calculation is proven on paper —modulo results cited as established
+mathematics— in CompElliptic's
+[`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md);
+formalizing it in Lean is tracked at
+[CompElliptic#28](https://github.com/daira/CompElliptic/issues/28).
+Discharging the `WeilBounded` hypothesis means formalizing the bound
+calculation *and* citing the general Weil bound result — Weil's theorem
+itself stays a cited input, since formalizing it would require machinery
+not present in Mathlib.
 
 ### The second ingredient: preimage sampling
 
@@ -619,9 +623,10 @@ on the Weil bound hypothesis.
 
 Two things remain, both tracked in issues:
 
-* The Weil-bound hypothesis's constant has been calculated but is not yet
-  formally proven. [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)
-  tracks the remaining steps to a fully rigorous account.
+* The Weil-bound hypothesis's constant has been calculated, and the
+  calculation proven on paper from cited literature, but not formalized
+  in Lean. [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)
+  tracks that formalization; Weil's theorem itself stays a cited input.
 * The security games that want to use this result need the group hash
   added to their adversary's interface first
   ([#188](https://github.com/zcash/ironwood/issues/188)). The composition
