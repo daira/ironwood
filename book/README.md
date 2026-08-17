@@ -17,6 +17,17 @@ You can render locally and test using `mdbook serve`. Ensure you have installed
     * This is expensive to perform re-renders with; try not to use this in
       `mdbook serve` mode until you need to test your documentation links resolve properly.
 
+The required tools can be installed in one command (`--force` upgrades an
+older version that is already installed):
+
+```sh
+cargo install --locked --force \
+  mdbook@0.4.52 \
+  mdbook-katex@0.9.4 \
+  mdbook-mermaid@0.16.2 \
+  mdbook-admonish@1.20.0
+```
+
 Pages can be marked as in-progress by adding `<!-- todo -->` to their line in
 `src/SUMMARY.md`, which renders a badge in the sidebar.
 
