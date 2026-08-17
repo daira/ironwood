@@ -382,9 +382,17 @@ $(\FieldSize)^2$ turns the count into the probability that the two-term sum land
 on $Q$, so the sum is the $L^1$ distance between that output distribution and the
 uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
 $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
-absolute differences of the probabilities they assign. At the deployed
-sizes, the Weil constant calculated for the deployed encoding puts $\eps$ near
-$2^{-120}$, as discussed in the next section.
+absolute differences of the probabilities they assign.
+
+The formalization accepts any budget $\eps$ whose square dominates
+$(\GroupSize - 1) \cdot C^4 / (\FieldSize)^2$ (`sum_abs_prob_dev_le`) — that
+is, any $\eps$ just above $C^2 \sqrt{\GroupSize} / \FieldSize$, where $C$ is
+the Weil constant discussed in the
+[next section](#calculating-the-weil-constant). At the deployed sizes
+$\FieldSize \approx \GroupSize \approx 2^{254}$ and $C = 21/2$: squaring the
+constant gives $C^2 \approx 2^{6.8}$, the square root halves the exponent to
+$\sqrt{\GroupSize} \approx 2^{127}$, and so
+$\eps \approx 2^{6.8} \cdot 2^{127} / 2^{254} \approx 2^{-120}$.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -605,8 +613,10 @@ a random oracle with advantage at most $q \cdot (\eps + 4/\FieldSize)$
 `twoOracleIndiffFromRO`). Here $\eps$ is bounded using the one
 unformalized mathematical input, the Weil-type character-sum bound
 discussed above. At the deployed Pallas and Vesta group hashes, the
-calculated bound puts $\eps$ near $2^{-120}$ — the dominant term of the
-advantage, since $4/\FieldSize$ is roughly $2^{-252}$.
+calculated bound puts $\eps$ near $2^{-120}$ (the arithmetic is at the end
+of [the regularity section](#the-first-ingredient-regularity)) — the
+dominant term of the advantage, since $4/\FieldSize$ is roughly
+$2^{-252}$.
 
 The ideal world in that statement is played by a simulator, and the
 simulator is a real algorithm, not just a distribution: it hashes once,
