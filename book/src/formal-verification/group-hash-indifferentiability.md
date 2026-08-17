@@ -422,10 +422,27 @@ That single-term fibre has at most a constant number of elements — we saw in
 the "[Where the ⅜ comes from](#admonition-where-the-⅜-comes-from)" note above
 that each point has at most $4$ nonzero preimages under $f$, and
 CompElliptic's `card_mapToCurve_fibre_le` proves the weaker but sufficient
-bound of $10$, again counting nonzero preimages. That is what makes the
-sampler efficient, and the simulator's cost analysis rests on it
-(`Simulator.lean`, instantiated at the deployed mappings at the constant
-`deployedFibreBound`, which also counts the input $0$).
+bound of $10$, again counting nonzero preimages.
+
+Care is needed to make the *pair* uniform on the fibre. Drawing $u_1$
+uniformly from the preimages of $Q - f(u_0)$ would over-weight the pairs
+whose preimage set is small: the pair's probability would be
+$\frac{1}{\FieldSize \cdot c}$ with $c$ the size of its preimage set,
+and $c$ varies across the fibre. So the simulator instead fixes a bound
+$d$ on the preimage counts and draws a slot index $0 \leq j < d$ uniformly,
+alongside $u_0$. If the preimage set of $Q - f(u_0)$ has an element with
+index $j$, the round accepts the pair $(u_0, u_1)$ with $u_1$ that element;
+otherwise it rejects, and the simulator redraws both $u_0$ and $j$. In
+particular an empty preimage set always rejects. Now every pair of the
+fibre consistent with $u_0$ is accepted in a round with the same
+probability $\frac{1}{\FieldSize \cdot d}$, whatever the size of its
+preimage set, so conditional on acceptance the pair is exactly uniform on
+the fibre. The bound $d$ also controls the cost: a round accepts with
+probability $\frac{\mathsf{pairCount}\, f\, Q}{\FieldSize \cdot d}$, about
+$1/d$ for typical $Q$, so few rounds are needed. This is the rejection
+sampler whose costs and output law `Simulator.lean` proves, instantiated
+at the deployed mappings at the constant `deployedFibreBound = 11` — the
+bound of $10$ for nonzero preimages, plus one for the input $0$.
 
 ## The single-query bias, in detail
 
