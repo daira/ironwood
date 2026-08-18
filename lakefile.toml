@@ -15,9 +15,10 @@ rev = "6e6328d7"
 [[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
-# Temporarily pinned to the head of the `indiff-counting` branch (CompElliptic PR #27,
-# the counting interface for the indifferentiability arc) until it merges.
-rev = "f66c93308ea62e6e26c8d3c0432af058d9f5131b"
+# Temporarily pinned to the head of the `weil-covers` branch (CompElliptic PR #29,
+# the reduction of the deployed Weil bound to Weil's theorem at the branch
+# covers, stacked on PR #27) until they merge.
+rev = "1cd909e6d847d47a1674685743c2fc99c4e6e74b"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.

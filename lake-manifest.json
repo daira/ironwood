@@ -19,10 +19,10 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "f66c93308ea62e6e26c8d3c0432af058d9f5131b",
+   "rev": "1cd909e6d847d47a1674685743c2fc99c4e6e74b",
    "name": "CompElliptic",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "f66c93308ea62e6e26c8d3c0432af058d9f5131b",
+   "inputRev": "1cd909e6d847d47a1674685743c2fc99c4e6e74b",
    "inherited": false,
    "configFile": "lakefile.toml"
   },
