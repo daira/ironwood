@@ -447,13 +447,19 @@ from genus-6 coverings (see zcash/pasta's
 [`weilbound.sage`](https://github.com/zcash/pasta/blob/master/weilbound.sage)).
 The calculation is proven on paper —modulo results cited as established
 mathematics— in CompElliptic's
-[`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md);
-formalizing it in Lean is tracked at
-[CompElliptic#28](https://github.com/daira/CompElliptic/issues/28).
-Discharging the `WeilBounded` hypothesis means formalizing the bound
-calculation *and* citing the general Weil bound result — Weil's theorem
-itself stays a cited input, since formalizing it would require machinery
-not present in Mathlib.
+[`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md),
+and formalized down to Weil's theorem at the two branch covers
+(CompElliptic's `Hashing/BranchCovers.lean` and
+`Hashing/WeilInstance.lean`): everything between the per-cover inputs
+$|S_{C_j}(\chi)| \le (2 \cdot 6 - 2)\sqrt{\FieldSize}$ —stated in squared,
+square-root-free form— and the deployed `WeilBounded` instances is
+machine-checked. Weil's theorem itself stays the cited input: even stating
+it needs vocabulary (genus, places, covers of curves) that Mathlib does
+not yet have. That vocabulary is out of scope for
+[CompElliptic#28](https://github.com/daira/CompElliptic/issues/28), which
+covers the computation and the paper proof's supporting facts; the
+vocabulary itself is
+[CompElliptic#30](https://github.com/daira/CompElliptic/issues/30).
 
 ### The second ingredient: preimage sampling
 
@@ -587,11 +593,13 @@ It's important to be precise about the status of each part.
   laws, its output law's distance to the fibre sampler, and the composition
   with the simulator as the exhibited ideal-world witness (`Simulator.lean`
   and the capped section of `Indiff.lean`).
-- **An unformalized mathematical input.** The regularity distance is proved
-  relative to the named hypothesis `WeilBounded`, which is parameterized as
+- **An unformalized mathematical input.** The regularity distance rests on
+  Weil's theorem at the two branch covers — the `CharSumBounded` inputs
   discussed in [Calculating the Weil constant](#calculating-the-weil-constant).
-  As stated there, discharging the hypothesis requires formalizing the bound
-  calculation *and* citing the general Weil bound result.
+  The bound calculation between those inputs and the endpoints is
+  machine-checked; the inputs themselves are cited — stating them needs
+  function-field vocabulary that Mathlib does not yet have
+  ([CompElliptic#30](https://github.com/daira/CompElliptic/issues/30)).
 - **A modelling choice, not a theorem.** That $\mathsf{hash\_to\_field}$ behaves
   like a random oracle is a heuristic (see
   [the note above](#admonition-a-heuristic-not-an-assumption)). The
@@ -608,15 +616,14 @@ instances.
 
 A distinguisher that makes $q$ queries, and sees both the field-element
 hash and the group hash built from it, can tell the real construction from
-a random oracle with advantage at most $q \cdot (\eps + 4/\FieldSize)$
+a random oracle with advantage at most $q/2^{120}$
 (`pallas_indiffFromRO`, `vesta_indiffFromRO`, via the two-oracle collapse
-`twoOracleIndiffFromRO`). Here $\eps$ is bounded using the one
-unformalized mathematical input, the Weil-type character-sum bound
-discussed above. At the deployed Pallas and Vesta group hashes, the
-calculated bound puts $\eps$ near $2^{-120}$ (the arithmetic is at the end
-of [the regularity section](#the-first-ingredient-regularity)) — the
-dominant term of the advantage, since $4/\FieldSize$ is roughly
-$2^{-252}$.
+`twoOracleIndiffFromRO`). The only unformalized mathematical input is
+Weil's theorem at the two branch covers, discussed above. The $2^{-120}$
+budget absorbs the regularity distance, about $2^{-120.2}$ (the arithmetic
+is at the end of
+[the regularity section](#the-first-ingredient-regularity)), and the
+zero-repair transport $4/\FieldSize$, roughly $2^{-252}$.
 
 The ideal world in that statement is played by a simulator, and the
 simulator is a real algorithm, not just a distribution: it hashes once,
@@ -633,10 +640,14 @@ on the Weil bound hypothesis.
 
 Two things remain, both tracked in issues:
 
-* The Weil-bound hypothesis's constant has been calculated, and the
-  calculation proven on paper from cited literature, but not formalized
-  in Lean. [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28)
-  tracks that formalization; Weil's theorem itself stays a cited input.
+* The Weil bound rests on a cited input: Weil's theorem at the two branch
+  covers. The calculation from that input to the deployed constant is
+  formalized; the input's own statement needs function-field vocabulary
+  (genus, places, covers) that Mathlib does not yet have. What remains of
+  [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28) is
+  formalizing the paper proof's supporting facts; the vocabulary is out
+  of its scope, tracked at
+  [CompElliptic#30](https://github.com/daira/CompElliptic/issues/30).
 * The security games that want to use this result need the group hash
   added to their adversary's interface first
   ([#188](https://github.com/zcash/ironwood/issues/188)). The composition
