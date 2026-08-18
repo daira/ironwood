@@ -15,10 +15,8 @@ rev = "6e6328d7"
 [[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
-# Temporarily pinned to the head of the `weil-covers` branch (CompElliptic PR #29,
-# the reduction of the deployed Weil bound to Weil's theorem at the branch
-# covers, stacked on PR #27) until they merge.
-rev = "1cd909e6d847d47a1674685743c2fc99c4e6e74b"
+# CompElliptic main, at the merge of the Weil-bound reduction (PR #29).
+rev = "2c0444035a84db957f27f06433715058d1e890ad"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.

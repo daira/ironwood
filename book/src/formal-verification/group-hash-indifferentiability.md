@@ -453,9 +453,12 @@ and formalized down to Weil's theorem at the two branch covers
 `Hashing/WeilInstance.lean`): everything between the per-cover inputs
 $|S_{C_j}(\chi)| \le (2 \cdot 6 - 2)\sqrt{\FieldSize}$ —stated in squared,
 square-root-free form— and the deployed `WeilBounded` instances is
-machine-checked. Weil's theorem itself stays the cited input: even stating
-it needs vocabulary (genus, places, covers of curves) that Mathlib does
-not yet have. That vocabulary is out of scope for
+machine-checked. The paper proof's own checkable inputs are also
+machine-checked (CompElliptic's `Hashing/WeilSupport.lean`), and the
+design doc cites each proven fact at its point of use, with CI keeping
+the references exact. Weil's theorem itself stays the cited input: even
+stating it needs vocabulary (genus, places, covers of curves) that
+Mathlib does not yet have. That vocabulary is out of scope for
 [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28), which
 covers the computation and the paper proof's supporting facts; the
 vocabulary itself is
@@ -642,11 +645,11 @@ Two things remain, both tracked in issues:
 
 * The Weil bound rests on a cited input: Weil's theorem at the two branch
   covers. The calculation from that input to the deployed constant is
-  formalized; the input's own statement needs function-field vocabulary
-  (genus, places, covers) that Mathlib does not yet have. What remains of
-  [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28) is
-  formalizing the paper proof's supporting facts; the vocabulary is out
-  of its scope, tracked at
+  formalized, and so are the paper proof's supporting facts
+  (CompElliptic's `Hashing/WeilSupport.lean`) — the delivered scope of
+  [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28).
+  The input's own statement needs function-field vocabulary (genus,
+  places, covers) that Mathlib does not yet have, tracked at
   [CompElliptic#30](https://github.com/daira/CompElliptic/issues/30).
 * The security games that want to use this result need the group hash
   added to their adversary's interface first
