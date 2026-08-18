@@ -465,7 +465,6 @@ assert_axioms Zcash.Snark.Capstone.actionStaticChecks +native(
 assert_axioms Zcash.Snark.Capstone.capturedActionThetaBudget +native(
   Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Capstone.actionLookupInputArity_le,
-  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -502,7 +501,6 @@ assert_axioms Zcash.Snark.Capstone.capturedActionGammaBudget +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.capturedActionYBudget +native(
-  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -562,7 +560,6 @@ assert_axioms Zcash.Snark.Capstone.actionStatisticalModel_at_2pow123 +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.actionDlogOracleQueryCost_bound +native(
-  Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,

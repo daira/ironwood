@@ -400,7 +400,9 @@ def actionTerminalWitnessOrRelationFinder
     match family.straightLineConstraintOutcome? static basis O with
     | none => none
     | some (PSum.inr relation) =>
-        some (Sum.inr (relation.toBasisRelation basis))
+        some (Sum.inr (augmentedBasis_ursOfAugmentedBasis
+          (actionCircuit.shape.withProofParams pp).k basis ▸
+            relation.toAlgebraicRelationWitness))
     | some (PSum.inl success) =>
         let decode : DeployedAlgebraicDecode (actionCircuit.shape.withProofParams pp) urs rfl
             (actionCircuit.toVerifierKey urs)

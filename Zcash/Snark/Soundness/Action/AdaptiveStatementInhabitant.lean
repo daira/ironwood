@@ -227,7 +227,8 @@ theorem zeroAdaptiveFixedRepresentations_fixedRepresented (i : ℕ)
   obtain ⟨rotation, hmem⟩ := hi
   rw [actionCircuit.toVerifierKey_fixedQueryLayout] at hmem
   have hlt : i < actionCircuit.fixedColumnCount :=
-    (adaptiveStatementFixedCoherence pp basis).queryLayoutBounded i rotation hmem
+    List.forall_iff_forall_mem.mp
+      actionCircuit.fixedQueryLayout_columns_lt (i, rotation) hmem
   exact ⟨canonicalActionFixedRepresentation pp basis ⟨i, hlt⟩,
     canonicalActionFixedRepresentation_mem pp basis ⟨i, hlt⟩, rfl⟩
 
@@ -638,9 +639,16 @@ theorem zeroAdaptiveFixedRepresentations_length_le (pp : ProofParams)
     List.length_ofFn, AdaptiveActionStatementShape,
     CircuitShape.withProofParams_numPermutationColumns,
     ActionFixedCoherence.fixedColumnCount_eq, adaptiveStatementFixedRepresentationLimit]
-  rw [Halo2.TopLevelCircuit.shape_numPermutationColumns,
-    ActionPermutationDomain.permutationColumnCount_eq]
-  norm_num
+  rw [Halo2.TopLevelCircuit.shape_numPermutationColumns]
+  have hpermutation : actionCircuit.permutationColumnCount ≤ 25 := by
+    simpa only [actionCircuit_numAdviceColumns_eq,
+      actionCircuit_numFixedColumns_eq,
+      actionCircuit_numInstanceColumns_eq] using
+        actionCircuit.permutationColumnCount_le_configuredColumnCount
+  calc
+    29 + actionCircuit.permutationColumnCount + 1 + 1 ≤
+        29 + 25 + 1 + 1 := by omega
+    _ ≤ 2 ^ 89 := by norm_num
 
 /-- A zero-query family that returns an all-zero statement and proof and represents every
 derived-key commitment. It inhabits the interface but is not claimed to be accepted. -/
