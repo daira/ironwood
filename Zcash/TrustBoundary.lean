@@ -174,11 +174,18 @@ the collapse of the full two-oracle game onto the one-oracle core, and the
 rejection-sampling simulator's round-count and output laws at the deployed
 mappings. -/
 
--- Indiff.lean: one-oracle indifferentiability at the deployed mappings
+-- Indiff.lean: one-oracle indifferentiability at the deployed mappings.
+-- The concrete endpoints consume the curve-order witnesses (through the
+-- group cards in the budget check and the isogeny facts), so their native
+-- owners include the nsmul certificates.
 assert_axioms Zcash.Security.GroupHash.pallas_indiffFromRO +native(
-  CompElliptic.Fields.Pasta.pallasBase)
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_isoGpt)
 assert_axioms Zcash.Security.GroupHash.vesta_indiffFromRO +native(
-  CompElliptic.Fields.Pasta.vestaBase)
+  CompElliptic.Fields.Pasta.vestaBase,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_isoGpt)
 
 -- Pasta.lean: the single-query bias at the deployed mappings, both directions
 assert_axioms Zcash.Security.GroupHash.pallas_weightedBias_real_le +native(

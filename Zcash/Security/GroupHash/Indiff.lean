@@ -35,16 +35,21 @@ a random oracle answers distinct messages independently; a distinguisher that
 would repeat a message must first be deduplicated (`OracleComp.dedup`), which
 preserves its result and its query bound.
 
-`indiffFromRO_of_regularity` discharges it from the regularity distance, and
-the Pasta corollaries instantiate that at the deployed mappings under the
-named `WeilBounded` hypothesis.
+`indiffFromRO_of_regularity` discharges it from the regularity distance.
+The parametric Pasta corollaries (`pallas_indiffFromRO_of_weilBounded`,
+`vesta_indiffFromRO_of_weilBounded`) instantiate that at the deployed
+mappings under a `WeilBounded` hypothesis and an explicit budget; the
+concrete endpoints (`pallas_indiffFromRO`, `vesta_indiffFromRO`) then
+take only Weil's theorem at the two branch covers —the `CharSumBounded`
+inputs of CompElliptic's `Hashing/WeilInstance.lean`— and conclude with
+the single term `q/2^120`.
 -/
 
 namespace Zcash.Security.GroupHash
 
 open Zcash.Common (PMFEventBiasLE PMFWeightedBiasLE OracleComp)
 open Zcash.Common.OracleComp (runFreshPMF runFreshPMF_eventBiasLE)
-open CompElliptic.Hashing (pairCount WeilBounded zeroRepaired)
+open CompElliptic.Hashing (pairCount WeilBounded zeroRepaired CharSumBounded)
 open CompElliptic.CurveForms.ShortWeierstrass (SWPoint)
 open CompElliptic.Curves.Pasta
 open CompElliptic.Fields.Pasta (PallasBaseField VestaBaseField)
@@ -92,12 +97,14 @@ theorem transport_term_le (α : Type*) [Fintype α] [Nonempty α] :
     _ = 4 / (Fintype.card α : ℝ) := by
         rw [sq, ← div_div, mul_div_assoc, div_self hx.ne', mul_one]
 
-/-- **Indifferentiability at the deployed Pallas mapping.** The named
-Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
-character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
-absorb the regularity distance that `C` induces. Then `q` queries distinguish
-with advantage at most `q · (ε + 4/#F)`. -/
-theorem pallas_indiffFromRO {C ε : ℝ} (q : ℕ)
+/-- **Indifferentiability at the deployed Pallas mapping, from a Weil
+bound and a budget.** The `WeilBounded` hypothesis supplies a constant `C`:
+each nontrivial character sum of the zero-repaired mapping is at most
+`C·√#F`. The budget hypothesis `hbound` lets `ε` absorb the regularity
+distance that `C` induces. Then `q` queries distinguish with advantage at
+most `q · (ε + 4/#F)`. The concrete endpoint `pallas_indiffFromRO`
+instantiates both. -/
+theorem pallas_indiffFromRO_of_weilBounded {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
       / (Fintype.card PallasBaseField : ℝ)^2 ≤ ε^2) :
@@ -107,12 +114,14 @@ theorem pallas_indiffFromRO {C ε : ℝ} (q : ℕ)
     ((pallas_regularityDistance_le h hε hbound).trans
       (by gcongr ε + ?_; exact transport_term_le PallasBaseField))
 
-/-- **Indifferentiability at the deployed Vesta mapping.** The named
-Weil-bound hypothesis supplies a constant `C` bounding each nontrivial
-character sum of the zero-repaired mapping by `C·√#F`, and `hbound` lets `ε`
-absorb the regularity distance that `C` induces. Then `q` queries distinguish
-with advantage at most `q · (ε + 4/#F)`. -/
-theorem vesta_indiffFromRO {C ε : ℝ} (q : ℕ)
+/-- **Indifferentiability at the deployed Vesta mapping, from a Weil
+bound and a budget.** The `WeilBounded` hypothesis supplies a constant `C`:
+each nontrivial character sum of the zero-repaired mapping is at most
+`C·√#F`. The budget hypothesis `hbound` lets `ε` absorb the regularity
+distance that `C` induces. Then `q` queries distinguish with advantage at
+most `q · (ε + 4/#F)`. The concrete endpoint `vesta_indiffFromRO`
+instantiates both. -/
+theorem vesta_indiffFromRO_of_weilBounded {C ε : ℝ} (q : ℕ)
     (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
       / (Fintype.card VestaBaseField : ℝ)^2 ≤ ε^2) :
@@ -121,6 +130,92 @@ theorem vesta_indiffFromRO {C ε : ℝ} (q : ℕ)
   indiffFromRO_of_regularity Vesta.mapToCurve q
     ((vesta_regularityDistance_le h hε hbound).trans
       (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
+
+/-! ## The concrete endpoints
+
+Instantiating the Weil side removes every analytic hypothesis: from Weil's
+theorem at the two branch covers alone —the `CharSumBounded` inputs of
+CompElliptic's `Hashing/WeilInstance.lean`— the advantage bound is the
+single term `q/2^120`. The parametric endpoints conclude with advantage
+`q·(ε + 4/#F)`; instantiating `ε := 1/2^120 - 4/#F` makes the sum
+telescope to exactly `1/2^120` — the subtraction pre-pays the zero-repair
+transport inside the budget. Two side conditions remain, both exact
+rational arithmetic on the card numerals: `ε ≥ 0` (the transport
+`4/#F ≈ 2^{-252}` is far below `2^{-120}`), and the budget check
+`(#G - 1)·(21/2)⁴/#F² ≤ ε²` (the regularity distance is about
+`2^{-120.2}`, a headroom factor of about `2^{0.2} ≈ 1.16`). -/
+
+/-- **Concrete indifferentiability at the deployed Pallas mapping.** From
+Weil's theorem at the two branch covers of iso-Pallas, `q` queries
+distinguish the group hash from a random oracle with advantage at most
+`q/2^120`. -/
+theorem pallas_indiffFromRO (q : ℕ)
+    (h1 : CharSumBounded Pallas.sswu.modelPoints1
+      (Pallas.sswu.cover1Map Pallas.isSquare_neg_one)
+      (100 * (Fintype.card PallasBaseField : ℝ)))
+    (h2 : CharSumBounded Pallas.sswu.modelPoints2
+      (Pallas.sswu.cover2Map Pallas.isSquare_neg_one)
+      (100 * (Fintype.card PallasBaseField : ℝ))) :
+    IndiffFromRO Pallas.mapToCurve q ((q : ℝ≥0∞) / 2^120) := by
+  have hcard : Fintype.card PallasBaseField
+      = CompElliptic.Fields.Pasta.PALLAS_BASE_CARD := ZMod.card _
+  have hG : Fintype.card (SWPoint Pallas.curve)
+      = CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := by
+    simpa using Pallas.card_eq
+  have hε : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ) := by
+    rw [hcard]
+    norm_num
+  have hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * (21/2:ℝ)^4
+      / (Fintype.card PallasBaseField : ℝ)^2
+      ≤ (1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ))^2 := by
+    rw [hG, hcard]
+    norm_num
+  -- Present the budget as `(ε + 4/#F)` with `ε := 1/2^120 - 4/#F`, so the
+  -- parametric conclusion telescopes to `q/2^120` exactly.
+  rw [show ((q : ℝ≥0∞) / 2^120) = q * ENNReal.ofReal ((1:ℝ)/2^120) from by
+      rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
+        ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_ofNat, mul_one_div],
+    show ((1:ℝ)/2^120) = (1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ))
+      + 4 / (Fintype.card PallasBaseField : ℝ) from by ring]
+  intro M A hQ
+  exact pallas_indiffFromRO_of_weilBounded q
+    (Pallas.weilBounded_zeroRepaired_mapToCurve h1 h2) hε hbound A hQ
+
+/-- **Concrete indifferentiability at the deployed Vesta mapping.** From
+Weil's theorem at the two branch covers of iso-Vesta, `q` queries
+distinguish the group hash from a random oracle with advantage at most
+`q/2^120`. -/
+theorem vesta_indiffFromRO (q : ℕ)
+    (h1 : CharSumBounded Vesta.sswu.modelPoints1
+      (Vesta.sswu.cover1Map Vesta.isSquare_neg_one)
+      (100 * (Fintype.card VestaBaseField : ℝ)))
+    (h2 : CharSumBounded Vesta.sswu.modelPoints2
+      (Vesta.sswu.cover2Map Vesta.isSquare_neg_one)
+      (100 * (Fintype.card VestaBaseField : ℝ))) :
+    IndiffFromRO Vesta.mapToCurve q ((q : ℝ≥0∞) / 2^120) := by
+  have hcard : Fintype.card VestaBaseField
+      = CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := ZMod.card _
+  have hG : Fintype.card (SWPoint Vesta.curve)
+      = CompElliptic.Fields.Pasta.PALLAS_BASE_CARD := by
+    simpa using Vesta.card_eq
+  have hε : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ) := by
+    rw [hcard]
+    norm_num
+  have hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * (21/2:ℝ)^4
+      / (Fintype.card VestaBaseField : ℝ)^2
+      ≤ (1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ))^2 := by
+    rw [hG, hcard]
+    norm_num
+  -- Present the budget as `(ε + 4/#F)` with `ε := 1/2^120 - 4/#F`, so the
+  -- parametric conclusion telescopes to `q/2^120` exactly.
+  rw [show ((q : ℝ≥0∞) / 2^120) = q * ENNReal.ofReal ((1:ℝ)/2^120) from by
+      rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
+        ENNReal.ofReal_pow (by norm_num), ENNReal.ofReal_ofNat, mul_one_div],
+    show ((1:ℝ)/2^120) = (1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ))
+      + 4 / (Fintype.card VestaBaseField : ℝ) from by ring]
+  intro M A hQ
+  exact vesta_indiffFromRO_of_weilBounded q
+    (Vesta.weilBounded_zeroRepaired_mapToCurve h1 h2) hε hbound A hQ
 
 /-! ## The composition with the capped simulator
 
