@@ -484,10 +484,7 @@ machine-checked (CompElliptic's [`Hashing/WeilSupport.lean`](https://github.com/
 design doc cites each proven fact at its point of use, with CI keeping
 the references exact. Weil's theorem itself stays the cited input: even
 stating it needs vocabulary (genus, places, covers of curves) that
-Mathlib does not yet have. That vocabulary is out of scope for
-[CompElliptic#28](https://github.com/daira/CompElliptic/issues/28), which
-covers the computation and the paper proof's supporting facts; the
-vocabulary itself is
+Mathlib does not yet have; that vocabulary is tracked at
 [CompElliptic#30](https://github.com/daira/CompElliptic/issues/30).
 
 ### The second ingredient: preimage sampling
