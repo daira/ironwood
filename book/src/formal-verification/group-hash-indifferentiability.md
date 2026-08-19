@@ -145,7 +145,9 @@ $f_1$-half of the inputs into the $f_2$-half and back, preserving the point reac
 About $\fraction{3}{8}$ of the output space is reached
 —with 2 or 4 preimages per reached point excluding exceptional cases— and
 the remaining $\fraction{5}{8}$ by neither map. (These proportions are heuristic;
-we confirmed them by exact computation on small curves, and they can be proven
+we confirmed them by
+[exact computation on small curves](https://github.com/daira/CompElliptic/blob/main/scripts/check_sswu_small_curves.sage),
+and they can be proven
 with error $O(1/\sqrt{\FieldSize})$ by counting points on the branch varieties —
 Lang–Weil, "Number of Points of Varieties in Finite Fields",
 *Amer. J. Math.* 76(4), 1954, [doi:10.2307/2372655](https://doi.org/10.2307/2372655).
