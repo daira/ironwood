@@ -470,21 +470,23 @@ absorbs the trailing $+ 1$. In square-root-free form this is
 $(10\sqrt{\FieldSize} + 1)^2 \le (21/2)^2 \mul \FieldSize$, which holds at the
 deployed sizes with margin about $2^{126}$.
 
-The calculation of $C$ is proven on paper —modulo results cited as established
-mathematics— in CompElliptic's
+The calculation of $C$ is proven on paper in CompElliptic's
 [`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md),
-and formalized down to Weil's theorem at the two branch covers
-(CompElliptic's [`Hashing/BranchCovers.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/BranchCovers.lean)
-and [`Hashing/WeilInstance.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilInstance.lean)): everything between the per-cover inputs
-$|S_{C_j}(\chi)| \le (2 \mul 6 - 2) \mul \sqrt{\FieldSize}$ —the analogous
+modulo results cited as established mathematics. It is also formalized,
+down to Weil's theorem at the two branch covers, in CompElliptic's
+[`Hashing/BranchCovers.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/BranchCovers.lean)
+and [`Hashing/WeilInstance.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilInstance.lean).
+The per-cover inputs are
+$|S_{C_j}(\chi)| \le (2 \mul 6 - 2) \mul \sqrt{\FieldSize}$ — the analogous
 sums over the rational points of the two branch coverings, stated in
-square-root-free form— and the deployed `WeilBounded` instances is
-machine-checked. The paper proof's own checkable inputs are also
-machine-checked (CompElliptic's [`Hashing/WeilSupport.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilSupport.lean)), and the
-design doc cites each proven fact at its point of use, with CI keeping
-the references exact. Weil's theorem itself stays the cited input: even
-stating it needs vocabulary (genus, places, covers of curves) that
-Mathlib does not yet have; that vocabulary is tracked at
+square-root-free form. Everything between those inputs and the deployed
+`WeilBounded` instances is machine-checked. The paper proof's own checkable
+inputs are also machine-checked (CompElliptic's
+[`Hashing/WeilSupport.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilSupport.lean)),
+and the design doc cites each proven fact at its point of use, with CI
+keeping the references exact. Weil's theorem itself stays the cited input:
+even stating it needs vocabulary (genus, places, covers of curves) that
+Mathlib does not yet have. That vocabulary is tracked at
 [CompElliptic#30](https://github.com/daira/CompElliptic/issues/30).
 
 ### The second ingredient: preimage sampling
