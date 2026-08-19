@@ -188,10 +188,14 @@ given other constraints like the desire for a constant-time group hash).
 
 Particular application protocols might actually be perfectly fine with this
 kind of non-uniform mapping. However, it can easily be distinguished from a
-uniform one, and so we would have to take account of that non-uniformity in
-all of our security arguments. For a clean abstraction we would like a mapping
-that cannot be distinguished, when applied to $\mathsf{hash\_to\_field}$
-outputs, from a uniform mapping onto the whole group.
+uniform one, and each of our security arguments would then need to take the
+non-uniformity into account separately. That need does not go away entirely;
+what we can do is pay for it once, with a concrete figure. So we would like
+a mapping that, applied to $\mathsf{hash\_to\_field}$ outputs, can be
+distinguished from a uniform mapping onto the whole group only with a
+concretely bounded advantage. As we will see, modelling
+$\mathsf{hash\_to\_field}$ as a random oracle, that advantage is at most
+$q/2^{120}$ after $q$ queries for the mapping we chose.
 
 ## The detour through an isogenous curve
 
