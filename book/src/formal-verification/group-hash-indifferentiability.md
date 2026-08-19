@@ -387,17 +387,8 @@ $(\FieldSize)^2$ turns the count into the probability that the two-term sum land
 on $Q$, so the sum is the $L^1$ distance between that output distribution and the
 uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
 $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
-absolute differences of the probabilities they assign.
-
-The formalization accepts any budget $\beta$ whose square dominates
-$(\GroupSize - 1) \mul C^4 / (\FieldSize)^2$ (`sum_abs_prob_dev_le`) — that
-is, any $\beta$ just above $C^2 \sqrt{\GroupSize} / \FieldSize$, where $C$ is
-the Weil constant discussed in the
-[next section](#calculating-the-weil-constant). At the deployed sizes
-$\FieldSize \approx \GroupSize \approx 2^{254}$ and $C = 21/2$: squaring the
-constant gives $C^2 \approx 2^{6.8}$, the square root halves the exponent to
-$\sqrt{\GroupSize} \approx 2^{127}$, and so
-$\beta \approx 2^{6.8} \mul 2^{127} / 2^{254} \approx 2^{-120}$.
+absolute differences of the probabilities they assign. $\beta$ will be calculated
+in the next section.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -432,6 +423,16 @@ That hypothesis is parameterized: it asserts a constant $C$ with every nontrivia
 character sum of the zero-repaired mapping at most $C \mul \sqrt{\FieldSize}$,
 and the final advantage scales with $C^2$.
 
+The formalization
+([`sum_abs_prob_dev_le`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/TwoTermUniformity.lean))
+bounds the regularity distance of the previous section by any budget
+$\beta$ whose square dominates
+<span style="white-space: nowrap">$\frac{(\GroupSize - 1) \mul C^4}{(\FieldSize)^2}$ —</span>
+that is, any $\beta$ just above $\frac{C^2 \mul \sqrt{\GroupSize}}{\FieldSize}$.
+At the deployed sizes $\FieldSize \approx \GroupSize \approx 2^{254}$ and
+<span style="white-space: nowrap">$C = 21/2$,</span> yielding
+$\beta \approx 2^{-120}$.
+
 The Weil bound places a bound on character sums along covering curves of the
 encoding, once $C$ is calculated via a per-encoding genus computation. Proving
 this result in general requires machinery that is not yet in Mathlib, which is
@@ -443,11 +444,11 @@ other hand, is relatively straightforward. For example,
 [Farashahi–Fouque–Shparlinski–Tibouchi–Voloch](https://eprint.iacr.org/2010/539)
 carry out this calculation for a sibling of the deployed encoding —simplified SWU
 with $Z = -1$, over fields of size $\equiv 3 \pmod 4$, with a quadratic-residue
-sign rule— and obtain $|S_f(\chi)| \le 52\sqrt{\FieldSize} + 151$ from genus-8
+sign rule— and obtain $|S(\chi)| \le 52 \mul \sqrt{\FieldSize} + 151$ from genus-8
 coverings.
 
 The deployed variant differs in all three parameters. The Weil bound for both
-Pallas and Vesta has been calculated as $|S_f(\chi)| \le 10\sqrt{\FieldSize} + 1$
+Pallas and Vesta has been calculated as $|S(\chi)| \le 10\sqrt{\FieldSize} + 1$
 from genus-6 coverings (see zcash/pasta's
 [`weilbound.sage`](https://github.com/zcash/pasta/blob/master/weilbound.sage)).
 The calculation is proven on paper —modulo results cited as established
@@ -456,7 +457,8 @@ mathematics— in CompElliptic's
 and formalized down to Weil's theorem at the two branch covers
 (CompElliptic's `Hashing/BranchCovers.lean` and
 `Hashing/WeilInstance.lean`): everything between the per-cover inputs
-$|S_{C_j}(\chi)| \le (2 \mul 6 - 2)\sqrt{\FieldSize}$ —stated in squared,
+$|S_{C_j}(\chi)| \le (2 \mul 6 - 2) \mul \sqrt{\FieldSize}$ —the analogous
+sums over the rational points of the two branch coverings, stated in
 square-root-free form— and the deployed `WeilBounded` instances is
 machine-checked. The paper proof's own checkable inputs are also
 machine-checked (CompElliptic's `Hashing/WeilSupport.lean`), and the
