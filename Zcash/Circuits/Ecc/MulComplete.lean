@@ -487,6 +487,8 @@ def round (w iter : ℕ) : FormalRegionCircuit Fp Config Config RoundInputs Roun
             Add.synthesisSummary, circuit_norm, synthesis_summary_norm]
         · simp only [roundSynthesisSummary, roundColumns, roundSynthesize,
             Add.synthesisSummary, circuit_norm, synthesis_summary_norm]
+        · simp only [roundSynthesisSummary, roundColumns, roundSynthesize,
+            Add.synthesisSummary, circuit_norm, synthesis_summary_norm]
       registered := by keygen_registration [roundSynthesize]
       lookupSelectorsAnchoredBy_of_registered := by
         intro configInput counts configured offset input region anchor _ _
@@ -874,6 +876,13 @@ def circuitSynthesisSummary (numBits : ℕ) (cfg : Config)
   (FloorPlanner.RegionSynthesisSummary.ofColumns
       [.column .advice cfg.zComplete.index] (offset + 1) 0).combine
     (roundsSynthesisSummary numBits cfg offset)
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_lookupActivationCount
+    (numBits : ℕ) (cfg : Config) (offset : ℕ) :
+    (circuitSynthesisSummary numBits cfg offset).lookupActivationCount = 0 := by
+  simp only [circuitSynthesisSummary, roundsSynthesisSummary,
+    synthesis_summary_norm, Nat.mul_zero, Nat.zero_add]
 
 @[synthesis_summary_norm]
 theorem circuitSynthesisSummary_instanceRowExtent_eq

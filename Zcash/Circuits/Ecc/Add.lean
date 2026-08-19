@@ -355,6 +355,11 @@ def synthesisSummary (config : Config) (offset : ℕ) :
     (offset + 2) 0
 
 @[synthesis_summary_norm]
+theorem synthesisSummary_lookupActivationCount (config : Config) (offset : ℕ) :
+    (synthesisSummary config offset).lookupActivationCount = 0 := by
+  simp only [synthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem synthesisSummary_constantSiteCount (config : Config) (offset : ℕ) :
     (synthesisSummary config offset).constantSiteCount = 0 := rfl
 
@@ -408,6 +413,7 @@ def add : FormalRegionCircuit Fp
         · simp only [synthesisSummary, circuit_norm, gate]
           omega
         · simp only [synthesisSummary, circuit_norm, gate]
+        · simp only [synthesisSummary, circuit_norm, gate, synthesis_summary_norm]
         · simp only [synthesisSummary, circuit_norm, gate, synthesis_summary_norm] }
 
   synthesize config offset (input : Inputs (AssignedCell Fp)) := do

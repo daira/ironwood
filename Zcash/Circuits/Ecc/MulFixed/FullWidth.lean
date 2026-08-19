@@ -105,6 +105,13 @@ def witnessScalarLoopSynthesisSummary (cfg : Config) (offset : ℕ) :
       [.column .advice cfg.superConfig.window.index] offset 1 1 0 85)
 
 @[synthesis_summary_norm]
+theorem witnessScalarLoopSynthesisSummary_lookupActivationCount
+    (cfg : Config) (offset : ℕ) :
+    (witnessScalarLoopSynthesisSummary cfg offset).lookupActivationCount = 0 := by
+  simp only [witnessScalarLoopSynthesisSummary, synthesis_summary_norm,
+    Nat.mul_zero, Nat.zero_add]
+
+@[synthesis_summary_norm]
 theorem witnessScalarLoopSynthesisSummary_instanceRowExtent_eq
     (cfg : Config) (offset : ℕ) :
     (witnessScalarLoopSynthesisSummary cfg offset).instanceRowExtent = 0 := by
@@ -252,6 +259,8 @@ theorem processWindowH_synthesisSummary_eq
     omega
   · simp only [processWindowH, processWindowSynthesisSummary, circuit_norm]
   · simp only [processWindowH, processWindowSynthesisSummary, circuit_norm]
+  · simp only [processWindowH, processWindowSynthesisSummary, circuit_norm,
+      synthesis_summary_norm]
 
 @[keygen_norm, keygen_output_norm]
 theorem processWindowH_output_x_column (B : FixedBaseData) (cfg : Config)
@@ -1418,6 +1427,12 @@ def circuitSynthesisSummary (cfg : Config) :
     (innerRegionSynthesisSummary cfg 0)).combine
     (FloorPlanner.SynthesisSummary.ofRegion
       (Add.synthesisSummary cfg.superConfig.addConfig 0))
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (circuitSynthesisSummary cfg).lookupActivationCount = 0 := by
+  simp only [circuitSynthesisSummary, innerRegionSynthesisSummary,
+    synthesis_summary_norm]
 
 @[synthesis_summary_norm]
 theorem synthesize_synthesisSummary_eq

@@ -275,6 +275,7 @@ theorem assignLoopSynthesisSummary_eq (W : ℕ) (cfg : Config)
   · simp only [circuit_norm,
       FloorPlanner.RegionSynthesisSummary.ofColumns_constantSiteCount]
   · simp only [circuit_norm, synthesis_summary_norm]
+  · simp only [circuit_norm, synthesis_summary_norm]
 
 def copyDecomposeSynthesisSummary (numWindows : ℕ) (cfg : Config)
     (offset : ℕ) : FloorPlanner.RegionSynthesisSummary :=
@@ -283,6 +284,14 @@ def copyDecomposeSynthesisSummary (numWindows : ℕ) (cfg : Config)
     ((enableLoopSynthesisSummary cfg offset numWindows).combine
       ((assignLoopSynthesisSummary cfg offset numWindows).combine
         (FloorPlanner.RegionSynthesisSummary.ofColumns [] 0 1)))
+
+@[synthesis_summary_norm]
+theorem copyDecomposeSynthesisSummary_lookupActivationCount
+    (numWindows : ℕ) (cfg : Config) (offset : ℕ) :
+    (copyDecomposeSynthesisSummary numWindows cfg offset).lookupActivationCount = 0 := by
+  simp only [copyDecomposeSynthesisSummary, enableLoopSynthesisSummary,
+    assignLoopSynthesisSummary, synthesis_summary_norm, Nat.mul_zero,
+    Nat.zero_add]
 
 @[synthesis_summary_norm]
 theorem copyDecomposeSynthesisSummary_instanceRowExtent_eq
@@ -441,6 +450,8 @@ def elaborated (W numWindows : ℕ) :
       · simp only [body, circuit_norm, enableLoopSynthesisSummary_eq,
           assignLoopSynthesisSummary_eq,
           FloorPlanner.RegionSynthesisSummary.ofColumns_constantSiteCount]
+      · simp only [body, circuit_norm, enableLoopSynthesisSummary_eq,
+          assignLoopSynthesisSummary_eq, synthesis_summary_norm]
       · simp only [body, circuit_norm, enableLoopSynthesisSummary_eq,
           assignLoopSynthesisSummary_eq, synthesis_summary_norm]
     registered := by keygen_registration [configure, enableEquality, body]

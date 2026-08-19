@@ -525,6 +525,11 @@ def mainCircuitSynthesisSummary (cfg : Config) :
               (Add.synthesisSummary cfg.addConfig offLsb))))))
 
 @[synthesis_summary_norm]
+theorem mainCircuitSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (mainCircuitSynthesisSummary cfg).lookupActivationCount = 0 := by
+  simp only [mainCircuitSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem mainCircuitSynthesisSummary_instanceRowExtent_eq (cfg : Config) :
     (mainCircuitSynthesisSummary cfg).instanceRowExtent = 0 := by
   simp only [mainCircuitSynthesisSummary, synthesis_summary_norm]
@@ -553,6 +558,8 @@ theorem mainCircuitSynthesisSummary_eq (cfg : Config)
   · simp only [mainCircuitSynthesisSummary, circuit_norm,
       synthesis_summary_norm, configure_selector_norm]
     omega
+  · simp only [mainCircuitSynthesisSummary, circuit_norm,
+      synthesis_summary_norm, configure_selector_norm]
   · simp only [mainCircuitSynthesisSummary, circuit_norm,
       synthesis_summary_norm, configure_selector_norm]
   · simp only [mainCircuitSynthesisSummary, circuit_norm,
@@ -1565,6 +1572,11 @@ def mulSynthesisSummary (cfg : Config) : FloorPlanner.SynthesisSummary :=
   (FloorPlanner.SynthesisSummary.ofRegion
       (mainCircuitSynthesisSummary cfg)).combine
     (MulOverflow.circuitSynthesisSummary 10 cfg.overflowConfig)
+
+@[synthesis_summary_norm]
+theorem mulSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (mulSynthesisSummary cfg).lookupActivationCount = 13 := by
+  simp only [mulSynthesisSummary, MulOverflow.numWords, synthesis_summary_norm]
 
 @[synthesis_summary_norm]
 theorem mulSynthesisSummary_tableRowExtent_eq (cfg : Config) :

@@ -460,6 +460,13 @@ def fixedConstantsLoopSynthesisSummary
     offset 1 1 0 numWindows
 
 @[synthesis_summary_norm]
+theorem fixedConstantsLoopSynthesisSummary_lookupActivationCount
+    (toggle : Gate Fp) (cfg : Config) (offset numWindows : ℕ) :
+    (fixedConstantsLoopSynthesisSummary toggle cfg offset numWindows).lookupActivationCount = 0 := by
+  simp only [fixedConstantsLoopSynthesisSummary, synthesis_summary_norm,
+    Nat.mul_zero]
+
+@[synthesis_summary_norm]
 theorem fixedConstantsLoopSynthesisSummary_instanceRowExtent_eq
     (toggle : Gate Fp) (cfg : Config) (offset numWindows : ℕ) :
     (fixedConstantsLoopSynthesisSummary toggle cfg offset numWindows).instanceRowExtent = 0 := by
@@ -481,6 +488,8 @@ theorem fixedConstantsWindow_synthesisSummary_eq
     omega
   · simp only [fixedConstantsWindowSynthesisSummary, fixedConstantsWindow,
       circuit_norm]
+  · simp only [fixedConstantsWindowSynthesisSummary, fixedConstantsWindow,
+      circuit_norm, synthesis_summary_norm]
   · simp only [fixedConstantsWindowSynthesisSummary, fixedConstantsWindow,
       circuit_norm, synthesis_summary_norm]
 
@@ -619,6 +628,8 @@ theorem processWindow_combine_addIncomplete_synthesisSummary
       Nat.zero_add]
   · simp only [processWindowSynthesisSummary, AddIncomplete.synthesisSummary,
       windowStepSynthesisSummary, synthesis_summary_norm]
+  · simp only [processWindowSynthesisSummary, AddIncomplete.synthesisSummary,
+      windowStepSynthesisSummary, synthesis_summary_norm]
 
 @[synthesis_summary_norm]
 theorem reduced_windowStep_synthesisSummary (cfg : Config) (row : ℕ) :
@@ -642,6 +653,7 @@ theorem reduced_windowStep_synthesisSummary (cfg : Config) (row : ℕ) :
     omega
   · rfl
   · simp only [FloorPlanner.RegionSynthesisSummary.ofColumns_instanceRowExtent]
+  · rfl
 
 @[synthesis_summary_norm]
 theorem processWindow_synthesisSummary_eq
@@ -655,6 +667,8 @@ theorem processWindow_synthesisSummary_eq
   · simp only [processWindowSynthesisSummary, processWindow, circuit_norm]
     omega
   · simp only [processWindowSynthesisSummary, processWindow, circuit_norm]
+  · simp only [processWindowSynthesisSummary, processWindow, circuit_norm,
+      synthesis_summary_norm]
   · simp only [processWindowSynthesisSummary, processWindow, circuit_norm,
       synthesis_summary_norm]
 
@@ -993,6 +1007,14 @@ def windowChainSynthesisSummary (cfg : Config)
             (windowStepColumns cfg) (offset + 2) 1 2 0
               (numWindows - 3)).combine
           (processWindowSynthesisSummary cfg (offset + (numWindows - 1))))))
+
+@[synthesis_summary_norm]
+theorem windowChainSynthesisSummary_lookupActivationCount
+    (cfg : Config) (offset numWindows : ℕ) :
+    (windowChainSynthesisSummary cfg offset numWindows).lookupActivationCount = 0 := by
+  simp only [windowChainSynthesisSummary, processWindowSynthesisSummary,
+    AddIncomplete.synthesisSummary, synthesis_summary_norm, Nat.mul_zero,
+    Nat.zero_add]
 
 @[synthesis_summary_norm]
 theorem windowChainSynthesisSummary_instanceRowExtent_eq

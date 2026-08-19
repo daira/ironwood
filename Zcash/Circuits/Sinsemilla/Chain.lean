@@ -341,6 +341,13 @@ def slotSynthesisSummary (ns : List ℕ) (i : ℕ) (cfg : Config)
     FloorPlanner.RegionSynthesisSummary :=
   HashPiece.circuitSynthesisSummary (ns.getD i 0) cfg base
 
+@[synthesis_summary_norm]
+theorem slotSynthesisSummary_lookupActivationCount
+    (ns : List ℕ) (i : ℕ) (cfg : Config) (base : ℕ) :
+    (slotSynthesisSummary ns i cfg base).lookupActivationCount =
+      ns.getD i 0 + 1 := by
+  simp only [slotSynthesisSummary, synthesis_summary_norm]
+
 /-- One piece slot as a `Unit`-output formal circuit (the loop stays homogeneous — the
 piece call's width-dependent output lives inside this bundle). Slot `i` of the width list
 `ns`: the `HashPiece` call at its own base row, the boundary `q_s2` re-pin, and the
@@ -1136,6 +1143,13 @@ def slotIterationSynthesisSummary (ns : List ℕ) (i : ℕ)
       (base + ns.getD i 0 + 1) 0)
 
 @[synthesis_summary_norm]
+theorem slotIterationSynthesisSummary_lookupActivationCount
+    (ns : List ℕ) (i : ℕ) (cfg : Config) (base : ℕ) :
+    (slotIterationSynthesisSummary ns i cfg base).lookupActivationCount =
+      ns.getD i 0 + 1 := by
+  simp only [slotIterationSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem slotIteration_synthesisSummary_eq
     (G : Generators) (ns : List ℕ)
     (yaIn : Placed Environment Fp → Fp) (i : ℕ) (cfg : Config)
@@ -1148,6 +1162,9 @@ theorem slotIteration_synthesisSummary_eq
           (sinsemillaGate cfg).enable (base + ns.getD i 0)).operations self) =
       slotIterationSynthesisSummary ns i cfg base := by
   apply FloorPlanner.RegionSynthesisSummary.ext
+  · simp only [slotIterationSynthesisSummary, RegionCircuit.operations_bind,
+      FloorPlanner.regionSynthesisSummary_append, circuit_norm,
+      synthesis_summary_norm]
   · simp only [slotIterationSynthesisSummary, RegionCircuit.operations_bind,
       FloorPlanner.regionSynthesisSummary_append, circuit_norm,
       synthesis_summary_norm]
@@ -1452,6 +1469,14 @@ def circuitSynthesisSummary (ns : List ℕ) (cfg : Config) (offset : ℕ) :
       (offset + prefixRows ns ns.length + 1) 0)
 
 @[synthesis_summary_norm]
+theorem circuitSynthesisSummary_lookupActivationCount
+    (ns : List ℕ) (cfg : Config) (offset : ℕ) :
+    (circuitSynthesisSummary ns cfg offset).lookupActivationCount =
+      (List.ofFn fun i : Fin ns.length => ns.getD i.val 0 + 1).sum := by
+  simp only [circuitSynthesisSummary, synthesis_summary_norm,
+    List.map_ofFn, Function.comp_def, Nat.add_zero]
+
+@[synthesis_summary_norm]
 theorem circuitSynthesisSummary_instanceRowExtent_eq
     (ns : List ℕ) (cfg : Config) (offset : ℕ) :
     (circuitSynthesisSummary ns cfg offset).instanceRowExtent = 0 := by
@@ -1580,6 +1605,7 @@ def circuit (G : Generators) (ns : List ℕ) (yaIn : Placed Environment Fp → F
           simp only [RegionCircuit.operations_bind,
             FloorPlanner.regionSynthesisSummary_append]
         · apply FloorPlanner.RegionSynthesisSummary.ext
+          · simp only [circuit_norm, synthesis_summary_norm]
           · simp only [circuit_norm, synthesis_summary_norm]
           · simp only [circuit_norm, synthesis_summary_norm]
           · simp only [circuit_norm, synthesis_summary_norm]

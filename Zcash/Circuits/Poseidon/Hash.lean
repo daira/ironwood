@@ -98,6 +98,8 @@ def initRegion (capacity : Fp) : FormalRegionCircuit Fp Config Config unit State
             synthesis_summary_norm]
         · simp only [initRegionSynthesisSummary, circuit_norm,
             synthesis_summary_norm]
+        · simp only [initRegionSynthesisSummary, circuit_norm,
+            synthesis_summary_norm]
       output_eq := by
         intro cfg _ _ _
         rfl }
@@ -196,6 +198,8 @@ def addInputRegionElaborated : ElaboratedRegionCircuit Fp Config Config
     · simp only [addInputRegionSynthesize, addInputRegionSynthesisSummary, circuit_norm,
         synthesis_summary_norm, configure_selector_norm]
       omega
+    · simp only [addInputRegionSynthesize, addInputRegionSynthesisSummary, circuit_norm,
+        synthesis_summary_norm, configure_selector_norm]
     · simp only [addInputRegionSynthesize, addInputRegionSynthesisSummary, circuit_norm,
         synthesis_summary_norm, configure_selector_norm]
     · simp only [addInputRegionSynthesize, addInputRegionSynthesisSummary, circuit_norm,
@@ -331,6 +335,13 @@ def hashSynthesisSummary (cfg : Config) :
         (addInputRegionSynthesisSummary cfg 0)).combine
       (FloorPlanner.SynthesisSummary.ofRegion
         (permuteSynthesisSummary cfg 0)))
+
+@[synthesis_summary_norm]
+theorem hashSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (hashSynthesisSummary cfg).lookupActivationCount = 0 := by
+  simp only [hashSynthesisSummary, initRegionSynthesisSummary,
+    addInputRegionSynthesisSummary, permuteSynthesisSummary,
+    synthesis_summary_norm]
 
 @[synthesis_summary_norm]
 theorem hashSynthesisSummary_tableRowExtent_eq (cfg : Config) :

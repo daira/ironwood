@@ -108,6 +108,42 @@ def operationEnabledLookups {F : Type} :
   | .constrainInstance _ _ _ :: rest, i => operationEnabledLookups rest i
   | .loadTable _ _ :: rest, i => operationEnabledLookups rest i
 
+/-- The reduced synthesis summary counts exactly the lookup activations extracted
+from one region. -/
+theorem regionEnabledLookups_length {F : Type}
+    (self : RegionIndex) (body : RegionOperations F) :
+    (regionEnabledLookups self body).length =
+      (FloorPlanner.regionSynthesisSummary body).lookupActivationCount := by
+  induction body with
+  | nil => rfl
+  | cons operation rest inductionHypothesis =>
+      cases operation <;>
+        simp only [regionEnabledLookups, FloorPlanner.regionSynthesisSummary,
+          FloorPlanner.RegionSynthesisSummary.combine_lookupActivationCount,
+          FloorPlanner.RegionSynthesisSummary.ofOperation_lookupActivationCount,
+          FloorPlanner.regionOperationLookupActivationCount,
+          List.length_cons, inductionHypothesis] <;>
+        omega
+
+/-- The reduced synthesis summary counts exactly the lookup activations extracted
+from a complete operation stream. -/
+theorem operationEnabledLookups_length {F : Type}
+    (operations : Operations F) (initial : RegionIndex) :
+    (operationEnabledLookups operations initial).length =
+      (FloorPlanner.synthesisSummary operations).lookupActivationCount := by
+  induction operations generalizing initial with
+  | nil => rfl
+  | cons operation rest inductionHypothesis =>
+      cases operation <;>
+        simp only [operationEnabledLookups, FloorPlanner.synthesisSummary,
+          List.length_append, regionEnabledLookups_length,
+          inductionHypothesis,
+          FloorPlanner.SynthesisSummary.combine_lookupActivationCount,
+          FloorPlanner.SynthesisSummary.ofRegion_lookupActivationCount,
+          FloorPlanner.SynthesisSummary.ofInstanceRow_lookupActivationCount,
+          FloorPlanner.SynthesisSummary.ofTableValues_lookupActivationCount,
+          Nat.zero_add]
+
 /-- Membership in a region's extracted lookup list is exactly membership of the
 corresponding raw `.enableLookup` operation, with the enclosing region retained. -/
 theorem mem_regionEnabledLookups_iff

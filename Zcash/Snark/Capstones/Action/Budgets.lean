@@ -33,7 +33,10 @@ compressed-constraint `x` term, so it upper-bounds the bare-adaptive remainder.
 /-- The Action circuit enables at most `2^12` lookup activations. -/
 theorem actionLookupActivationCount_le :
     (operationEnabledLookups actionCircuit.operations 0).length ≤ 2 ^ 12 := by
-  native_decide
+  rw [operationEnabledLookups_length,
+    ← actionCircuit.synthesisSummary_eq_operations,
+    actionCircuit_lookupActivationCount_eq]
+  norm_num
 
 /-- Every enabled Action lookup has at most four inputs. -/
 theorem actionLookupInputArity_le :

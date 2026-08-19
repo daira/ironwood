@@ -1088,6 +1088,8 @@ private theorem notesPlannerBlocks_correct :
   simp only [← Multiset.map_coe, ← Multiset.coe_add,
     Multiset.coe_singleton, Multiset.map_singleton]
   simp only [
+    RegionSynthesisSummary.combine_columns,
+    RegionSynthesisSummary.combine_rowCount,
     RegionSynthesisSummary.ofColumns,
     RegionSynthesisSummary.toRegionShapeSummary,
     RegionShapeSummary.withoutSelectors, unionColumns]

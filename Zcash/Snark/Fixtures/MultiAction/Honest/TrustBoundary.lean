@@ -463,7 +463,6 @@ assert_axioms Zcash.Snark.Capstone.actionStaticChecks +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.capturedActionThetaBudget +native(
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -628,7 +627,6 @@ assert_axioms Zcash.Snark.Capstone.capturedActionXSqueezeSchedule +native(
 -- are evaluated at.
 assert_axioms Zcash.Snark.Capstone.orchard_adaptiveActionStatementSurface_measure_le_for +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -646,7 +644,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_adaptiveActionStatementSurface_measur
 -- `theta` and conservatively charges every stage of the combined finder.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -661,7 +658,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_knowledge_er
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_knowledge_error_bound +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -679,7 +675,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_kn
 -- group-work envelopes and the finder's certified read set discharged alongside it.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -697,7 +692,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_know
 -- trusted axiom owner beyond the ideal work-factor capstone it transports.
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -712,7 +706,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2po
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -727,7 +720,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,
@@ -749,7 +741,6 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2p
 -- would re-advertise the property the Action surface deliberately stopped advertising.
 assert_axioms Zcash.Snark.Contract.actionKnowledgeContract +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Capstone.actionLookupActivationCount_le,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
   Zcash.Snark.Keygen.certificate,

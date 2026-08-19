@@ -204,6 +204,7 @@ theorem gateRegion_synthesisSummary
     omega
   · simp only [gateRegion, circuit_norm, synthesis_summary_norm]
   · simp only [gateRegion, circuit_norm, synthesis_summary_norm]
+  · simp only [gateRegion, circuit_norm, synthesis_summary_norm]
 
 /-- The layouter-level `overflow_check` body: the three faithful sibling regions plus the
 copyCheck child. -/
@@ -306,6 +307,12 @@ def circuitSynthesisSummary (K : ℕ) (cfg : Config K)
             .column .advice cfg.adv2.index,
             .selector cfg.qOverflow.index]
           3 0)))
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_lookupActivationCount (K : ℕ) (cfg : Config K) :
+    (circuitSynthesisSummary K cfg).lookupActivationCount = numWords K := by
+  simp only [circuitSynthesisSummary, synthesis_summary_norm, Nat.zero_add,
+    Nat.add_zero]
 
 @[synthesis_summary_norm]
 theorem circuitSynthesisSummary_tableRowExtent_eq (K : ℕ) (cfg : Config K) :

@@ -165,6 +165,12 @@ def innerRegionSynthesisSummary (cfg : Config) (offset : ℕ) :
       (windowChainSynthesisSummary cfg.superConfig offset 85))
 
 @[synthesis_summary_norm]
+theorem innerRegionSynthesisSummary_lookupActivationCount
+    (cfg : Config) (offset : ℕ) :
+    (innerRegionSynthesisSummary cfg offset).lookupActivationCount = 0 := by
+  simp only [innerRegionSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem innerRegion_synthesisSummary_eq
     (B : FixedBaseData) (cfg : Config) (offset : ℕ)
     (alpha : AssignedCell Fp) (self : RegionIndex) :
@@ -258,6 +264,12 @@ def witnessCheck13SynthesisSummary
   LookupRangeCheck.witnessCheckSynthesisSummary 10 13 false cfg
 
 @[synthesis_summary_norm]
+theorem witnessCheck13SynthesisSummary_lookupActivationCount
+    (cfg : LookupRangeCheck.Config 10) :
+    (witnessCheck13SynthesisSummary cfg).lookupActivationCount = 13 := by
+  simp only [witnessCheck13SynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem witnessCheck13_synthesisSummary_eq
     (cfg : LookupRangeCheck.Config 10) (w : WitgenIR Fp 1)
     (self : RegionIndex) :
@@ -291,6 +303,11 @@ def canonicityRegionSynthesisSummary (cfg : Config) :
     3 0
 
 @[synthesis_summary_norm]
+theorem canonicityRegionSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (canonicityRegionSynthesisSummary cfg).lookupActivationCount = 0 := by
+  simp only [canonicityRegionSynthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem canonicityRegion_synthesisSummary_eq
     (cfg : Config) (alpha z84 alphaPrime z13 z44 z43 : AssignedCell Fp)
     (self : RegionIndex) :
@@ -304,10 +321,12 @@ theorem canonicityRegion_synthesisSummary_eq
       circuit_norm, canonGate]
     omega
   · simp only [canonicityRegionSynthesisSummary, canonicityRegion,
-      circuit_norm, canonGate]
+      circuit_norm, canonGate, synthesis_summary_norm]
   · simp only [canonicityRegionSynthesisSummary, canonicityRegion,
       circuit_norm, canonGate]
     omega
+  · simp only [canonicityRegionSynthesisSummary, canonicityRegion,
+      circuit_norm, canonGate]
 
 @[synthesis_summary_norm]
 theorem canonicityRegionSynthesisSummary_hasNoFixedColumns (cfg : Config) :
@@ -1531,6 +1550,11 @@ def circuitSynthesisSummary (cfg : Config) :
       ((witnessCheck13SynthesisSummary cfg.lookupConfig).combine
         (FloorPlanner.SynthesisSummary.ofRegion
           (canonicityRegionSynthesisSummary cfg))))
+
+@[synthesis_summary_norm]
+theorem circuitSynthesisSummary_lookupActivationCount (cfg : Config) :
+    (circuitSynthesisSummary cfg).lookupActivationCount = 13 := by
+  simp only [circuitSynthesisSummary, synthesis_summary_norm]
 
 @[synthesis_summary_norm]
 theorem circuitSynthesisSummary_tableRowExtent_eq (cfg : Config) :

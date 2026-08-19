@@ -82,6 +82,11 @@ def synthesisSummary (cfg : Config) (offset : ℕ) :
     (offset + 2) 0
 
 @[synthesis_summary_norm]
+theorem synthesisSummary_lookupActivationCount (cfg : Config) (offset : ℕ) :
+    (synthesisSummary cfg offset).lookupActivationCount = 0 := by
+  simp only [synthesisSummary, synthesis_summary_norm]
+
+@[synthesis_summary_norm]
 theorem synthesisSummary_hasNoFixedColumns (cfg : Config) (offset : ℕ) :
     (synthesisSummary cfg offset).HasNoFixedColumns := by
   unfold synthesisSummary
@@ -133,6 +138,8 @@ def bundleElaborated (wb1 wd1 : WitgenIR Fp 1) :
       · simp only [synthesisSummary, bundleSynthesize, circuit_norm,
           synthesis_summary_norm]
         omega
+      · simp only [synthesisSummary, bundleSynthesize, circuit_norm,
+          synthesis_summary_norm]
       · simp only [synthesisSummary, bundleSynthesize, circuit_norm,
           synthesis_summary_norm]
       · simp only [synthesisSummary, bundleSynthesize, circuit_norm,

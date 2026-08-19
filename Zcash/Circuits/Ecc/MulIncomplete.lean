@@ -108,6 +108,12 @@ def loopSynthesisSummary (n : ℕ) (cfg : Config) (offset : ℕ) :
       .column .advice cfg.yP.index]
     offset 1 3 0 n
 
+@[synthesis_summary_norm]
+theorem loopSynthesisSummary_lookupActivationCount
+    (n : ℕ) (cfg : Config) (offset : ℕ) :
+    (loopSynthesisSummary n cfg offset).lookupActivationCount = 0 := by
+  simp only [loopSynthesisSummary, synthesis_summary_norm, Nat.mul_zero]
+
 /-- The repeated double-and-add rows use selectors and advice columns only. -/
 @[synthesis_summary_norm]
 theorem loopSynthesisSummary_hasNoFixedColumns
@@ -418,6 +424,13 @@ def doubleAndAddSynthesisSummary (n : ℕ) (cfg : Config) (offset : ℕ) :
         (offset + n + 3) 0))
 
 @[synthesis_summary_norm]
+theorem doubleAndAddSynthesisSummary_lookupActivationCount
+    (n : ℕ) (cfg : Config) (offset : ℕ) :
+    (doubleAndAddSynthesisSummary n cfg offset).lookupActivationCount = 0 := by
+  simp only [doubleAndAddSynthesisSummary, synthesis_summary_norm,
+    Nat.add_zero]
+
+@[synthesis_summary_norm]
 theorem doubleAndAddSynthesisSummary_instanceRowExtent_eq
     (n : ℕ) (cfg : Config) (offset : ℕ) :
     (doubleAndAddSynthesisSummary n cfg offset).instanceRowExtent = 0 := by
@@ -468,6 +481,7 @@ def double_and_add (n : ℕ) (w : ℕ) :
             FloorPlanner.RegionSynthesisSummary.ofColumns_constantSiteCount]
         · simp only [circuit_norm, synthesis_summary_norm,
             FloorPlanner.RegionSynthesisSummary.ofColumns_instanceRowExtent]
+        · simp only [circuit_norm, synthesis_summary_norm]
       output cfg offset _ self :=
         { acc :=
             { x := .of self (offset + n + 2) cfg.xA

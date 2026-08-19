@@ -311,6 +311,22 @@ theorem actionCircuit_lookupInputArity_le
       Circuit.configure_lookupInputArity_le
         Specs.Sinsemilla.orchardGenerators lookup hlookup
 
+/-- Action synthesis enables exactly 2424 lookup sites. -/
+theorem actionCircuit_lookupActivationCount_eq :
+    actionCircuit.synthesisSummary.lookupActivationCount = 2424 := by
+  rw [Internal.actionCircuit_eq_impl]
+  calc
+    _ = (Circuit.mainPostSynthesisSummary
+          Internal.actionCircuitImpl.config).lookupActivationCount := by
+      simpa only [TopLevelCircuit.synthesisSummary,
+        Internal.actionCircuitImpl] using
+          congrArg (fun summary => summary.lookupActivationCount)
+            (Circuit.circuit_synthesisSummary_eq
+              Specs.Sinsemilla.orchardGenerators orchardBases
+              Internal.actionCircuitImpl.config () 0)
+    _ = 2424 :=
+      Circuit.mainPostSynthesisSummary_lookupActivationCount _
+
 /-- Action's configured gates and lookups have exact Halo 2 degree nine. -/
 theorem actionCircuit_constraintDegree_eq :
     actionCircuit.constraintDegree = 9 := by

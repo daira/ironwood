@@ -31,10 +31,10 @@
    "type": "git",
    "subDir": null,
    "scope": "",
-   "rev": "5e2547473aad1aa832fbd2c5a383e5020df1cdd4",
+   "rev": "0b5ff2403f5e1411d070ecde449ceb0914ef752e",
    "name": "Clean",
    "manifestFile": "lake-manifest.json",
-   "inputRev": "5e254747",
+   "inputRev": "0b5ff240",
    "inherited": false,
    "configFile": "lakefile.lean"
   },
