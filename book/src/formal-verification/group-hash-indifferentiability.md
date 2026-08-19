@@ -109,14 +109,17 @@ $$f(u) = \begin{cases}
 
 The Simplified SWU construction arranges that the two candidate curve-equation
 values differ by a nonsquare factor, so exactly one of the two branches is
-available for each input $u$.
+available for each input $u$. The precise formulas —including how $u$ is
+transformed before it becomes an $x$-coordinate— are in CompElliptic's
+[`Hashing/SimplifiedSWU.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/SimplifiedSWU.lean),
+the formalization of the construction.
 
-It also fixes the sign at the end: the output's $y$-coordinate is negated if
-necessary so that its sign matches the sign of the input, in the convention
-that RFC 9380 calls `sgn0`. This makes $f$ *odd*, that is, $f(-u) = -f(u)$
-for $u \neq 0$. Oddness carries weight below: it is what splits an input pair
-$\{u, -u\}$ across a point and its negation, and the character-sum analysis
-relies on it too.
+The actual construction also fixes the sign at the end: the output's
+$y$-coordinate is negated if necessary so that its sign matches the sign of the
+input, in the convention that RFC 9380 calls `sgn0`. This makes $f$ *odd*, that
+is, $f(-u) = -f(u)$ for $u \neq 0$. Oddness carries weight below: it is what
+splits an input pair $\{u, -u\}$ across a point and its negation, and the
+character-sum analysis relies on it too.
 
 The images of $f_1$ and $f_2$ are not disjoint; for Simplified SWU they in fact
 coincide, apart from a negligible proportion of exceptional points. To see why,
