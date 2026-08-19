@@ -11,7 +11,7 @@ import Zcash.Common.Oracle.Hybrid
 This composes the single-query bias of `GroupHash/Sampler.lean` through the
 adaptive hybrid `runFreshPMF_eventBiasLE`: a distinguisher making at most `q`
 fresh queries tells the real world from the ideal world with advantage at most
-`q·ε`, where `ε` is the regularity distance.
+`q·β`, where `β` is the regularity distance.
 
 ## The one-oracle game
 
@@ -72,14 +72,14 @@ def IndiffFromRO [Nonempty F] [Nonempty G] (f : F → G) (q : ℕ) (δ : ℝ≥0
         (runFreshPMF (PMF.uniformOfFintype (F × F)) A) δ
 
 omit [DecidableEq F] in
-/-- **The multi-query composition**: a regularity distance of `ε` gives
-indifferentiability at `q·ε`, by charging the single-query bias once per
+/-- **The multi-query composition**: a regularity distance of `β` gives
+indifferentiability at `q·β`, by charging the single-query bias once per
 query node of the adaptive tree (`runFreshPMF_eventBiasLE`). -/
 theorem indiffFromRO_of_regularity [Nonempty F] [Nonempty G] (f : F → G)
-    {ε : ℝ} (q : ℕ)
+    {β : ℝ} (q : ℕ)
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
-    IndiffFromRO f q (q * ENNReal.ofReal ε) := by
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
+    IndiffFromRO f q (q * ENNReal.ofReal β) := by
   intro M A hQ
   exact ⟨runFreshPMF_eventBiasLE (weightedBias_real_le f hdev) hQ,
     runFreshPMF_eventBiasLE (weightedBias_ideal_le f hdev) hQ⟩
@@ -100,36 +100,36 @@ theorem transport_term_le (α : Type*) [Fintype α] [Nonempty α] :
 /-- **Indifferentiability at the deployed Pallas mapping, from a Weil
 bound and a budget.** The `WeilBounded` hypothesis supplies a constant `C`:
 each nontrivial character sum of the zero-repaired mapping is at most
-`C·√#F`. The budget hypothesis `hbound` lets `ε` absorb the regularity
+`C·√#F`. The budget hypothesis `hbound` lets `β` absorb the regularity
 distance that `C` induces. Then `q` queries distinguish with advantage at
-most `q · (ε + 4/#F)`. The concrete endpoint `pallas_indiffFromRO`
+most `q · (β + 4/#F)`. The concrete endpoint `pallas_indiffFromRO`
 instantiates both. -/
-theorem pallas_indiffFromRO_of_weilBounded {C ε : ℝ} (q : ℕ)
-    (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
+theorem pallas_indiffFromRO_of_weilBounded {C β : ℝ} (q : ℕ)
+    (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hβ : 0 ≤ β)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
-      / (Fintype.card PallasBaseField : ℝ)^2 ≤ ε^2) :
+      / (Fintype.card PallasBaseField : ℝ)^2 ≤ β^2) :
     IndiffFromRO Pallas.mapToCurve q
-      (q * ENNReal.ofReal (ε + 4 / Fintype.card PallasBaseField)) :=
+      (q * ENNReal.ofReal (β + 4 / Fintype.card PallasBaseField)) :=
   indiffFromRO_of_regularity Pallas.mapToCurve q
-    ((pallas_regularityDistance_le h hε hbound).trans
-      (by gcongr ε + ?_; exact transport_term_le PallasBaseField))
+    ((pallas_regularityDistance_le h hβ hbound).trans
+      (by gcongr β + ?_; exact transport_term_le PallasBaseField))
 
 /-- **Indifferentiability at the deployed Vesta mapping, from a Weil
 bound and a budget.** The `WeilBounded` hypothesis supplies a constant `C`:
 each nontrivial character sum of the zero-repaired mapping is at most
-`C·√#F`. The budget hypothesis `hbound` lets `ε` absorb the regularity
+`C·√#F`. The budget hypothesis `hbound` lets `β` absorb the regularity
 distance that `C` induces. Then `q` queries distinguish with advantage at
-most `q · (ε + 4/#F)`. The concrete endpoint `vesta_indiffFromRO`
+most `q · (β + 4/#F)`. The concrete endpoint `vesta_indiffFromRO`
 instantiates both. -/
-theorem vesta_indiffFromRO_of_weilBounded {C ε : ℝ} (q : ℕ)
-    (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
+theorem vesta_indiffFromRO_of_weilBounded {C β : ℝ} (q : ℕ)
+    (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hβ : 0 ≤ β)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
-      / (Fintype.card VestaBaseField : ℝ)^2 ≤ ε^2) :
+      / (Fintype.card VestaBaseField : ℝ)^2 ≤ β^2) :
     IndiffFromRO Vesta.mapToCurve q
-      (q * ENNReal.ofReal (ε + 4 / Fintype.card VestaBaseField)) :=
+      (q * ENNReal.ofReal (β + 4 / Fintype.card VestaBaseField)) :=
   indiffFromRO_of_regularity Vesta.mapToCurve q
-    ((vesta_regularityDistance_le h hε hbound).trans
-      (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
+    ((vesta_regularityDistance_le h hβ hbound).trans
+      (by gcongr β + ?_; exact transport_term_le VestaBaseField))
 
 /-! ## The concrete endpoints
 
@@ -137,12 +137,12 @@ Instantiating the Weil side removes every analytic hypothesis: from Weil's
 theorem at the two branch covers alone —the `CharSumBounded` inputs of
 CompElliptic's `Hashing/WeilInstance.lean`— the advantage bound is the
 single term `q/2^120`. The parametric endpoints conclude with advantage
-`q·(ε + 4/#F)`; instantiating `ε := 1/2^120 - 4/#F` makes the sum
+`q·(β + 4/#F)`; instantiating `β := 1/2^120 - 4/#F` makes the sum
 telescope to exactly `1/2^120` — the subtraction pre-pays the zero-repair
 transport inside the budget. Two side conditions remain, both exact
-rational arithmetic on the card numerals: `ε ≥ 0` (the transport
+rational arithmetic on the card numerals: `β ≥ 0` (the transport
 `4/#F ≈ 2^{-252}` is far below `2^{-120}`), and the budget check
-`(#G - 1)·(21/2)⁴/#F² ≤ ε²` (the regularity distance is about
+`(#G - 1)·(21/2)⁴/#F² ≤ β²` (the regularity distance is about
 `2^{-120.2}`, a headroom factor of about `2^{0.2} ≈ 1.16`). -/
 
 /-- **Concrete indifferentiability at the deployed Pallas mapping.** From
@@ -162,7 +162,7 @@ theorem pallas_indiffFromRO (q : ℕ)
   have hG : Fintype.card (SWPoint Pallas.curve)
       = CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := by
     simpa using Pallas.card_eq
-  have hε : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ) := by
+  have hβ : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ) := by
     rw [hcard]
     norm_num
   have hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * (21/2:ℝ)^4
@@ -170,7 +170,7 @@ theorem pallas_indiffFromRO (q : ℕ)
       ≤ (1/2^120 - 4 / (Fintype.card PallasBaseField : ℝ))^2 := by
     rw [hG, hcard]
     norm_num
-  -- Present the budget as `(ε + 4/#F)` with `ε := 1/2^120 - 4/#F`, so the
+  -- Present the budget as `(β + 4/#F)` with `β := 1/2^120 - 4/#F`, so the
   -- parametric conclusion telescopes to `q/2^120` exactly.
   rw [show ((q : ℝ≥0∞) / 2^120) = q * ENNReal.ofReal ((1:ℝ)/2^120) from by
       rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
@@ -179,7 +179,7 @@ theorem pallas_indiffFromRO (q : ℕ)
       + 4 / (Fintype.card PallasBaseField : ℝ) from by ring]
   intro M A hQ
   exact pallas_indiffFromRO_of_weilBounded q
-    (Pallas.weilBounded_zeroRepaired_mapToCurve h1 h2) hε hbound A hQ
+    (Pallas.weilBounded_zeroRepaired_mapToCurve h1 h2) hβ hbound A hQ
 
 /-- **Concrete indifferentiability at the deployed Vesta mapping.** From
 Weil's theorem at the two branch covers of iso-Vesta, `q` queries
@@ -198,7 +198,7 @@ theorem vesta_indiffFromRO (q : ℕ)
   have hG : Fintype.card (SWPoint Vesta.curve)
       = CompElliptic.Fields.Pasta.PALLAS_BASE_CARD := by
     simpa using Vesta.card_eq
-  have hε : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ) := by
+  have hβ : (0:ℝ) ≤ 1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ) := by
     rw [hcard]
     norm_num
   have hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * (21/2:ℝ)^4
@@ -206,7 +206,7 @@ theorem vesta_indiffFromRO (q : ℕ)
       ≤ (1/2^120 - 4 / (Fintype.card VestaBaseField : ℝ))^2 := by
     rw [hG, hcard]
     norm_num
-  -- Present the budget as `(ε + 4/#F)` with `ε := 1/2^120 - 4/#F`, so the
+  -- Present the budget as `(β + 4/#F)` with `β := 1/2^120 - 4/#F`, so the
   -- parametric conclusion telescopes to `q/2^120` exactly.
   rw [show ((q : ℝ≥0∞) / 2^120) = q * ENNReal.ofReal ((1:ℝ)/2^120) from by
       rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
@@ -215,7 +215,7 @@ theorem vesta_indiffFromRO (q : ℕ)
       + 4 / (Fintype.card VestaBaseField : ℝ) from by ring]
   intro M A hQ
   exact vesta_indiffFromRO_of_weilBounded q
-    (Vesta.weilBounded_zeroRepaired_mapToCurve h1 h2) hε hbound A hQ
+    (Vesta.weilBounded_zeroRepaired_mapToCurve h1 h2) hβ hbound A hQ
 
 /-! ## The composition with the capped simulator
 
@@ -240,17 +240,17 @@ def IndiffFromROCapped [Nonempty F] [Nonempty G] (f : F → G) (d : ℕ)
       ∧ PMFEventBiasLE (runFreshPMF (simLaw f d K) A)
         (runFreshPMF (PMF.uniformOfFintype (F × F)) A) δ
 
-/-- **The capped multi-query composition**: a regularity distance of `ε`
+/-- **The capped multi-query composition**: a regularity distance of `β`
 gives indifferentiability against the capped simulator at
-`q · (ε + simLawBias f d K)`. Each query is charged the single-query bias
+`q · (β + simLawBias f d K)`. Each query is charged the single-query bias
 plus the capped simulator's average bias. -/
 theorem indiffFromROCapped_of_regularity [Nonempty F] [Nonempty G]
     (f : F → G) {d : ℕ} [NeZero d]
-    (hd : ∀ P : G, (singleFibre f P).card ≤ d) {ε : ℝ} (q K : ℕ)
+    (hd : ∀ P : G, (singleFibre f P).card ≤ d) {β : ℝ} (q K : ℕ)
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
     IndiffFromROCapped f d K q
-      (q * (ENNReal.ofReal ε + simLawBias f d K)) := by
+      (q * (ENNReal.ofReal β + simLawBias f d K)) := by
   intro M A hQ
   have hswap := (simLaw_eventBiasLE_idealLaw f hd K).weightedBiasLE
   have hswap' := (idealLaw_eventBiasLE_simLaw f hd K).weightedBiasLE
@@ -259,7 +259,7 @@ theorem indiffFromROCapped_of_regularity [Nonempty F] [Nonempty G]
     have h₂ := runFreshPMF_eventBiasLE hswap' hQ
     have := h₁.trans h₂
     rwa [← mul_add,
-      add_comm (simLawBias f d K) (ENNReal.ofReal ε)] at this
+      add_comm (simLawBias f d K) (ENNReal.ofReal β)] at this
   · have h₁ := runFreshPMF_eventBiasLE hswap hQ
     have h₂ := runFreshPMF_eventBiasLE (weightedBias_ideal_le f hdev) hQ
     have := h₁.trans h₂
@@ -268,31 +268,31 @@ theorem indiffFromROCapped_of_regularity [Nonempty F] [Nonempty G]
 /-- **Indifferentiability at the deployed Pallas mapping, witnessed by the
 capped simulator**: the `IndiffFromRO` budget plus the capped simulator's
 average bias, per query. -/
-theorem pallas_indiffFromROCapped {C ε : ℝ} (q K : ℕ)
-    (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hε : 0 ≤ ε)
+theorem pallas_indiffFromROCapped {C β : ℝ} (q K : ℕ)
+    (h : WeilBounded (zeroRepaired Pallas.mapToCurve) C) (hβ : 0 ≤ β)
     (hbound : ((Fintype.card (SWPoint Pallas.curve) : ℝ) - 1) * C^4
-      / (Fintype.card PallasBaseField : ℝ)^2 ≤ ε^2) :
+      / (Fintype.card PallasBaseField : ℝ)^2 ≤ β^2) :
     IndiffFromROCapped Pallas.mapToCurve deployedFibreBound K q
-      (q * (ENNReal.ofReal (ε + 4 / Fintype.card PallasBaseField)
+      (q * (ENNReal.ofReal (β + 4 / Fintype.card PallasBaseField)
         + simLawBias Pallas.mapToCurve deployedFibreBound K)) :=
   indiffFromROCapped_of_regularity Pallas.mapToCurve
     pallas_singleFibre_card_le q K
-    ((pallas_regularityDistance_le h hε hbound).trans
-      (by gcongr ε + ?_; exact transport_term_le PallasBaseField))
+    ((pallas_regularityDistance_le h hβ hbound).trans
+      (by gcongr β + ?_; exact transport_term_le PallasBaseField))
 
 /-- **Indifferentiability at the deployed Vesta mapping, witnessed by the
 capped simulator**: the `IndiffFromRO` budget plus the capped simulator's
 average bias, per query. -/
-theorem vesta_indiffFromROCapped {C ε : ℝ} (q K : ℕ)
-    (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hε : 0 ≤ ε)
+theorem vesta_indiffFromROCapped {C β : ℝ} (q K : ℕ)
+    (h : WeilBounded (zeroRepaired Vesta.mapToCurve) C) (hβ : 0 ≤ β)
     (hbound : ((Fintype.card (SWPoint Vesta.curve) : ℝ) - 1) * C^4
-      / (Fintype.card VestaBaseField : ℝ)^2 ≤ ε^2) :
+      / (Fintype.card VestaBaseField : ℝ)^2 ≤ β^2) :
     IndiffFromROCapped Vesta.mapToCurve deployedFibreBound K q
-      (q * (ENNReal.ofReal (ε + 4 / Fintype.card VestaBaseField)
+      (q * (ENNReal.ofReal (β + 4 / Fintype.card VestaBaseField)
         + simLawBias Vesta.mapToCurve deployedFibreBound K)) :=
   indiffFromROCapped_of_regularity Vesta.mapToCurve
     vesta_singleFibre_card_le q K
-    ((vesta_regularityDistance_le h hε hbound).trans
-      (by gcongr ε + ?_; exact transport_term_le VestaBaseField))
+    ((vesta_regularityDistance_le h hβ hbound).trans
+      (by gcongr β + ?_; exact transport_term_le VestaBaseField))
 
 end Zcash.Security.GroupHash

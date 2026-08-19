@@ -52,8 +52,8 @@ hybrid `runFreshPMF_eventBiasLE` consumes, so a single-query bound composes to a
   `∑_Q |pairCount f Q / (#F)² − 1 / #G|`,
 
 the L¹ distance between the two-term output distribution and the uniform
-distribution on `G`. CompElliptic's `sum_abs_prob_dev_le` bounds it by `ε`
-(relying on the Weil bound). Both bias directions come out at this same `ε`.
+distribution on `G`. CompElliptic's `sum_abs_prob_dev_le` bounds it by `β`
+(relying on the Weil bound). Both bias directions come out at this same `β`.
 
 To see why, regroup the per-pair difference by the group element
 `Q = f u₀ + f u₁`. Take a nonempty fibre of `Q`, with `k = pairCount f Q ≥ 1`
@@ -77,8 +77,8 @@ elements. That fallback mass is exactly the empty-fibre part of the same
 regularity distance: an empty fibre has `pairCount f Q = 0`, so its term is
 `|0 − 1/#G| = 1/#G`, and there are `e` of them, totalling `e / #G`. So the
 nonempty part and the fallback mass together are the *whole* regularity distance
-`∑_Q |pairCount f Q / (#F)² − 1/#G| ≤ ε` — the fallback fills in the terms the
-nonempty part left out, and the bound stays at `ε`. In the other direction the
+`∑_Q |pairCount f Q / (#F)² − 1/#G| ≤ β` — the fallback fills in the terms the
+nonempty part left out, and the bound stays at `β`. In the other direction the
 fallback only raises the ideal law, which shrinks `real − ideal`, so that
 direction is bounded by the nonempty part alone.
 -/
@@ -264,11 +264,11 @@ omit [DecidableEq F] in
 the regularity distance: dropping the ideal law's fallback part only enlarges
 the overshoot, and the fibre-uniform part regroups to the regularity terms of
 the nonempty fibres. -/
-theorem sum_tsub_uniform_idealLaw_le [Nonempty F] [Nonempty G] (f : F → G) {ε : ℝ}
+theorem sum_tsub_uniform_idealLaw_le [Nonempty F] [Nonempty G] (f : F → G) {β : ℝ}
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
     ∑ p : F × F, (PMF.uniformOfFintype (F × F) p - idealLaw f p)
-      ≤ ENNReal.ofReal ε := by
+      ≤ ENNReal.ofReal β := by
   have hcard : (Fintype.card (F × F) : ℝ≥0∞)⁻¹
       = ENNReal.ofReal (1 / (Fintype.card F : ℝ)^2) := by
     rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
@@ -316,11 +316,11 @@ omit [DecidableEq F] in
 /-- **The single-query bias, real overshooting ideal.** The real per-query law
 (uniform on `F × F`) overshoots the ideal law by at most the regularity distance
 against every `[0, 1]`-valued test. -/
-theorem weightedBias_real_le [Nonempty F] [Nonempty G] (f : F → G) {ε : ℝ}
+theorem weightedBias_real_le [Nonempty F] [Nonempty G] (f : F → G) {β : ℝ}
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
     Zcash.Common.PMFWeightedBiasLE (PMF.uniformOfFintype (F × F)) (idealLaw f)
-      (ENNReal.ofReal ε) :=
+      (ENNReal.ofReal β) :=
   pmfWeightedBiasLE_of_sum_tsub_le (sum_tsub_uniform_idealLaw_le f hdev)
 
 omit [DecidableEq F] in
@@ -328,11 +328,11 @@ omit [DecidableEq F] in
 the regularity distance: the fibre-uniform part accounts for the nonempty
 fibres' regularity terms, and the fallback mass is exactly the empty fibres'
 terms, so together they exhaust the sum. -/
-theorem sum_tsub_idealLaw_uniform_le [Nonempty F] [Nonempty G] (f : F → G) {ε : ℝ}
+theorem sum_tsub_idealLaw_uniform_le [Nonempty F] [Nonempty G] (f : F → G) {β : ℝ}
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
     ∑ p : F × F, (idealLaw f p - PMF.uniformOfFintype (F × F) p)
-      ≤ ENNReal.ofReal ε := by
+      ≤ ENNReal.ofReal β := by
   have hcard : (Fintype.card (F × F) : ℝ≥0∞)⁻¹
       = ENNReal.ofReal (1 / (Fintype.card F : ℝ)^2) := by
     rw [ENNReal.ofReal_div_of_pos (by positivity), ENNReal.ofReal_one,
@@ -439,12 +439,12 @@ theorem sum_tsub_idealLaw_uniform_le [Nonempty F] [Nonempty G] (f : F → G) {ε
 omit [DecidableEq F] in
 /-- **The single-query bias, ideal overshooting real.** The same regularity
 distance bounds the other direction: the ideal law overshoots the real one by at
-most `ε`, the fallback mass of the empty fibres being part of the same sum. -/
-theorem weightedBias_ideal_le [Nonempty F] [Nonempty G] (f : F → G) {ε : ℝ}
+most `β`, the fallback mass of the empty fibres being part of the same sum. -/
+theorem weightedBias_ideal_le [Nonempty F] [Nonempty G] (f : F → G) {β : ℝ}
     (hdev : ∑ Q, |(pairCount f Q : ℝ) / (Fintype.card F : ℝ)^2
-        - 1 / (Fintype.card G : ℝ)| ≤ ε) :
+        - 1 / (Fintype.card G : ℝ)| ≤ β) :
     Zcash.Common.PMFWeightedBiasLE (idealLaw f) (PMF.uniformOfFintype (F × F))
-      (ENNReal.ofReal ε) :=
+      (ENNReal.ofReal β) :=
   pmfWeightedBiasLE_of_sum_tsub_le (sum_tsub_idealLaw_uniform_le f hdev)
 
 end Zcash.Security.GroupHash
