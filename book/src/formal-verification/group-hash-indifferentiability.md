@@ -374,7 +374,7 @@ exactly when all its nontrivial character sums vanish — so small nontrivial
 character sums mean close to uniform. That is what lets a Weil bound control
 the *regularity distance*
 
-$$\sum_{Q} \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \eps,$$
+$$\sum_{Q} \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \beta,$$
 
 where $\mathsf{pairCount}\, f\, Q$ counts the pairs $(u_0, u_1)$ with
 $f(u_0) + f(u_1) = Q$ — the size of the *fibre* of $Q$. Dividing by
@@ -384,15 +384,15 @@ uniform distribution on $\Group$. The *$L^1$ distance* between two distributions
 $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
 absolute differences of the probabilities they assign.
 
-The formalization accepts any budget $\eps$ whose square dominates
+The formalization accepts any budget $\beta$ whose square dominates
 $(\GroupSize - 1) \cdot C^4 / (\FieldSize)^2$ (`sum_abs_prob_dev_le`) — that
-is, any $\eps$ just above $C^2 \sqrt{\GroupSize} / \FieldSize$, where $C$ is
+is, any $\beta$ just above $C^2 \sqrt{\GroupSize} / \FieldSize$, where $C$ is
 the Weil constant discussed in the
 [next section](#calculating-the-weil-constant). At the deployed sizes
 $\FieldSize \approx \GroupSize \approx 2^{254}$ and $C = 21/2$: squaring the
 constant gives $C^2 \approx 2^{6.8}$, the square root halves the exponent to
 $\sqrt{\GroupSize} \approx 2^{127}$, and so
-$\eps \approx 2^{6.8} \cdot 2^{127} / 2^{254} \approx 2^{-120}$.
+$\beta \approx 2^{6.8} \cdot 2^{127} / 2^{254} \approx 2^{-120}$.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
@@ -526,8 +526,8 @@ only effect is on the bias, where it is accounted for exactly.
 ### The bias reduces to the regularity distance
 
 The claim, in each direction, is that the law in each world *overshoots* that
-of the other world by at most $\eps$: for every test $w$ valued in $[0, 1]$,
-$\sum_x \mu(x)\, w(x) \le \sum_x \nu(x)\, w(x) + \eps$. This one-sided form
+of the other world by at most $\beta$: for every test $w$ valued in $[0, 1]$,
+$\sum_x \mu(x)\, w(x) \le \sum_x \nu(x)\, w(x) + \beta$. This one-sided form
 (`PMFWeightedBiasLE`) is what the query-composition step needs.
 
 To bound it, regroup the per-pair difference by the group element
@@ -551,7 +551,7 @@ uniform *within* the fibre whatever its size, so all $k$ pairs share one
 probability. Summing over the nonempty fibres gives the part of the regularity
 distance with $\mathsf{pairCount}\, f\, Q > 0$.
 
-### Why both directions come out at the same $\eps$
+### Why both directions come out at the same $\beta$
 
 The empty fibres require our attention in one direction only.
 
@@ -567,9 +567,9 @@ regularity distance: an empty fibre has $\mathsf{pairCount}\, f\, Q = 0$, so
 its term is $\left| 0 - \frac{1}{\GroupSize} \right| = \frac{1}{\GroupSize}$, and
 there are $e$ of them, totalling $\frac{e}{\GroupSize}$. So the nonempty part
 and the fallback mass together are the *whole* regularity distance
-$\sum_Q \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \eps$.
+$\sum_Q \left| \frac{\mathsf{pairCount}\, f\, Q}{(\FieldSize)^2} - \frac{1}{\GroupSize} \right| \le \beta$.
 The fallback fills in the terms the nonempty part left out, and the bound stays
-at $\eps$.
+at $\beta$.
 
 ## From one query to many
 
@@ -577,7 +577,7 @@ A single-query bound does not immediately bound a distinguisher that makes many
 adaptive queries — later queries may depend on earlier answers. The adaptive
 hybrid `runFreshPMF_eventBiasLE` (in `Zcash/Common/Oracle/`) bridges the
 gap: it charges the one-squeeze bias once per query node, so a $q$-query tree
-turns a single-query bias $\eps$ into an overall bias of at most $q \cdot \eps$,
+turns a single-query bias $\beta$ into an overall bias of at most $q \cdot \beta$,
 even when the query tree is fully adaptive. Repeated queries to the same point
 are first collapsed by `dedup`, so a point asked twice keeps one answer rather
 than drawing a fresh one.
