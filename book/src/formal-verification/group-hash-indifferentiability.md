@@ -7,8 +7,8 @@ not seen an indifferentiability proof before; no prior acquaintance with the
 notion is assumed.
 
 The counting that the argument rests on lives in
-[CompElliptic](https://github.com/daira/CompElliptic) (`Hashing/TwoTermUniformity.lean`,
-`Hashing/PastaSSWU.lean`); the probabilistic argument on this page lives under
+[CompElliptic](https://github.com/daira/CompElliptic) ([`Hashing/TwoTermUniformity.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/TwoTermUniformity.lean),
+[`Hashing/PastaSSWU.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/PastaSSWU.lean)); the probabilistic argument on this page lives under
 `Zcash/Security/GroupHash/`.
 
 ## The deployed hash
@@ -474,13 +474,13 @@ The calculation of $C$ is proven on paper —modulo results cited as established
 mathematics— in CompElliptic's
 [`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md),
 and formalized down to Weil's theorem at the two branch covers
-(CompElliptic's `Hashing/BranchCovers.lean` and
-`Hashing/WeilInstance.lean`): everything between the per-cover inputs
+(CompElliptic's [`Hashing/BranchCovers.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/BranchCovers.lean)
+and [`Hashing/WeilInstance.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilInstance.lean)): everything between the per-cover inputs
 $|S_{C_j}(\chi)| \le (2 \mul 6 - 2) \mul \sqrt{\FieldSize}$ —the analogous
 sums over the rational points of the two branch coverings, stated in
 square-root-free form— and the deployed `WeilBounded` instances is
 machine-checked. The paper proof's own checkable inputs are also
-machine-checked (CompElliptic's `Hashing/WeilSupport.lean`), and the
+machine-checked (CompElliptic's [`Hashing/WeilSupport.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilSupport.lean)), and the
 design doc cites each proven fact at its point of use, with CI keeping
 the references exact. Weil's theorem itself stays the cited input: even
 stating it needs vocabulary (genus, places, covers of curves) that
@@ -672,7 +672,7 @@ Two things remain, both tracked in issues:
 * The Weil bound rests on a cited input: Weil's theorem at the two branch
   covers. The calculation from that input to the deployed constant is
   formalized, and so are the paper proof's supporting facts
-  (CompElliptic's `Hashing/WeilSupport.lean`) — the delivered scope of
+  (CompElliptic's [`Hashing/WeilSupport.lean`](https://github.com/daira/CompElliptic/blob/main/CompElliptic/Hashing/WeilSupport.lean)) — the delivered scope of
   [CompElliptic#28](https://github.com/daira/CompElliptic/issues/28).
   The input's own statement needs function-field vocabulary (genus,
   places, covers) that Mathlib does not yet have, tracked at
