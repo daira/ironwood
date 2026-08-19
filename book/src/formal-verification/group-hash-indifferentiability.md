@@ -103,8 +103,8 @@ Weierstrass curves with $a = 0$, like Pallas and Vesta; we'll get to that in
 negligible cases we have:
 
 $$f(u) = \begin{cases}
-  g(u),&\textsf{for half of the } u \\
-  h(u),&\textsf{for the other half.}
+  f_1(u),&\textsf{for half of the } u \\
+  f_2(u),&\textsf{for the other half.}
 \end{cases}$$
 
 The Simplified SWU construction arranges that the two candidate curve-equation
@@ -118,27 +118,27 @@ for $u \neq 0$. Oddness carries weight below: it is what splits an input pair
 $\{u, -u\}$ across a point and its negation, and the character-sum analysis
 relies on it too.
 
-The images of $g$ and $h$ are not disjoint; for Simplified SWU they in fact
+The images of $f_1$ and $f_2$ are not disjoint; for Simplified SWU they in fact
 coincide, apart from a negligible proportion of exceptional points. To see why,
-fix a target point $P$. Whether any input reaches $P$ via $g$ comes down to a
+fix a target point $P$. Whether any input reaches $P$ via $f_1$ comes down to a
 quadratic equation in $t = Z \cdot u^2$; the equation depends only on the
 $x$-coordinate of $P$, which $P$ shares with $-P$. A solution $t$ yields inputs
 precisely when $t/Z$ is a square —that is, when $t$ really is $Z \cdot u^2$ for
 some input $u$— and then, since $f$ is odd, the input pair $\{u, -u\}$ has one
 member mapping to $P$ and the other to $-P$. So each realizable solution
-contributes exactly one preimage of $P$. Reaching $P$ via $h$ comes down to a
+contributes exactly one preimage of $P$. Reaching $P$ via $f_2$ comes down to a
 second quadratic in $t$, in the same way. Now, two facts connect the branches:
 
-- $t$ solves the $g$-equation exactly when $1/t$ solves the $h$-equation;
+- $t$ solves the $f_1$-equation exactly when $1/t$ solves the $f_2$-equation;
 - $t/Z$ is a square iff $(1/t)/Z$ is, because their product is the square $1/Z^2$.
 
-So input $u$ reaching $P$ via $g$ corresponds to the inputs $\pm 1/(Z \cdot u)$
-reaching $P$ via $h$ and vice versa. Hence $P$ is reached via $g$ iff it is reached
-via $h$.
+So input $u$ reaching $P$ via $f_1$ corresponds to the inputs $\pm 1/(Z \cdot u)$
+reaching $P$ via $f_2$ and vice versa. Hence $P$ is reached via $f_1$ iff it is
+reached via $f_2$.
 
 This coexists with the exact halves above because those partition the *inputs*,
 not the outputs. The correspondence $u \mapsto \pm 1/(Z \cdot u)$ carries the
-$g$-half of the inputs into the $h$-half and back, preserving the point reached.
+$f_1$-half of the inputs into the $f_2$-half and back, preserving the point reached.
 About $\fraction{3}{8}$ of the output space is reached
 —with 2 or 4 preimages per reached point excluding exceptional cases— and
 the remaining $\fraction{5}{8}$ by neither map. (These proportions are heuristic;
@@ -152,8 +152,8 @@ A modern exposition of that paper is Tao,
 
 ```admonish info title="Where the ⅜ comes from"
 Fix a target point and consider the quadratic in $t$ deciding whether it is
-reached — the branch-$g$ one, say. (The branch-$h$ one behaves identically under
-$t \mapsto 1/t$.) Two coin flips decide the outcome.
+reached — the branch-$f_1$ one, say. (The branch-$f_2$ one behaves identically
+under $t \mapsto 1/t$.) Two coin flips decide the outcome.
 
 - The quadratic has two roots when its discriminant is a square: probability
   about $\fraction{1}{2}$.
