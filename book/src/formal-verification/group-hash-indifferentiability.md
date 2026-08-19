@@ -444,8 +444,7 @@ divides by $(\FieldSize)^4$ — leaving
 $\frac{(\GroupSize - 1) \mul C^4}{(\FieldSize)^2}$.
 
 At the deployed sizes $\FieldSize \approx \GroupSize \approx 2^{254}$ and
-<span style="white-space: nowrap">$C = 21/2$,</span> yielding
-$\beta \approx 2^{-120}$.
+$C = 21/2$ (see below), yielding $\beta \approx 2^{-120}$.
 
 The Weil bound places a bound on character sums along covering curves of the
 encoding, once $C$ is calculated via a per-encoding genus computation. Proving
@@ -465,7 +464,13 @@ The deployed variant differs in all three parameters. The Weil bound for both
 Pallas and Vesta has been calculated as $|S(\chi)| \le 10\sqrt{\FieldSize} + 1$
 from genus-6 coverings (see zcash/pasta's
 [`weilbound.sage`](https://github.com/zcash/pasta/blob/master/weilbound.sage)).
-The calculation is proven on paper —modulo results cited as established
+This is where the deployed $C = 21/2$ comes from: the hypothesis wants
+$|S(\chi)| \le C \mul \sqrt{\FieldSize}$, and the extra half over the $10$
+absorbs the trailing $+ 1$. In square-root-free form this is
+$(10\sqrt{\FieldSize} + 1)^2 \le (21/2)^2 \mul \FieldSize$, which holds at the
+deployed sizes with margin about $2^{126}$.
+
+The calculation of $C$ is proven on paper —modulo results cited as established
 mathematics— in CompElliptic's
 [`design/weil-constant-derivation.md`](https://github.com/daira/CompElliptic/blob/main/design/weil-constant-derivation.md),
 and formalized down to Weil's theorem at the two branch covers
