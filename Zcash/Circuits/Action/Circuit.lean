@@ -1101,6 +1101,15 @@ theorem configure_finalCounts_numFixedColumns_from (G : Generators)
       counts.numFixedColumns + 14 := by
   configure_norm
 
+/-- Action configuration allocates fifty-six selectors after any ambient configure
+prefix. -/
+@[keygen_norm]
+theorem configure_finalCounts_numSelectors_from (G : Generators)
+    (counts : ConfigureCounts) :
+    ((configure G).finalCounts counts).numSelectors =
+      counts.numSelectors + 56 := by
+  configure_norm
+
 /-- Every fixed column used by Action regions is among the columns allocated by Action's
 configure program. -/
 theorem configure_regionFixedColumns_forall_fixedColumns
@@ -1177,6 +1186,11 @@ theorem configure_finalCounts_numAdviceColumns (G : Generators) :
 /-- The closed Action configuration allocates fourteen fixed columns. -/
 theorem configure_finalCounts_numFixedColumns (G : Generators) :
     ((configure G).finalCounts {}).numFixedColumns = 14 := by
+  configure_norm
+
+/-- The closed Action configuration allocates fifty-six selectors. -/
+theorem configure_finalCounts_numSelectors (G : Generators) :
+    ((configure G).finalCounts {}).numSelectors = 56 := by
   configure_norm
 
 /-- The closed Action configuration allocates one instance column. -/

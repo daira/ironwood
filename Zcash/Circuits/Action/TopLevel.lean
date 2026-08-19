@@ -266,6 +266,16 @@ theorem actionCircuit_numFixedColumns_eq :
       Circuit.configure_finalCounts_numFixedColumns
         Specs.Sinsemilla.orchardGenerators
 
+/-- Action's closed configure run allocates fifty-six selectors. -/
+theorem actionCircuit_selectorCount_eq :
+    actionCircuit.selectorCount = 56 := by
+  rw [Internal.actionCircuit_eq_impl]
+  simpa only [Internal.actionCircuitImpl, TopLevelCircuit.selectorCount,
+    TopLevelCircuit.constraintSystem, TopLevelCompilation.constraintSystem,
+    Circuit.circuit] using
+      Circuit.configure_finalCounts_numSelectors
+        Specs.Sinsemilla.orchardGenerators
+
 /-- Action's closed configure run allocates one instance column. -/
 theorem actionCircuit_numInstanceColumns_eq :
     actionCircuit.constraintSystem.numInstanceColumns = 1 := by

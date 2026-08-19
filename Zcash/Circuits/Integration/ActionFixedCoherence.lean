@@ -21,11 +21,6 @@ namespace ActionFixedCoherence
 
 open Zcash.Snark.Keygen
 
-/-- The Action circuit has 29 dense fixed columns after selector compression. -/
-theorem fixedColumnCount_eq :
-    actionCircuit.fixedColumnCount = 29 := by
-  native_decide
-
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 

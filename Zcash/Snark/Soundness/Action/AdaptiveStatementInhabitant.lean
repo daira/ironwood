@@ -628,9 +628,10 @@ def zeroAdaptiveStatementOutput :
 end Adversary
 
 /-- The zero family's representation table holds the zero point, the blinding generator, and one
-entry per fixed and common-permutation column: 2 + 29 + 15 = 46 entries, far inside the `2^89`
-interface cap.  Discharging the invariant concretely is what stops the capstones' quantifier from
-ranging over a class no family is known to satisfy. -/
+entry per fixed and common-permutation column. Generic selector compression and configured-column
+bounds put its length at most 97, far inside the `2^89` interface cap. Discharging the invariant
+concretely is what stops the capstones' quantifier from ranging over a class no family is known to
+satisfy. -/
 theorem zeroAdaptiveFixedRepresentations_length_le (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
     (zeroAdaptiveFixedRepresentations pp basis).length ≤
@@ -638,16 +639,27 @@ theorem zeroAdaptiveFixedRepresentations_length_le (pp : ProofParams)
   simp only [zeroAdaptiveFixedRepresentations, List.length_cons, List.length_append,
     List.length_ofFn, AdaptiveActionStatementShape,
     CircuitShape.withProofParams_numPermutationColumns,
-    ActionFixedCoherence.fixedColumnCount_eq, adaptiveStatementFixedRepresentationLimit]
+    adaptiveStatementFixedRepresentationLimit]
   rw [Halo2.TopLevelCircuit.shape_numPermutationColumns]
+  have hfixed : actionCircuit.fixedColumnCount ≤ 70 := by
+    calc
+      actionCircuit.fixedColumnCount ≤
+          actionCircuit.constraintSystem.numFixedColumns +
+            actionCircuit.selectorCount :=
+        actionCircuit.fixedColumnCount_le_numFixedColumns_add_selectorCount
+      _ = 14 + 56 := by
+        rw [actionCircuit_numFixedColumns_eq,
+          actionCircuit_selectorCount_eq]
+      _ = 70 := by norm_num
   have hpermutation : actionCircuit.permutationColumnCount ≤ 25 := by
     simpa only [actionCircuit_numAdviceColumns_eq,
       actionCircuit_numFixedColumns_eq,
       actionCircuit_numInstanceColumns_eq] using
         actionCircuit.permutationColumnCount_le_configuredColumnCount
   calc
-    29 + actionCircuit.permutationColumnCount + 1 + 1 ≤
-        29 + 25 + 1 + 1 := by omega
+    actionCircuit.fixedColumnCount +
+        actionCircuit.permutationColumnCount + 1 + 1 ≤
+      70 + 25 + 1 + 1 := by omega
     _ ≤ 2 ^ 89 := by norm_num
 
 /-- A zero-query family that returns an all-zero statement and proof and represents every
