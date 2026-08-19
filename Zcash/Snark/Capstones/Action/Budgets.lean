@@ -39,7 +39,10 @@ theorem actionLookupActivationCount_le :
 theorem actionLookupInputArity_le :
     ∀ i : Fin (operationEnabledLookups actionCircuit.operations 0).length,
       ((operationEnabledLookups actionCircuit.operations 0).get i).argument.inputs.length ≤ 4 := by
-  native_decide
+  intro i
+  apply actionCircuit_lookupInputArity_le
+  apply OperationsKeygenCoherent.lookup actionCircuit.keygenCoherent
+  exact List.get_mem _ i
 
 /-- The exact per-Action permutation-cell count.  Unlike the old `2^16` envelope, this
 tight value keeps the consensus-maximum β budget below `2^46`. -/

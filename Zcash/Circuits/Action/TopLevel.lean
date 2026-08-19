@@ -298,6 +298,19 @@ theorem actionCircuit_permutationColumnCount_eq :
       Circuit.configure_permutationColumns_length
         Specs.Sinsemilla.orchardGenerators
 
+/-- Every lookup in the Action constraint system has at most four inputs. -/
+theorem actionCircuit_lookupInputArity_le
+    (lookup : LookupArgument Fp)
+    (hlookup : lookup ∈ actionCircuit.constraintSystem.lookups) :
+    lookup.inputs.length ≤ 4 := by
+  rw [Internal.actionCircuit_eq_impl] at hlookup
+  simpa only [Internal.actionCircuitImpl,
+    TopLevelCircuit.constraintSystem,
+    TopLevelCompilation.constraintSystem,
+    Circuit.circuit] using
+      Circuit.configure_lookupInputArity_le
+        Specs.Sinsemilla.orchardGenerators lookup hlookup
+
 /-- Action's configured gates and lookups have exact Halo 2 degree nine. -/
 theorem actionCircuit_constraintDegree_eq :
     actionCircuit.constraintDegree = 9 := by

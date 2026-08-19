@@ -1204,6 +1204,27 @@ theorem configure_permutationColumns_length (G : Generators) :
     ((configure G).run {}).2.permutationColumns.length = 15 := by
   configure_norm
 
+/-- The three Action lookup arguments have arities one, three, and three. -/
+theorem configure_lookupInputLengths (G : Generators) :
+    ((configure G).delta {}).lookups.map (fun lookup => lookup.inputs.length) =
+      [1, 3, 3] := by
+  configure_norm
+
+/-- Every lookup configured by the Action circuit has at most four inputs. -/
+theorem configure_lookupInputArity_le (G : Generators) :
+    ∀ lookup ∈ ((configure G).run {}).2.lookups,
+      lookup.inputs.length ≤ 4 := by
+  intro lookup hlookup
+  rw [show ((configure G).run {}).2.lookups =
+    ((configure G).delta {}).lookups by rfl] at hlookup
+  have hlength : lookup.inputs.length ∈
+      ((configure G).delta {}).lookups.map
+        (fun argument => argument.inputs.length) :=
+    List.mem_map.mpr ⟨lookup, hlookup, rfl⟩
+  rw [configure_lookupInputLengths] at hlength
+  simp only [List.mem_cons, List.not_mem_nil, or_false] at hlength
+  omega
+
 private instance elaboratedConfigure (G : Generators) : ElaboratedConfigure (configure G) := by
   unfold configure
   infer_instance
