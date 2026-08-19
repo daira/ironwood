@@ -7,6 +7,8 @@
 \possqrt:{\,{}^{+}\kern-0.78em\sqrt{\mathstrut #1}}
 \floor:{\left\lfloor{#1}\right\rfloor}
 \fraction:{{}^{#1}\kern-0.15em/\kern-0.1em{}_{#2}}
+\mul:{\kern0.12em\cdot\kern0.12em}
+\argument:\cdot
 
 # Groups and fields
 \Group:{\mathbb{G}}

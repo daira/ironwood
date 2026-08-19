@@ -22,7 +22,7 @@ $$H(m) = f(u_0) + f(u_1), \qquad (u_0, u_1) = \mathsf{hash\_to\_field}(m, 2),$$
 where $f = \mathsf{mapToCurve} \typecolon \Field \to \Group$ sends a field element
 to a curve point, and the sum is the group law.
 
-We model $\mathsf{hash\_to\_field}(\cdot, 2) \typecolon \Domain \to \Field \times \Field$
+We model $\mathsf{hash\_to\_field}(\argument, 2) \typecolon \Domain \to \Field \times \Field$
 as a random oracle: an idealized hash whose output on each new input is a fresh
 uniform pair. The question is whether $H$ itself may then be modelled as a random
 oracle into the group $\Group$. But first, we'll try to explain why a simpler
@@ -34,11 +34,11 @@ How can we map from a field to an elliptic curve group? In the case of short
 Weierstrass curves, each non-identity point has coordinates
 $(x, y) \typecolon \Field \times \Field$ satisfying the curve equation:
 
-$$y^2 = x^3 + a \cdot x + b$$
+$$y^2 = x^3 + a \mul x + b$$
 
 An obvious candidate for a map from a field element $u$ to a curve element
 would be to choose one of the points with $x = u$ using a deterministic square
-root function $\possqrt{\cdot}$, i.e. $(u, \possqrt{u^3 + a \cdot u + b})$.
+root function $\possqrt{\argument}$, i.e. $(u, \possqrt{u^3 + a \mul u + b})$.
 
 Sapling used twisted Edwards curves which have a different equation, but that
 is essentially what it did — pick one of the coordinates, and then the equation
@@ -47,24 +47,24 @@ low bias using a conventional hash function with a large enough output size, by
 taking its output as an integer modulo the field size. Then the mapping above
 is bijective, so its output points will be approximately evenly distributed,
 although only among *half* of the curve points — the half chosen by the
-deterministic $\possqrt{\cdot}$.
+deterministic $\possqrt{\argument}$.
 
 The problem is that then not all $x$-coordinates, and therefore not all inputs
 to the hash, map to a point. For each $x$-coordinate, we have 0, 1, or 2
-solutions for $y$ depending on the number of square roots of $x^3 + a \cdot x + b$.
+solutions for $y$ depending on the number of square roots of $x^3 + a \mul x + b$.
 Heuristically, roughly half of the $x$-coordinates should have no solutions
 for $y$, roughly half of them should have two solutions, and a negligible
 proportion (only the case
-<span style="white-space: nowrap">$y^2 = 0 = x^3 + a \cdot x + b$</span>, which
+<span style="white-space: nowrap">$y^2 = 0 = x^3 + a \mul x + b$</span>, which
 may not happen at all for a particular curve) have one solution. That is in fact
 what happens in practice. If the curve has $N$ points, and
 $N$ is odd —as it is for Pallas and Vesta— then the number of
 $x$-coordinates that correspond to a point on the curve is exactly $(N - 1)/2$.
-The *proportion* that correspond to a point is $(N - 1)/(2 \cdot \FieldSize)$,
+The *proportion* that correspond to a point is $(N - 1)/(2 \mul \FieldSize)$,
 writing $\FieldSize$ for the number of elements of $\Field$.
 The [Hasse bound](https://en.wikipedia.org/wiki/Hasse%27s_theorem_on_elliptic_curves),
 $|N - (\FieldSize + 1)| \leq 2\sqrt{\FieldSize}$, makes the
-heuristic precise: $(N - 1)/(2 \cdot \FieldSize)$ is within
+heuristic precise: $(N - 1)/(2 \mul \FieldSize)$ is within
 $1/\sqrt{\FieldSize}$ of $\fraction{1}{2}$.
 
 For fixed generators, having a group hash that is not a total function is not
@@ -124,9 +124,9 @@ character-sum analysis relies on it too.
 The images of $f_1$ and $f_2$ are not disjoint; for Simplified SWU they in fact
 coincide, apart from a negligible proportion of exceptional points. To see why,
 fix a target point $P$. Whether any input reaches $P$ via $f_1$ comes down to a
-quadratic equation in $t = Z \cdot u^2$; the equation depends only on the
+quadratic equation in $t = Z \mul u^2$; the equation depends only on the
 $x$-coordinate of $P$, which $P$ shares with $-P$. A solution $t$ yields inputs
-precisely when $t/Z$ is a square —that is, when $t$ really is $Z \cdot u^2$ for
+precisely when $t/Z$ is a square —that is, when $t$ really is $Z \mul u^2$ for
 some input $u$— and then, since $f$ is odd, the input pair $\{u, -u\}$ has one
 member mapping to $P$ and the other to $-P$. So each realizable solution
 contributes exactly one preimage of $P$. Reaching $P$ via $f_2$ comes down to a
@@ -135,12 +135,12 @@ second quadratic in $t$, in the same way. Now, two facts connect the branches:
 - $t$ solves the $f_1$-equation exactly when $1/t$ solves the $f_2$-equation;
 - $t/Z$ is a square iff $(1/t)/Z$ is, because their product is the square $1/Z^2$.
 
-So input $u$ reaching $P$ via $f_1$ corresponds to the inputs $\pm 1/(Z \cdot u)$
+So input $u$ reaching $P$ via $f_1$ corresponds to the inputs $\pm 1/(Z \mul u)$
 reaching $P$ via $f_2$ and vice versa. Hence $P$ is reached via $f_1$ iff it is
 reached via $f_2$.
 
 This coexists with the exact halves above because those partition the *inputs*,
-not the outputs. The correspondence $u \mapsto \pm 1/(Z \cdot u)$ carries the
+not the outputs. The correspondence $u \mapsto \pm 1/(Z \mul u)$ carries the
 $f_1$-half of the inputs into the $f_2$-half and back, preserving the point reached.
 About $\fraction{3}{8}$ of the output space is reached
 —with 2 or 4 preimages per reached point excluding exceptional cases— and
@@ -164,18 +164,18 @@ under $t \mapsto 1/t$.) Two coin flips decide the outcome.
   about $\fraction{1}{2}$.
 - Given a split, each root $t_i$ yields an input pair $\pm u_i$ exactly when
   $t_i/Z$ is a square. These two events are perfectly correlated, because the
-  product $t_1 \cdot t_2$ is fixed by the quadratic's coefficients: writing the
-  quadratic character $\chi(\cdot)$ as $+1$ on nonzero squares and $-1$ on
-  nonsquares, we have $\chi(t_1/Z) \cdot \chi(t_2/Z) = \chi(t_1 \cdot t_2)$.
+  product $t_1 \mul t_2$ is fixed by the quadratic's coefficients: writing the
+  quadratic character $\chi(\argument)$ as $+1$ on nonzero squares and $-1$ on
+  nonsquares, we have $\chi(t_1/Z) \mul \chi(t_2/Z) = \chi(t_1 \mul t_2)$.
   That sign is $-1$ about half the time, in which case exactly one root yields
   inputs. It is $+1$ otherwise — then both roots yield inputs or neither does,
   each about half the time.
 
 By oddness, each input pair $\pm u$ contributes one preimage to the target point
 and one to its negation. So the point is reached from $2$ preimages (one per
-branch) with probability $\fraction{1}{2} \cdot \fraction{1}{2} = \fraction{1}{4}$,
+branch) with probability $\fraction{1}{2} \mul \fraction{1}{2} = \fraction{1}{4}$,
 and from $4$ preimages (two per branch) with probability
-$\fraction{1}{2} \cdot \fraction{1}{2} \cdot \fraction{1}{2} = \fraction{1}{8}$;
+$\fraction{1}{2} \mul \fraction{1}{2} \mul \fraction{1}{2} = \fraction{1}{8}$;
 otherwise it is unreached. The reach probability is
 $\fraction{1}{4} + \fraction{1}{8} = \fraction{3}{8}$, and reached points have
 $\fraction{8}{3}$ preimages on average.
@@ -206,7 +206,7 @@ The short Weierstrass form with $a = 0$ corresponds to curves with
 $j$-invariant $0$, that is, with Complex Multiplication by $\mathbb{Z}[\zeta_3]$
 and an automorphism group of order $6$: there are exactly six invertible mappings
 from the curve to itself that preserve the group structure, namely
-$(x, y) \mapsto (\zeta_3^k \cdot x, \pm y)$. (These stay on the curve because
+$(x, y) \mapsto (\zeta_3^k \mul x, \pm y)$. (These stay on the curve because
 $x$ appears only cubed, and $(\zeta_3^k)^3 = 1$.)
 
 Daira-Emma Hopwood's ZK Study Club talk
@@ -223,9 +223,9 @@ nice visual form of the argument.
 Simplified SWU, for its part, obtains its branch pair by *solving for the
 $x$-coordinate* at which the scaling defect
 
-$$g(\lambda x) - \lambda^3 g(x) = a \lambda (1 - \lambda^2) \cdot x + b (1 - \lambda^3)$$
+$$g(\lambda x) - \lambda^3 g(x) = a \lambda (1 - \lambda^2) \mul x + b (1 - \lambda^3)$$
 
-vanishes, where $\lambda = Z \cdot u^2$. The $x$-coefficient is proportional
+vanishes, where $\lambda = Z \mul u^2$. The $x$-coefficient is proportional
 to $a$, so on a $j = 0$ curve there is nothing to solve for: every
 $x$-scaling is an isomorphism onto a sextic twist, making the defect
 constant in $x$, and it vanishes only when the scaling is one of the extra
@@ -360,7 +360,7 @@ Weil bound on the character sums of $f$.
 
 A *character* of $\Group$ is a homomorphism $\psi \typecolon \Group \to \Cmul$
 into the nonzero complex numbers: it turns the group operation into ordinary
-multiplication, $\psi(P + Q) = \psi(P) \cdot \psi(Q)$, and its values lie on the unit
+multiplication, $\psi(P + Q) = \psi(P) \mul \psi(Q)$, and its values lie on the unit
 circle. The *character sum* of $f$ at $\psi$ is
 
 $$S(\psi) = \sum_{u \in \Field} \psi(f(u)),$$
@@ -390,21 +390,21 @@ $\mu$ and $\nu$ on a finite set is $\sum_x |\mu(x) - \nu(x)|$, the total of the
 absolute differences of the probabilities they assign.
 
 The formalization accepts any budget $\beta$ whose square dominates
-$(\GroupSize - 1) \cdot C^4 / (\FieldSize)^2$ (`sum_abs_prob_dev_le`) — that
+$(\GroupSize - 1) \mul C^4 / (\FieldSize)^2$ (`sum_abs_prob_dev_le`) — that
 is, any $\beta$ just above $C^2 \sqrt{\GroupSize} / \FieldSize$, where $C$ is
 the Weil constant discussed in the
 [next section](#calculating-the-weil-constant). At the deployed sizes
 $\FieldSize \approx \GroupSize \approx 2^{254}$ and $C = 21/2$: squaring the
 constant gives $C^2 \approx 2^{6.8}$, the square root halves the exponent to
 $\sqrt{\GroupSize} \approx 2^{127}$, and so
-$\beta \approx 2^{6.8} \cdot 2^{127} / 2^{254} \approx 2^{-120}$.
+$\beta \approx 2^{6.8} \mul 2^{127} / 2^{254} \approx 2^{-120}$.
 
 ```admonish info title="Characters, for readers who know the DFT"
 The DFT analyses a signal on $\mathbb{Z}/N$ against the reference waves
-$a \mapsto e^{2\pi i \cdot ka/N}$, one per frequency $k$. What makes those
+$a \mapsto e^{2\pi i \mul ka/N}$, one per frequency $k$. What makes those
 waves work is not anything analytic about the exponential — it is the
 identity
-$e^{2\pi i \cdot k(a+b)/N} = e^{2\pi i \cdot ka/N} \cdot e^{2\pi i \cdot kb/N}$,
+$e^{2\pi i \mul k(a+b)/N} = e^{2\pi i \mul ka/N} \mul e^{2\pi i \mul kb/N}$,
 which turns addition of signal positions into multiplication of wave values.
 A character keeps exactly that property and discards the rest. For
 $\mathbb{Z}/N$ the characters are precisely the $N$ reference waves of the
@@ -429,7 +429,7 @@ and Cauchy–Schwarz then yield the regularity distance.
 
 The regularity distance is proved relative to the named hypothesis `WeilBounded`.
 That hypothesis is parameterized: it asserts a constant $C$ with every nontrivial
-character sum of the zero-repaired mapping at most $C \cdot \sqrt{\FieldSize}$,
+character sum of the zero-repaired mapping at most $C \mul \sqrt{\FieldSize}$,
 and the final advantage scales with $C^2$.
 
 The Weil bound places a bound on character sums along covering curves of the
@@ -456,7 +456,7 @@ mathematics— in CompElliptic's
 and formalized down to Weil's theorem at the two branch covers
 (CompElliptic's `Hashing/BranchCovers.lean` and
 `Hashing/WeilInstance.lean`): everything between the per-cover inputs
-$|S_{C_j}(\chi)| \le (2 \cdot 6 - 2)\sqrt{\FieldSize}$ —stated in squared,
+$|S_{C_j}(\chi)| \le (2 \mul 6 - 2)\sqrt{\FieldSize}$ —stated in squared,
 square-root-free form— and the deployed `WeilBounded` instances is
 machine-checked. The paper proof's own checkable inputs are also
 machine-checked (CompElliptic's `Hashing/WeilSupport.lean`), and the
@@ -484,7 +484,7 @@ bound of $10$, again counting nonzero preimages.
 Care is needed to make the *pair* uniform on the fibre. Drawing $u_1$
 uniformly from the preimages of $Q - f(u_0)$ would over-weight the pairs
 whose preimage set is small: the pair's probability would be
-$\frac{1}{\FieldSize \cdot c}$ with $c$ the size of its preimage set,
+$\frac{1}{\FieldSize \mul c}$ with $c$ the size of its preimage set,
 and $c$ varies across the fibre. So the simulator instead fixes a bound
 $d$ on the preimage counts and draws a slot index $0 \leq j < d$ uniformly,
 alongside $u_0$. If the preimage set of $Q - f(u_0)$ has an element with
@@ -492,10 +492,10 @@ index $j$, the round accepts the pair $(u_0, u_1)$ with $u_1$ that element;
 otherwise it rejects, and the simulator redraws both $u_0$ and $j$. In
 particular an empty preimage set always rejects. Now every pair of the
 fibre consistent with $u_0$ is accepted in a round with the same
-probability $\frac{1}{\FieldSize \cdot d}$, whatever the size of its
+probability $\frac{1}{\FieldSize \mul d}$, whatever the size of its
 preimage set, so conditional on acceptance the pair is exactly uniform on
 the fibre. The bound $d$ also controls the cost: a round accepts with
-probability $\frac{\mathsf{pairCount}\, f\, Q}{\FieldSize \cdot d}$, about
+probability $\frac{\mathsf{pairCount}\, f\, Q}{\FieldSize \mul d}$, about
 $1/d$ for typical $Q$, so few rounds are needed. This is the rejection
 sampler whose costs and output law `Simulator.lean` proves, instantiated
 at the deployed mappings at the constant `deployedFibreBound = 11` — the
@@ -540,14 +540,14 @@ $Q = f(u_0) + f(u_1)$. Take a nonempty fibre of $Q$, with
 $k = \mathsf{pairCount}\, f\, Q \ge 1$ pairs. Every pair in it looks identical
 in both worlds:
 
-- the ideal world puts $\frac{1}{\GroupSize \cdot k}$ on each pair — it spreads
+- the ideal world puts $\frac{1}{\GroupSize \mul k}$ on each pair — it spreads
   the $\frac{1}{\GroupSize}$ that $R$ gives to $Q$ uniformly over the $k$ pairs;
 - the real world puts $\frac{1}{(\FieldSize)^2}$ on each pair.
 
 So the absolute difference is one constant across all $k$ pairs of the fibre,
 and summed over the fibre it is
 
-$$k \cdot \left| \frac{1}{\GroupSize \cdot k} - \frac{1}{(\FieldSize)^2} \right| = \left| \frac{1}{\GroupSize} - \frac{k}{(\FieldSize)^2} \right|,$$
+$$k \mul \left| \frac{1}{\GroupSize \mul k} - \frac{1}{(\FieldSize)^2} \right| = \left| \frac{1}{\GroupSize} - \frac{k}{(\FieldSize)^2} \right|,$$
 
 a single term of the regularity distance. The $k$ cancels inside the first
 fraction. The fibre size enters only as $\mathsf{pairCount}\, f\, Q$ in that
@@ -582,7 +582,7 @@ A single-query bound does not immediately bound a distinguisher that makes many
 adaptive queries — later queries may depend on earlier answers. The adaptive
 hybrid `runFreshPMF_eventBiasLE` (in `Zcash/Common/Oracle/`) bridges the
 gap: it charges the one-squeeze bias once per query node, so a $q$-query tree
-turns a single-query bias $\beta$ into an overall bias of at most $q \cdot \beta$,
+turns a single-query bias $\beta$ into an overall bias of at most $q \mul \beta$,
 even when the query tree is fully adaptive. Repeated queries to the same point
 are first collapsed by `dedup`, so a point asked twice keeps one answer rather
 than drawing a fresh one.
