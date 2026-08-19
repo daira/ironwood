@@ -413,7 +413,8 @@ in the signal domain is multiplication in the frequency domain, so the
 transform of $\mathsf{pairCount}\, f$ at frequency $\psi$ is the *square*
 $S(\psi)^2$ — just as convolving a signal with itself squares its spectrum.
 The Weil bound says every nontrivial frequency is small; squaring, Parseval,
-and Cauchy–Schwarz then yield the regularity distance.
+and <span style="white-space: nowrap">Cauchy–Schwarz</span> then yield the
+regularity distance.
 ```
 
 #### Calculating the Weil constant
@@ -429,6 +430,19 @@ bounds the regularity distance of the previous section by any budget
 $\beta$ whose square dominates
 <span style="white-space: nowrap">$\frac{(\GroupSize - 1) \mul C^4}{(\FieldSize)^2}$ —</span>
 that is, any $\beta$ just above $\frac{C^2 \mul \sqrt{\GroupSize}}{\FieldSize}$.
+
+That expression is the
+[aside](#admonition-characters-for-readers-who-know-the-dft)'s pipeline,
+made quantitative. The two-term
+spectrum at $\psi$ is $S(\psi)^2$, so each of the $\GroupSize - 1$ nontrivial
+frequencies has spectral energy at most $(C^2 \mul \FieldSize)^2$. Parseval
+turns total spectral energy into the summed squared deviation of the pair
+counts, divided by $\GroupSize$; <span style="white-space: nowrap">Cauchy–Schwarz</span>
+bounds the square of an $L^1$ sum by $\GroupSize$ times the sum of squares,
+cancelling the $\GroupSize$ quotient; and normalizing counts to probabilities
+divides by $(\FieldSize)^4$ — leaving
+$\frac{(\GroupSize - 1) \mul C^4}{(\FieldSize)^2}$.
+
 At the deployed sizes $\FieldSize \approx \GroupSize \approx 2^{254}$ and
 <span style="white-space: nowrap">$C = 21/2$,</span> yielding
 $\beta \approx 2^{-120}$.
