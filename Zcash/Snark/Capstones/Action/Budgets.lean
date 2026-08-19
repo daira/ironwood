@@ -50,16 +50,13 @@ theorem resolverPermutationCell_card_eq
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p actionActiveRows) =
       30630 := by
-  rw [resolverPermutationCell_card]
-  rw [actionCircuit.shape_numPermutationSets]
-  rw [actionCircuit.toVerifierKey_permutationChunks,
-    derived_scalars.2.2.2.2.2.2]
-  rw [show actionCircuit.permutationSetCount = shape.numPermutationSets by
-    simpa only [actionCircuit.shape_numPermutationSets] using
-      congrArg CircuitShape.numPermutationSets
-        actionCircuitShape_eq_fixtureCircuitShape]
-  clear p poly urs pp
-  native_decide
+  rw [topLevelResolverPermutationCell_card,
+    actionCircuit_permutationColumnCount_eq,
+    actionActiveRows_eq,
+    actionCircuit.n_eq_two_pow_domainExponent,
+    action_domainExponent_eq,
+    actionCircuit_blindingFactors_eq]
+  norm_num
 
 /-- Each Action permutation-cell resolver has at most `2^16` entries. -/
 theorem resolverPermutationCell_card_le

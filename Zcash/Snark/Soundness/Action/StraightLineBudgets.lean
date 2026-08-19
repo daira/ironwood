@@ -3,6 +3,7 @@ import Zcash.Snark.Soundness.StraightLine.Event
 import Zcash.Snark.Soundness.Composition.SequentialLift
 import Zcash.Snark.Soundness.Composition.ChallengeReads
 import Zcash.Snark.Soundness.Composition.SemanticChallengeRemainder
+import Zcash.Circuits.Integration.PermutationCompiler
 
 /-!
 # Pricing the Action semantic failure events from sequential cuts
@@ -26,6 +27,8 @@ final endpoint quantifies over families equipped with such cuts.
 
 namespace Zcash.Snark
 
+open Halo2
+
 /-- The permutation cell count is `m` rows per chunk pair — a layout count: the pair list is a
 `map` over the key's own `permutationChunks`. -/
 theorem resolverPermutationCell_card {shape : CircuitShape} {numProofs : ℕ} {G : Type*}
@@ -35,6 +38,44 @@ theorem resolverPermutationCell_card {shape : CircuitShape} {numProofs : ℕ} {G
       ∑ c : Fin shape.numPermutationSets,
         m * (vk.permutationChunks.getD c []).length := by
   simp [ResolverPermutationCell, ChunkCell, resolverPermutationPairs_length]
+
+/-- For a circuit-derived key, the permutation-cell resolver contains one cell
+per active row and equality-enabled circuit column. -/
+theorem topLevelResolverPermutationCell_card
+    {G : Type} [AddCommGroup G] [Inhabited G]
+    {Config : Type} {PublicInput : TypeMap} [ProvableType PublicInput]
+    {numProofs : ℕ}
+    (top : TopLevelCircuit Fp Config PublicInput)
+    (urs : URS G) (poly : CommitmentId → CPoly)
+    (p : Fin numProofs) (m : ℕ) :
+    Fintype.card
+        (ResolverPermutationCell (top.toVerifierKey urs) poly p m) =
+      m * top.permutationColumnCount := by
+  rw [resolverPermutationCell_card]
+  rw [← Finset.mul_sum]
+  congr 1
+  let chunks := (top.toVerifierKey urs).permutationChunks
+  have hchunks : chunks.length = top.shape.numPermutationSets :=
+    top.toVerifierKey_permutationChunks_length urs
+  rw [← hchunks]
+  rw [← List.sum_ofFn]
+  calc
+    (List.ofFn fun i : Fin chunks.length =>
+        (chunks.getD i []).length).sum =
+        (List.ofFn fun i : Fin chunks.length =>
+          (chunks[i]).length).sum := by
+            congr 2
+            funext i
+            simp
+    _ = (chunks.map List.length).sum := by
+      exact congrArg List.sum
+        (List.ofFn_getElem_eq_map chunks List.length)
+    _ = chunks.flatten.length := by
+      rw [List.length_flatten]
+    _ = top.permutationColumnCount := by
+      simp only [chunks, top.toVerifierKey_permutationChunks,
+        verifierCS_permutationChunks_flatten, List.length_zipIdx,
+        List.length_map, TopLevelCircuit.permutationColumnCount]
 
 namespace ActionTerminal
 

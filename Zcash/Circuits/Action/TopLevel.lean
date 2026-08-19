@@ -285,6 +285,19 @@ theorem actionCircuit_numInstanceColumns_eq :
       Circuit.configure_finalCounts_numInstanceColumns
         Specs.Sinsemilla.orchardGenerators
 
+/-- Action's closed configure run equality-enables fifteen distinct columns. -/
+theorem actionCircuit_permutationColumnCount_eq :
+    actionCircuit.permutationColumnCount = 15 := by
+  rw [Internal.actionCircuit_eq_impl]
+  simpa only [Internal.actionCircuitImpl,
+    TopLevelCircuit.permutationColumnCount,
+    TopLevelCircuit.permutationColumns,
+    TopLevelCircuit.constraintSystem,
+    TopLevelCompilation.constraintSystem,
+    Circuit.circuit] using
+      Circuit.configure_permutationColumns_length
+        Specs.Sinsemilla.orchardGenerators
+
 /-- Action's configured gates and lookups have exact Halo 2 degree nine. -/
 theorem actionCircuit_constraintDegree_eq :
     actionCircuit.constraintDegree = 9 := by

@@ -1198,6 +1198,12 @@ theorem configure_finalCounts_numInstanceColumns (G : Generators) :
     ((configure G).finalCounts {}).numInstanceColumns = 1 := by
   configure_norm
 
+set_option maxRecDepth 10000 in
+/-- The closed Action configuration equality-enables fifteen distinct columns. -/
+theorem configure_permutationColumns_length (G : Generators) :
+    ((configure G).run {}).2.permutationColumns.length = 15 := by
+  configure_norm
+
 private instance elaboratedConfigure (G : Generators) : ElaboratedConfigure (configure G) := by
   unfold configure
   infer_instance
