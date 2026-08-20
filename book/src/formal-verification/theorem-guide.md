@@ -256,7 +256,7 @@ those resources rarely solves discrete log on Vesta, is supplied as a premise ra
 derived. That is where a concrete security estimate for Vesta enters, and it enters from
 outside.
 
-### Two idealizations
+### Three idealizations
 
 These are not hardness assumptions; instead, they swap the real world for a more convenient
 one. They are choices we took to make this formalization more tractable, with the trade-off
@@ -273,6 +273,14 @@ be missed.
   built into what counts as an adversary at all, rather than appearing as a hypothesis you can
   read off a theorem. An attacker that does not play along is outside the claim entirely — not
   covered with a weaker bound.
+* **Attacks do not depend on specific encodings**. The formalization does not cover the
+  concrete, byte-level encodings used to represent curve points, field elements, etc., either
+  in transmitted protocol messages or in the Fiat–Shamir transcript. Instead, the formalization
+  is expressed in terms of the abstract types used in the specification. This is a potentially
+  significant category of gap, because (despite substantial attention to this area in audits
+  and code review) Zcash implementations have had quite a few significant security bugs due to
+  unintentionally non-canonical encodings, mishandling of exceptional cases in decoding, etc.
+  It is a longer-term goal to extend the formalization to cover the byte-level encodings.
 
 ### The fixed list of curve points
 
@@ -325,10 +333,13 @@ Everything above, collected.
    exploitable structure, and is not formalized anywhere.
 3. **The attacker is algebraic** — it shows its work for every curve point it outputs. One
    that does not is outside the claim rather than covered by it.
-4. **The deployed list of curve points is as good as a sampled one.** Security is proved for
+4. **Attacks do not depend on specific encodings.** The formalization speaks the
+   specification's abstract types; how curve points and field elements become bytes, in
+   protocol messages or in the transcript, is not covered.
+5. **The deployed list of curve points is as good as a sampled one.** Security is proved for
    protocols that sample it; the real one is hashed into existence and baked in.
-5. **The byte layer under the hashing schedule.** What gets hashed, and in what order, is
+6. **The byte layer under the hashing schedule.** What gets hashed, and in what order, is
    checked; how those things become bytes is not.
-6. **A few closed numeric facts trust the compiler.** They are established by running
+7. **A few closed numeric facts trust the compiler.** They are established by running
    compiled code rather than by the kernel; each is pinned to its owning declaration at
    build time, and each is independently re-checkable.
