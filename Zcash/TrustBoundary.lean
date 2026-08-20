@@ -683,14 +683,13 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
   have been conjured from mere propositional existence. Vesta-instantiated producers additionally
   inherit CompElliptic's `native_decide` curve point-count axiom (`+native`).
 
-  Note that CompElliptic's witnesses are *not* the bulk of what `+native` covers library-wide.
-  Exactly three owners across the whole census are CompElliptic's: the two curve point counts
-  (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the Tonelli–Shanks root-of-unity data
-  (`Fields.Pasta.pallasBase`, whose certificate sits in a structure-field auto-param). Every other
-  owner — the Action structural facts, the NU6.3 separation check, the captured fixture claims,
-  and the keygen certificate — is this repository's own. Compiler trust
-  here is overwhelmingly first-party, not an inherited leaf; each `+native(...)` list names
-  precisely which certificates its entry rests on.
+  The reusable census in this file reaches four native owners. Three come from CompElliptic: the
+  two curve point-count witnesses (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the Pallas
+  Tonelli–Shanks root-of-unity data (`Fields.Pasta.pallasBase`, whose certificate sits in a
+  structure-field auto-param). The fourth is Ironwood's closed NU6.3 cross-address separation
+  check. The four dedicated fixture censuses separately permit Ironwood-owned closed checks of
+  captured data, cross-capture provenance, and the keygen/deployment seam. Each `+native(...)`
+  list names precisely which certificates its entry rests on.
 * **Theorems** — the probability-layer bounds, the knowledge-soundness and binding endpoints across
   all adversary models, the DL capstones, and the run-time/query-charge lemmas — get
   `assert_axioms`, bounding the trusted base at the standard tier (`propext` / `Classical.choice` /
@@ -1723,8 +1722,8 @@ The refinement from the Action circuit's postcondition to the games-facing ledge
 break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
 query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
 of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
-consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus
-`native_decide` certificates (including the Pallas point-count witness).
+consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus only
+CompElliptic's Pallas point-count witness.
 
 `actionSpec_to_ledger` is the bridge's whole consumer surface: composition with circuit
 satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume

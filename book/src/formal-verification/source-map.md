@@ -69,7 +69,7 @@ directory level, naming the notable modules as entry points.
   reachable `sorry`, an unexpected axiom, or `native_decide` where none was permitted — fails
   the build here. Computed break reductions are pinned with `assert_computable`, theorems with
   `assert_axioms`. The SNARK-side censuses were consolidated into this one file, so apart from
-  the two per-capture fixture boundaries below it is the single place the trust claims are pinned.
+  the four per-capture fixture boundaries below it is the single place the trust claims are pinned.
 
 ## Arithmetic — `Zcash/Arithmetic/`
 
@@ -195,7 +195,8 @@ with its **Fiat–Shamir** schedule check, its `Boundary` statement of record at
 key and schedule, its per-slot tamper sweep (`Negative/Sweep`), and its checked `TrustBoundary`
 turning the fingerprint match into
 build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's constraint-system fields equal
-to the ones derived end to end from the ported `configure`. The multi-action capture additionally
+to the ones derived end to end from the ported `configure` as a standalone diagnostic, not a
+soundness or fixture-trust input. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
 schedule and static-check modules, the adaptive-statement knowledge-failure endpoints — its `2^123`
 work-factor instantiation and the conditionally staged-certified `2^123` and `2^125` adversary-work
@@ -434,7 +435,7 @@ them as data (`SpecOrBreak`) rather than assuming them away.
   phases (`Mul`, `MulIncomplete`, `MulIncompleteRound`, `MulComplete`, `MulOverflow`,
   `DoubleAndAdd`), and fixed-base multiplication (`MulFixed/`, with full-width, short, and
   base-field-element variants). **`MulFixed/Certs/`** holds the six deployed fixed bases with
-  their window-table certificates, checked through `CertCheck`'s `ℕ`-literal evaluator.
+  their window-table certificates, kernel-checked through `CertCheck`'s `ℕ`-literal evaluator.
 - **`Sinsemilla/`** — the Sinsemilla chip: the `2^K` generator table (`Basic`), one hash piece
   and its rounds (`HashPiece`, `HashPieceRound`), the `⊥`-propagating chain (`Chain`,
   `HashToPoint`), the commit domain (`CommitDomain`), and the fixed-depth Merkle path (`Merkle`).
