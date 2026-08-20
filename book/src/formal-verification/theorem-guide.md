@@ -192,10 +192,10 @@ step rewrites that compact test into the explicit equation the rest of the argum
 
 ### Classifying one accepting proof
 
-An equation holding says nothing about who knew what. What closes the gap is the
-algebraic-adversary assumption below: the prover must show its work, declaring for every curve
-point it sends a recipe building it from points it was handed. Read against those recipes, the
-equation forces one of three things.
+An equation holding says nothing about who knew what. What closes the gap in this
+formalization is the algebraic-adversary assumption below: the prover must show its work.
+For every curve point it sends, it must declare a recipe of how to build it from points that
+it was given. Read against those recipes, the equation forces one of three things.
 
 * The recipes describe a genuine opening — the prover holds data satisfying the circuit, and
   the argument writes it down.
@@ -255,8 +255,10 @@ outside.
 
 ### Two idealizations
 
-Not hardness assumptions, and reading them as though they were overstates the result. They
-swap the real world for a more convenient one, and nothing deployed satisfies them literally.
+These are not hardness assumptions; instead, they swap the real world for a more convenient
+one. They are choices we took to make this formalization more tractable, with the trade-off
+that attacks depending on the differences between the real world and the idealized one could
+be missed.
 
 * **The hash behaves like a truly random function** — the **random-oracle model**. This covers
   Blake2b, the conversion of hash output into numbers, and the derivation of the public point
