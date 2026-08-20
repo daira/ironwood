@@ -36,7 +36,7 @@ variable {G : Type*} [AddCommGroup G] [Module Fp G]
 evaluates to zero over the URS — the hypothesis every soundness endpoint consumes.
 
 The predicate begins at typed, post-decode values by design: byte parsing, canonical encodings,
-transcript serialization, and Blake2b sit below the accepted formal floor, checked pointwise by
+transcript serialization, and BLAKE2b sit below the accepted formal floor, checked pointwise by
 the fingerprint captures rather than universally refined — a byte-level verifier model remains
 open work (`Fingerprint/Match.lean`, *What remains external*). Acceptance prices one
 proof bundle: halo2's optional `BatchVerifier` aggregation layer is outside the formalized

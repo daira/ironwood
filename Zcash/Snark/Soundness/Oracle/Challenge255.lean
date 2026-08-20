@@ -8,7 +8,7 @@ import Zcash.Snark.Soundness.Oracle.ChallengeUniform
 Halo2's `Challenge255::new` turns one 64-byte squeeze into a field challenge: the digest is read
 as a 512-bit integer and reduced modulo `p`.  The security layer prices squeezes as exactly
 uniform (`uniformChallenge`); this module prices the gap between that ideal and the deployed
-conversion, assuming only that the digest itself is uniform.  Idealizing Blake2b as a uniform
+conversion, assuming only that the digest itself is uniform.  Idealizing BLAKE2b as a uniform
 512-bit digest stays external (`Oracle/Model.lean`).
 
 Write `2 ^ 512 = challengeQuot * p + challengeRem`.  Reduction sends `challengeQuot + 1` digests

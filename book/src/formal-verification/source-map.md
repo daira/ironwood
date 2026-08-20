@@ -118,7 +118,7 @@ The pure function that assembles the fingerprint MSM in the exact order of halo2
   query back to the canonical group element it references.
 - `Expressions` recomputes the vanishing argument's `expected_h_eval`.
 - `Ipa` is the inner-product-argument opening (`compute_s` / `compute_b`).
-- `FiatShamir` models halo2's Blake2b challenge schedule as an abstract `squeeze`.
+- `FiatShamir` models halo2's BLAKE2b challenge schedule as an abstract `squeeze`.
 - `AssembleSpec` says what the rejecting `assemble?` returns when it does not reject — exactly
   the total assembly's value — the operational interface both the fingerprint walk and the
   deployed soundness layer consume.
@@ -357,7 +357,7 @@ Six subtrees carry the heavier machinery:
   exactly-uniform challenge law over `Fp`; `Challenge255` prices the deployed conversion against
   that ideal — a uniform 512-bit digest reduced modulo `p` overshoots uniform by exactly
   `r(p−r)/(p·2^512) < 2^-260`, stated as the `PMFEventBiasLE` premise the work-factor capstone's
-  bias conjunct consumes, with Blake2b's idealization as the uniform digest remaining external.
+  bias conjunct consumes, with BLAKE2b's idealization as the uniform digest remaining external.
   (The generic oracle-computation machinery — `OracleComp`, the adaptive hybrid, and the
   `PMFEventBiasLE` transport interface — are in `Common/Oracle/`.)
 - **`Multiopen/`** — the multiopen argument's value binding. `Decode` supplies the coefficient and

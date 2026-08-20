@@ -13,7 +13,7 @@ import Zcash.Snark.Soundness.Ipa.CommitFold
 carries that relation and the full constraint-list satisfaction predicate; the
 computed Fiat–Shamir/AGM reduction is in `FiatShamir.Adversary.Algebraic`.
 
-The boundary is explicit: DL-relation hardness, an ideal random oracle for Blake2b and challenge
+The boundary is explicit: DL-relation hardness, an ideal random oracle for BLAKE2b and challenge
 conversion (and, on the generator-RO endpoints, for the hash-to-curve URS derivation),
 CompElliptic's Vesta point-count axiom, and correctness of the supplied verifying key.
 The computed reduction models oracle queries, represented output, and query loss.

@@ -50,7 +50,7 @@ rather than proved, with its known strengthening named where one exists:
 * *Challenges* — squeezes are exactly uniform (`uniformChallenge`).  The deployed conversion
   reduces a 64-byte digest modulo `p`; its exact reduction bias is priced by
   `challenge255_weightedBias_le`, and `challenge255_joint_eventBias_le` composes it through an
-  adaptive deduplicated query tree (`Soundness/Oracle/Challenge255.lean`). Idealizing Blake2b as a
+  adaptive deduplicated query tree (`Soundness/Oracle/Challenge255.lean`). Idealizing BLAKE2b as a
   uniform digest remains external.
 * *DLOG hardness* — each profile takes a caller-supplied advantage bound for its exact relation
   finder (`AdaptiveStatementDlogProfile`, `CertifiedAdaptiveStatementDlogProfile`); relating that

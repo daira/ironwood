@@ -376,7 +376,7 @@ end ComputedAlgebraicFSFamily
 /-! ## Unbounded oracle domain
 
 Bounded-query adversaries over transcript lists reduce to their finite reachable-support split.
-Blake2b remains idealized; `truncateTranscript` is only the deployed bounded-transcript retraction. -/
+BLAKE2b remains idealized; `truncateTranscript` is only the deployed bounded-transcript retraction. -/
 
 /-- Transfer a uniform bounded-transcript binding bound to the reachable-support split. This is the
 named reduction from the unbounded oracle domain to its finite reachable-support split. -/

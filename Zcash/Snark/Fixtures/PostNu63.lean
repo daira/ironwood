@@ -10,7 +10,7 @@ fixture generation, Orchard first compares the exact `PinnedVerificationKey` deb
 against its checked-in `circuit_description_post_nu6_3`; Halo2 then derives and emits the transcript
 representation below from that same verified key object.
 
-Lean does not reimplement Halo2's `Debug` serialization or Blake2b derivation. The hand-pinned scalar
+Lean does not reimplement Halo2's `Debug` serialization or BLAKE2b derivation. The hand-pinned scalar
 here makes fixture drift visible in this repository, while the Rust regeneration assertion binds it
 to the full canonical pinned key.
 

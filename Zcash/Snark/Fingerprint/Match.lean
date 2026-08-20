@@ -131,7 +131,7 @@ Eleven premises remain trusted rather than fixture-checked:
 * rejection paths — the deployed accept path is straight-line in proof values post-decode
   (`Core/ProofString.lean`), corroborated by the random captures running to completion;
 * byte→algebraic decode — deployed rejects non-canonical encodings, the safe direction;
-* Fiat–Shamir bytes and Blake2b — the typed schedule is not a transcript-binding model;
+* Fiat–Shamir bytes and BLAKE2b — the typed schedule is not a transcript-binding model;
 * the pinned-point caveat — a published capture could be special-cased by a malicious edit,
   excluded by review and by seeds fixed before code;
 * sampled-point distribution — applying the literal ε treats scalar expansion from fixed public
@@ -149,7 +149,7 @@ Eleven premises remain trusted rather than fixture-checked:
   `TrustBoundary.lean`.
 
 The comparison against Orchard's canonical Post-NU6.3 `PinnedVerificationKey` and Halo2's
-pinned-key serialization/Blake2b derivation remain the fixture-generation boundary rather than
+pinned-key serialization/BLAKE2b derivation remain the fixture-generation boundary rather than
 being reimplemented in Lean.
 -/
 

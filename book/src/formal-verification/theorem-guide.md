@@ -264,8 +264,8 @@ that attacks depending on the differences between the real world and the idealiz
 be missed.
 
 * **The hash behaves like a truly random function** — the **random-oracle model**. This covers
-  Blake2b, the conversion of hash output into numbers, and the derivation of the public point
-  list. Blake2b is not formalized anywhere: the model treats it as an opaque box and assumes
+  BLAKE2b, the conversion of hash output into numbers, and the derivation of the public point
+  list. BLAKE2b is not formalized anywhere: the model treats it as an opaque box and assumes
   the box is random.
 * **The attacker is algebraic** — assumed to declare, for every curve point it outputs, a
   recipe building it from points it was given. Real attackers owe no such explanation. This is
@@ -298,7 +298,7 @@ challenge, which is what makes it harmless that the prover can compute challenge
 proves this of its own model, and captured fixtures check that model against real transcripts.
 
 The byte layer beneath is not modelled. The sequence of things hashed is verified; how they
-become bytes, and Blake2b itself, are not. Modelling the encoding would narrow the gap without
+become bytes, and BLAKE2b itself, are not. Modelling the encoding would narrow the gap without
 closing it, since the hash would remain outside the proof.
 
 ### Facts checked by running code, not by the kernel
@@ -321,7 +321,7 @@ Everything above, collected.
 
 1. **Discrete log is hard on Vesta** — and the concrete estimate of how hard, which the
    theorems take as a premise rather than derive, is right.
-2. **The hash behaves like a random oracle.** Blake2b is treated as fresh randomness with no
+2. **The hash behaves like a random oracle.** BLAKE2b is treated as fresh randomness with no
    exploitable structure, and is not formalized anywhere.
 3. **The attacker is algebraic** — it shows its work for every curve point it outputs. One
    that does not is outside the claim rather than covered by it.

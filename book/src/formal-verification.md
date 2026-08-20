@@ -151,7 +151,7 @@ What the fixture captures actually *check* is the statement of record in each fa
 `Fixtures/*/Random/Epsilon.lean`. Capture lineage, seeds, and the reproducibility pipeline are in
 `Zcash/Snark/Fixtures/PROVENANCE.md`. Together, the captures and ε theorems support the typed,
 post-decoding Rust↔Lean boundary, not universal byte-level refinement. Byte encoding, transcript
-domain-prefix bytes, and Blake2b remain external; `Snark/Fingerprint/Match.lean` enumerates this
+domain-prefix bytes, and BLAKE2b remain external; `Snark/Fingerprint/Match.lean` enumerates this
 boundary, tracked in [#66](https://github.com/zcash/ironwood/issues/66).
 
 **The circuit-side layout fixtures are pinned, not regenerated.** The CS and layout dumps behind
@@ -173,7 +173,7 @@ what the statements *model*: it is neither an axiom nor a compiler-trust questio
 sees it.
 
 **Fiat–Shamir is idealized.** The deployed verifier derives each challenge by hashing the
-transcript so far with Blake2b and reducing 64 bytes to a field element. The development models
+transcript so far with BLAKE2b and reducing 64 bytes to a field element. The development models
 that as an abstract `squeeze` (`Verifier/FiatShamir.lean`) and, in the security layer, as a
 uniform random oracle — the assumption that carries interactive soundness to the deployed
 non-interactive check. Identifying the deployed hash with that oracle is external, over and
