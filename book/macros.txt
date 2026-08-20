@@ -2,10 +2,36 @@
 \IronwoodProject:{\textsf{Ironwood}}
 
 # Operators
+\typecolon:{\;{\small ⦂}\;}
 \bconcat:{\mathop{\kern 0.1em||\kern 0.1em}}
+\possqrt:{\,{}^{+}\kern-0.78em\sqrt{\mathstrut #1}}
+\floor:{\left\lfloor{#1}\right\rfloor}
+\fraction:{{}^{#1}\kern-0.15em/\kern-0.1em{}_{#2}}
+\mul:{\kern0.12em\cdot\kern0.12em}
+\argument:\cdot
+
+# Groups and fields
+\Group:{\mathbb{G}}
+\GroupP:{\mathbb{P}}
+\GroupV:{\mathbb{V}}
+\Cmul:{\mathbb{C}^\times}
+\Field:{\mathbb{F}}
+\Fp:{\mathbb{F}_p}
+\Fq:{\mathbb{F}_q}
+
+\card:{\kern-0.05em\textsf{\#}{#1}}
+\GroupSize:{\card{\Group}}
+\FieldSize:{\card{\Field}}
+
+\Domain:{M}
+
+# Indifferentiability
+\Sim:{\mathcal{S}}
+\Dist:{\mathcal{D}}
 
 # Variables
 \Repr:{\star}
+\eps:{\varepsilon}
 
 # Note and note-plaintext fields
 \d:{\mathsf{d}}

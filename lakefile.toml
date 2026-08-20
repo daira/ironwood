@@ -15,7 +15,8 @@ rev = "6e6328d7"
 [[require]]
 name = "CompElliptic"
 git = "https://github.com/daira/CompElliptic"
-rev = "fd9977340d728b704436894f87f9967f117ad5f7"
+# CompElliptic main, at the merge of the Weil-bound reduction (PR #29).
+rev = "2c0444035a84db957f27f06433715058d1e890ad"
 
 # mathlib last, so that its pinned versions of the common transitive dependencies
 # (batteries, aesop, Qq, proofwidgets, ...) take precedence over CompPoly's.

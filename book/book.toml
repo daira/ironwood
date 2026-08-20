@@ -1,7 +1,6 @@
 [book]
 authors = ["Daira-Emma Hopwood", "Sean Bowe"]
 language = "en"
-multilingual = false
 src = "src"
 title = "The Ironwood Book"
 

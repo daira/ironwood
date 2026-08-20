@@ -215,7 +215,11 @@ gap between the two is the standard gap for protocols with a URS. We prove secur
 the family of protocols that sample the bases at random, over the distribution of that
 randomness. Then we argue heuristically that the deployed protocol, which fixes them via
 hash-to-curve, inherits it — provided that the hash-to-curve scheme admits no attack
-more efficient than the algebraic ones bounded by the proven reductions. No Lean
+more efficient than the algebraic ones bounded by the proven reductions. The
+[group-hash indifferentiability development](group-hash-indifferentiability.md)
+supplies the formal half of that judgement: the deployed group hash is
+indifferentiable from a random oracle into the group, under a named Weil-bound
+hypothesis, with the simulator exhibited as an algorithm. No Lean
 theorem instantiates the soundness endpoints at the deployed bases; identifying Halo2's
 hash-to-curve outputs with the sampled basis is the heuristic step
 (`Zcash/TrustBoundary.lean` records this scope). The same heuristic underlies every
@@ -262,7 +266,8 @@ games whose honest parties themselves call `DiversifyHash` —Spendability and S
 Authority, where key generation derives the diversified base— the modelled adversary
 cannot express strategies a realistic adversary performs routinely, so those games need
 the oracle in the adversary's interface before their capstones carry their intended
-weight. And enumerating, per game, the generators judged relevant leaves out fixed bases
+weight; the indifferentiability result is what licenses giving them that oracle as a
+random oracle. And enumerating, per game, the generators judged relevant leaves out fixed bases
 from other protocol components that a deployed adversary can obtain; nothing known
 suggests they help, but "nothing known suggests" is itself a heuristic judgement, and it
 should be visible rather than implicit. Both are known limitations of the current

@@ -1,4 +1,3 @@
-import Zcash.Circuits.Specs.CompEllipticExtras
 import Zcash.Circuits.Specs.Types
 import Zcash.Circuits.Specs.Bitrange
 import Zcash.Circuits.Specs.Pallas

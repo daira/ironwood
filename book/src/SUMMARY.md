@@ -15,5 +15,6 @@
   - [Security Models](formal-verification/security-models.md)
   - [Knowledge-Soundness Contract](formal-verification/knowledge-contract.md)
   - [Ledger Security Games](formal-verification/ledger-security-games.md)
+  - [Group-Hash Indifferentiability](formal-verification/group-hash-indifferentiability.md)
   - [Definitions](formal-verification/definitions.md)
   - [Source Map](formal-verification/source-map.md)
