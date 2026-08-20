@@ -10,7 +10,7 @@ domain root of unity `omegaOf` (CompElliptic's certified Pasta `ROOT_OF_UNITY` s
 down, `EvaluationDomain::new`), `Fp::DELTA`, and the domain facts (primitive-root, power
 injectivity, size nonvanishing) derived from the certificate's order fact.
 Moved out of `Zcash/Bridge` per the Clean-boundary architecture
-(`Zcash/Circuits/Integration/clean-boundary.md`): these are verifier-native arithmetic
+(`book/src/formal-verification/clean-boundary.md`): these are verifier-native arithmetic
 facts, not bridge plumbing.
 -/
 
