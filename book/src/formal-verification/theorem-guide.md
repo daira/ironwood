@@ -100,13 +100,15 @@ several directions:
   oversimplification for Orchard and Ironwood because they share addresses and key material;
   we may decide to either model this explicitly or justify more rigorously why that isn't
   needed.)
-* Modelling of the hash-to-curve is not complete. This also particularly affects the
-  formalization of the Spendability and Spend authority properties, because they depend
-  on diversified address generation using $\mathsf{DiversifyHash}$, and so a realistic
-  adversary has to be able to invoke the hash-to-curve. There are some technical issues
-  involved in this modelling that have not been fully resolved, but we have a plan for how
-  it will work, starting with proving indifferentiability for the concrete hash-to-curve
-  construction used by Orchard ([CompElliptic#25](https://github.com/daira/CompElliptic/issues/25)).
+* Modelling of the hash-to-curve in the ledger games is not complete. This also particularly
+  affects the formalization of the Spendability and Spend authority properties, because they
+  depend on diversified address generation using $\mathsf{DiversifyHash}$, and so a realistic
+  adversary has to be able to invoke the hash-to-curve. The first step is delivered: the
+  deployed hash-to-curve is proven indifferentiable from a random oracle onto the group, with
+  a concrete advantage bound — see
+  [Group-Hash Indifferentiability](group-hash-indifferentiability.md). What remains is to
+  give the games' adversaries oracle access to it
+  ([#188](https://github.com/zcash/ironwood/issues/188)).
 
 # Circuit and SNARK layers
 
