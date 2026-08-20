@@ -106,7 +106,7 @@ the corresponding DLOG advantage bound. (The operationally accounted route is se
 structural, carried by the adversary's *type*: the algebraic restriction above and the
 random-oracle modelling of the challenge schedule. What trusting each of these means is the
 subject of [Security Models](security-models.md), and the
-[Guide to the Theorems](theorem-guide.md#what-you-are-trusting) states them in plain language.
+[Guide to the Ironwood Formalization](theorem-guide.md#what-you-are-trusting) states them in plain language.
 
 ## Why the record is not Action-specific
 

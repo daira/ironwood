@@ -79,7 +79,7 @@ control how the honest parties create transactions, generate keys (without telli
 adversary those keys), etc. That is how these properties were originally defined at
 Zcon3 in [Understanding the Security of Zcash](https://raw.githubusercontent.com/daira/zcash-security/main/zcash-security.pdf).
 
-The formalization of Balance integrity is in much better shape, and all the important pieces
+The formalization of *Balance integrity* is in much better shape, and all the important pieces
 have been completed. Modelling honest parties is not an issue for Balance properties; the
 adversary merely has to exhibit an unbalanced consensus-valid ledger. There are still some
 potential gaps, however, described below and on the [Ledger Security Games](ledger-security-games.md)
@@ -104,10 +104,10 @@ several directions:
   affects the formalization of the Spendability and Spend authority properties, because they
   depend on diversified address generation using $\mathsf{DiversifyHash}$, and so a realistic
   adversary has to be able to invoke the hash-to-curve. The first step is delivered: the
-  deployed hash-to-curve is proven indifferentiable from a random oracle onto the group, with
-  a concrete advantage bound — see
-  [Group-Hash Indifferentiability](group-hash-indifferentiability.md). What remains is to
-  give the games' adversaries oracle access to it
+  deployed hash-to-curve is proven indifferentiable from a random oracle onto the group,
+  with a concrete advantage bound, modelling the underlying field-element hash as a random
+  oracle — see [Group-Hash Indifferentiability](group-hash-indifferentiability.md). What
+  remains is to give the games' adversaries oracle access to it
   ([#188](https://github.com/zcash/ironwood/issues/188)).
 
 # Circuit and SNARK layers
@@ -115,19 +115,19 @@ several directions:
 ## Guide to the Circuit and SNARK Theorems
 
 The verifier knowledge-soundness proof for the Orchard protocol (and therefore the
-Ironwood pool) assumes one idea from cryptography — that a proof system lets someone
-convince you of a claim without showing you the data behind it. This idea can be understood
-without background in Lean, Halo 2, or any background in either formal or succinct proof
-systems. The rest of this page tries to explain the modelling assumptions and heuristics
-the verifier soundness claim rests on that are not established by a formal theorem, and
-therefore have to be assessed by other means.
+Ironwood pool) can be followed with one idea from cryptography — that a proof system lets
+someone convince you of a claim without showing you the data behind it. Understanding that
+idea needs no Lean, no Halo 2, and no background in formal or succinct proof systems. The
+rest of this page tries to explain the modelling assumptions and heuristics the verifier
+soundness claim rests on that are not established by a formal theorem, and therefore have
+to be assessed by other means.
 
 It is not a walkthrough of the proofs. The [proof map](proof-map.md) shows how the results
 connect, the [source map](source-map.md) indexes the tree, [definitions](definitions.md)
 covers the coined terms, [Security Models](security-models.md) states the models in full, and
 the [Knowledge-Soundness Contract](knowledge-contract.md) reads the theorem field by field.
-This page is about the Action circuit; for the protocol properties built on top of it, see
-[Ledger Security Games](ledger-security-games.md).
+From here on, the subject is the Action circuit; for the protocol properties built on top
+of it, see [Ledger Security Games](ledger-security-games.md).
 
 ## The claim
 
@@ -206,9 +206,10 @@ it was given. Read against those recipes, the equation forces one of three thing
 * Neither, meaning the challenge fell in the small set of values that can mask a false
   equation. The bound below covers how often that happens.
 
-Nothing is re-run with different answers. The classification runs the prover a fixed, small
-number of times — and that matters, because an extractor's cost is a count of prover runs, and
-a count growing with the size of the field would be worth nothing in practice. The adversary
+Nothing is re-run with different answers: the prover runs once, and the classification
+reads what that single run declared. That matters, because an extractor's cost is a count of
+prover runs, and a count growing with the size of the field would be worth nothing in
+practice. The adversary
 also picks its own target, producing the public inputs and the proof together; everything
 identifying that statement is hashed in before the first challenge, so it cannot be chosen
 after the fact.
@@ -328,3 +329,6 @@ Everything above, collected.
    protocols that sample it; the real one is hashed into existence and baked in.
 5. **The byte layer under the hashing schedule.** What gets hashed, and in what order, is
    checked; how those things become bytes is not.
+6. **A few closed numeric facts trust the compiler.** They are established by running
+   compiled code rather than by the kernel; each is pinned to its owning declaration at
+   build time, and each is independently re-checkable.
