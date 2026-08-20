@@ -106,19 +106,11 @@ assert_axioms Zcash.Snark.FixtureRandom.vk_eq_derived +native(
   Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_fixedCommitments,
   Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The Fiat–Shamir schedule checks, the composed fingerprint, and the boundary statement at the
 -- Lean-derived key (`Boundary.lean`). The oracle/schedule data and the composed-statement
--- functions are flagless — compiler trust may enter only through the named claims — except
--- `derivedVk`, whose circuit argument itself carries the natively-certified fixed-base
--- facts.
+-- functions are flagless; compiler trust may enter only through the named claims.
 assert_axioms Zcash.Snark.FixtureRandom.capturedChallengeValues_eq_expected +native(
   Zcash.Snark.FixtureRandom.capturedChallengeValues_eq_expected)
 assert_axioms Zcash.Snark.FixtureRandom.missingChallenge_not_captured +native(
@@ -150,13 +142,7 @@ assert_axioms Zcash.Snark.deriveChallengesForStatement
 assert_axioms Zcash.Snark.nonInteractiveFingerprintForStatement
 assert_axioms Zcash.Snark.FixtureRandom.derivedVk +native(
   Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derived +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Keygen.certificate,
@@ -166,12 +152,6 @@ assert_axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derive
   Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
-  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
-  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Snark.FixtureRandom.instance_commitments_derived,
   Zcash.Snark.FixtureRandom.deriveChallenges_matches_captured_schedule,
   Zcash.Snark.FixtureRandom.fingerprint_matches)
@@ -208,13 +188,7 @@ Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_permutationCommonCommitments.
 Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_ursG._native.native_decide.ax_1_1,
 Zcash.Snark.PostNu63Fixture.randomSingle_uses_same_wu._native.native_decide.ax_1_1,
 CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt._native.native_decide.ax_1_1,
-CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check._native.native_decide.ax_1_1,
-Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check._native.native_decide.ax_1_1] -/
+CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt._native.native_decide.ax_1_1] -/
 #guard_msgs (whitespace := lax) in
 #print axioms Zcash.Snark.FixtureRandom.nonInteractiveFingerprint_matches_derived
 
