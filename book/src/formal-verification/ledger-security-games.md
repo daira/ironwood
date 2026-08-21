@@ -5,13 +5,14 @@ under `Zcash/Snark/`. This page is its companion for the other half of the devel
 protocol **security properties** under `Zcash/Security/`. It covers:
 * the top-level capstones — the *ledger-model security games* of *Balance integrity*, *Spendability*, and *Spend authority*;
 * how each capstone connects, by reduction via intermediate security properties such as
-  *binding-signature balance*, *key binding*, and *verifier knowledge soundness*, to an
-  exhibited break of a cryptographic primitive in a specified adversary model.
+  *binding-signature balance* and *key binding*, to an exhibited break of a cryptographic
+  primitive in a specified adversary model — and where the intended hand-off to *verifier
+  knowledge soundness* remains open.
 
 Every argument here follows the *breaks as computed data* convention and the three-layer
 stack described in [Security Models](security-models.md).
 
-## One connected picture
+## One picture, not yet connected
 
 ```mermaid
 %%{init: {"flowchart": {"nodeSpacing": 20, "rankSpacing": 50, "padding": 6, "diagramPadding": 4, "subGraphTitleMargin": {"top": 4, "bottom": 18}}, "themeCSS": ".cluster-label { font-weight: 700; font-size: 1.1em; font-family: raleway, sans-serif; } marker { overflow: visible !important; } marker path { transform-box: fill-box !important; transform-origin: center !important; transform: scale(1.25) !important; }"}}%%
@@ -56,7 +57,7 @@ flowchart TD
   NFB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>distinct derive-inputs +<br/>equal nullifier<br/>computes</a>"| NFC["NullifierCollision"]
   SPENDAUTH --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean'>verified signature over<br/>unsigned sighash computes</a>"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
-  STMT STMTtoKS@-. "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Composition/Bridge.lean'>justified by<br/>the extractor</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
+  STMT STMTtoKS@-. "<a target='_blank' href='https://github.com/zcash/ironwood/issues/147'>intended hand-off:<br/>not yet formalized<br/>(#147, #155)</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data<br/>(separate development)"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
   KERR KERRtoNDLR@==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
@@ -104,14 +105,14 @@ flowchart TD
   class RDSA hyp
   class DL,ROM assumed
   classDef agmEdge stroke:#8858c8,stroke-width:4.2px
-  classDef agmBridge stroke:#8858c8,stroke-width:3.5px,stroke-dasharray: 7.5 3.2
+  classDef gapEdge stroke:#cf222e,stroke-width:3.5px,stroke-dasharray: 7.5 3.2
   class KERRtoNDLR,KStoDL,RDSAtoDL agmEdge
-  class STMTtoKS agmBridge
+  class STMTtoKS gapEdge
 ```
 
 <p>
 <span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">➞</span> heavy purple edge: a reduction (or intended reduction) in the online-AGM — both endpoint games are <a href="security-models.html#the-algebraic-adversary-restriction">algebraic</a><br/>
-<span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">⇢</span> dashed purple edge: an AGM-scoped justification crossing named side conditions — a semantic bridge rather than a proved implication<br/>
+<span style="color:#cf222e; font-weight: 700; font-size: 1.9rem">⇢</span> dashed red edge: an intended hand-off that is not yet formalized — the endpoints share no definition (<a href="https://github.com/zcash/ironwood/issues/147">#147</a>, <a href="https://github.com/zcash/ironwood/issues/155">#155</a>)<br/>
 <span style="font-size: 1.9rem">➝</span> thin edge: depends on (a reduction, assumption, or model)<br/>
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
 <span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
@@ -149,16 +150,18 @@ assumption. The games are the top-level capstones. The ledger model requires the
 supply, along with any accepting proof, a **witness or replay evidence** for the Action
 statement (`ActionSatisfied`) — in the replay case the ledger oracle can produce the
 previously supplied witness. Each component argument consumes the statement's satisfaction
-*on that witness*. Knowledge soundness is what justifies the modelling: whenever the ledger
-layer needs a witness, the extractor computes one —or computes break data— from the accepting
-proof. The justification is AGM-scoped —the extractor consumes the adversary's
-representations— so its edge is heavy purple; the dashing marks that it crosses the
-remaining semantic bridge: the Clean/Ironwood circuit-correctness conditions
-(`TopLevelCircuitCorrectness`) — named component conditions rather than a proved
-implication. Discharging them is the subject of the circuit soundness proof.
+*on that witness*. Knowledge soundness is what is *intended* to justify that modelling:
+whenever the ledger layer needs a witness, the extractor would compute one —or compute
+break data— from the accepting proof. That hand-off is not yet formalized in any form:
+the games state `ActionSatisfied` over their own abstract types, and no definition is
+shared with the SNARK development. The dashed red edge marks exactly this gap
+([#147](https://github.com/zcash/ironwood/issues/147),
+[#155](https://github.com/zcash/ironwood/issues/155)). Until it lands, the
+witness-supply requirement is a modelling assumption of the ledger games, not a
+consequence of verifier knowledge soundness.
 
 <style>
-/* "One connected picture" links: labels keep their ordinary colour at rest
+/* "One picture, not yet connected" links: labels keep their ordinary colour at rest
    (blue is reserved for the status coding); hover underlines. */
 .mermaid .edgeLabel a { color: inherit; }
 .mermaid .edgeLabel a:hover,
