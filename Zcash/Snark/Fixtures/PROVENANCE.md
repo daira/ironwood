@@ -78,7 +78,7 @@ feature) and three test drivers. The proof string is produced fabricate→replay
 schedule is the deployed verifier's own, never hand-transcribed: a `RandomizingTranscript`
 wrapping a real `Blake2bWrite` samples a fresh random canonical value at each
 `read_point`/`read_scalar` (points as `generator · t`, `t ≠ 0`), absorbs and buffers it, and
-forwards squeezes/common inputs to the inner Blake2b state; the finalized bytes are then
+forwards squeezes/common inputs to the inner BLAKE2b state; the finalized bytes are then
 replayed through `ChallengeRecorder` over `Blake2bRead` — identical to the honest pipeline —
 and the fixture is exported from the replay. The driver asserts, failing loudly rather than
 ever re-seeding silently: verifier ran to completion (twice), replay challenges and
@@ -99,7 +99,7 @@ adversarial proofs.
 Distributional caveat, stated plainly: fixed public seeds make the fabricated scalars
 *constants*, not samples — "nothing up my sleeve" rules out adversarial seed selection but
 does not create the uniform distribution the ε theorems count over. Applying the literal ε
-therefore assumes that seeded expansion behaves as a uniform sample; this premise is listed in
+therefore assumes that seeded expansion behaves as a uniform sample; this premiss is listed in
 `Zcash/Snark/Fingerprint/Match.lean`. A reduction-backed alternative would freeze both
 implementations, use a future public randomness beacon, regenerate the fixtures, and add the
 ChaCha PRG and sampling losses to ε.

@@ -10,14 +10,14 @@ import Zcash.Snark.Verifier.Assemble
 # Fiat–Shamir challenge schedule
 
 The deployed verifier derives each challenge by hashing the transcript absorbed so far. This module
-models halo2's Blake2b hash as the abstract `FiatShamir.squeeze`; it does not formalize Blake2b.
+models halo2's BLAKE2b hash as the abstract `FiatShamir.squeeze`; it does not formalize BLAKE2b.
 The one-sided bias interfaces live in `Common.Oracle.Model`; the uniform-challenge idealization
 in `Soundness.Oracle.ChallengeUniform`.
 
 `deriveChallenges` records the absorb/squeeze order from halo2's PLONK, multiopen, and commitment
 verifiers. `nonInteractiveFingerprint` runs `assemble` at those derived challenges.
 
-The security development idealizes `squeeze` as a random oracle; identifying deployed Blake2b
+The security development idealizes `squeeze` as a random oracle; identifying deployed BLAKE2b
 with it is external, and the field conversion's exact reduction bias is priced in
 `Soundness/Oracle/Challenge255.lean`. Fixtures use trusted typed captures, not transcript bytes.
 -/
@@ -28,7 +28,7 @@ open Zcash.Arithmetic (Msm)
 
 /-- A point, scalar, or challenge-domain marker written to the Fiat–Shamir transcript.
 
-The constructors correspond to halo2's three Blake2b domain prefixes. A squeeze absorbs `challenge`;
+The constructors correspond to halo2's three BLAKE2b domain prefixes. A squeeze absorbs `challenge`;
 it does not feed the resulting field element back into the transcript. -/
 inductive TranscriptElt (F G : Type*) where
   | point : G → TranscriptElt F G
@@ -38,8 +38,8 @@ inductive TranscriptElt (F G : Type*) where
 
 /-- The abstract Fiat–Shamir hash: squeeze a field challenge from the absorbed transcript.
 
-The deployed hash is Blake2b. The model treats it as a random oracle; the querying adversary,
-query loss, and Blake2b justification remain outside this structure. -/
+The deployed hash is BLAKE2b. The model treats it as a random oracle; the querying adversary,
+query loss, and BLAKE2b justification remain outside this structure. -/
 structure FiatShamir (F G : Type*) where
   squeeze : List (TranscriptElt F G) → F
 

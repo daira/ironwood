@@ -9,7 +9,7 @@ import Zcash.Snark.Soundness.FiatShamir.Ordering
 the proof's IPA block while preserving its pre-IPA fields; the adaptive AGM development uses this
 to assemble the proof returned by the algebraic adversary.
 
-`Soundness.FiatShamir.Adversary` builds the querying-adversary reduction on top. Identifying Blake2b
+`Soundness.FiatShamir.Adversary` builds the querying-adversary reduction on top. Identifying BLAKE2b
 with the modeled random oracle remains an assumption.
 -/
 

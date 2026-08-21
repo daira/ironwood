@@ -9,7 +9,7 @@ schedule.  Raw public columns are checked before they are committed.  The VK tra
 representation and every resulting instance commitment are then absorbed before proof-controlled
 advice commitments and the first challenge. Binding the key here means binding its opaque transcript
 representation; this model does not connect `vkTranscriptRepr` to the fields of `vk`. Halo2's
-Blake2b hash of the pinned key and its collision resistance remain below this abstraction boundary.
+BLAKE2b hash of the pinned key and its collision resistance remain below this abstraction boundary.
 
 The column commitment operation remains a parameter here.  For Orchard it is instantiated by the
 existing Lagrange-basis commitment model; this entry point controls when it may run and how its

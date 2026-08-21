@@ -19,7 +19,7 @@ programs — is carried by `ComputedAdaptiveActionStatementFSFamily` itself, the
 is parameterized over, so it appears as the record's parameter rather than as a field.
 The typed observer/table equality is deliberately the refinement boundary: it says which concrete
 finite experiment the deployed verifier implements without claiming byte-level refinement,
-concrete Blake2b hashing, or the outer batch wrapper.
+concrete BLAKE2b hashing, or the outer batch wrapper.
 -/
 
 namespace Zcash.Snark
@@ -36,7 +36,7 @@ each identified with its modeled counterpart.
 
 Fields split by status.  `challengeLawIsChallenge255` identifies the typed deployed conversion
 with `challenge255`; `challenge255_joint_eventBias_le` then discharges the adaptive joint hybrid,
-with only the permanent Blake2b-to-uniform-digest floor behind that identification. `basisIsGeneratorRO`
+with only the permanent BLAKE2b-to-uniform-digest floor behind that identification. `basisIsGeneratorRO`
 is the GroupHash-as-random-oracle idealization, permanent up to the encoding-distribution
 groundwork.  `vkDigestAgreesOnCanonical` binds the family's opaque digest to the deployed one at
 the canonical key only — the capstones claim no cross-key binding.  `acceptsFaithful` is the

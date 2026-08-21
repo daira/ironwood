@@ -184,7 +184,7 @@ theorem assembleQueries_parametric_numProofs {shape : Shape} {F G : Type*} [Fiel
 
 /-- The Fiat–Shamir schedule is generic in `shape.numProofs`.
 
-This theorem pins the per-proof folds, not Blake2b. The concrete fixtures check captured transcript
+This theorem pins the per-proof folds, not BLAKE2b. The concrete fixtures check captured transcript
 events with their fixture oracles. -/
 theorem deriveChallenges_parametric_numProofs {shape : Shape} {F G : Type*} [Zero F]
     (fs : FiatShamir F G) (init : List (TranscriptElt F G)) (ps : ProofString shape F G) :

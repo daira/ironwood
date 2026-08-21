@@ -10,6 +10,7 @@
   - [Action Circuit](design/action-circuit.md)
   - [*Orchard-* to *Ironwood-pool* Migration](design/migration.md) <!-- todo -->
 - [Formal Verification](formal-verification.md)
+  - [Guide to the Ironwood Formalization](formal-verification/guide.md)
   - [Proof Journey](formal-verification/proof-journey.md)
   - [Proof Map](formal-verification/proof-map.md)
   - [Security Models](formal-verification/security-models.md)
@@ -18,3 +19,6 @@
   - [Group-Hash Indifferentiability](formal-verification/group-hash-indifferentiability.md)
   - [Definitions](formal-verification/definitions.md)
   - [Source Map](formal-verification/source-map.md)
+  - [Working Notes](formal-verification/working-notes.md)
+    - [The Clean Boundary](formal-verification/clean-boundary.md)
+    - [Halo 2 Lawfulness and Certificate Elimination](formal-verification/lawfulness-and-certificate-elimination.md)
