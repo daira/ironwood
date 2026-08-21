@@ -132,27 +132,28 @@ given cost into a bound on the protocol game; it does not certify the belief.
 
 ### The resource numbers are coverage parameters
 
-The Snark-side capstones quote concrete numbers: the covered adversary's random-oracle
-queries are bounded by $2^{123}$ and its group work by $2^{123}$ —or $2^{125}$ in a
-staged-certified variant— with a statistical remainder ($2^{-83}$ for the
-consensus-generic Action capstone) proved for every workload up to the full covered
-budget. The instantiated formula endpoint quotes an eight-fold finder envelope —a
-three-bit overhead, since the finder replays a bounded number of traversals— evaluating
-the advantage at $2^{126}$ oracle queries and group operations. The staged-certified
-endpoints instead count the reduction's work additively, by a proved counter
-composition, and evaluate it at $2^{124}$ queries and $2^{126}$ group operations — the
-group work including the adversary's own at the larger budget. It is easy to misread
-the envelope as an estimate of Vesta's discrete-log cost; it is in fact a coverage
-parameter. The target is as large as
-is useful —past roughly $2^{126}$ group operations an adversary can compute Vesta discrete
-logs directly, voiding every binding property here (see the lifetime caveat below)— and
-no smaller, so that no adversary with a meaningful guarantee is excluded.
+The Snark-side capstones quote concrete numbers: the covered adversary makes at most
+$2^{123}$ random-oracle queries and performs at most $2^{125}$ group operations, the
+latter certified by a staged cost program. The statistical remainder ($2^{-83}$ for
+the consensus-generic Action capstone) is proved for every workload up to the full
+covered budget. The endpoints count the reduction's work additively, by a proved
+counter composition: the reduction adds at most $2^{123}$ group operations and 22 oracle
+queries to the adversary's own, and the advantage is evaluated at $2^{124}$ queries and
+$2^{126}$ group operations after rounding up to powers of two. The accounting overhead
+is a fraction of a bit of group work: before rounding, $2^{125}$ becomes at most
+$2^{125} + 2^{123} \approx 2^{125.32}$.
+
+It is easy to misread the $2^{126}$ target as an estimate of Vesta's discrete-log cost;
+it is in fact a coverage parameter. The target is as large as is useful —past roughly
+$2^{126}$ group operations an adversary can compute Vesta discrete logs directly,
+voiding every binding property here (see the lifetime caveat below)— and no smaller,
+so that no adversary with a meaningful guarantee is excluded.
 
 The near-coincidence with Pollard rho's estimated cost on Vesta (about $2^{126}$, using
 the curve's automorphisms) is therefore a stopping rationale, not a dependence: a revised
 attack estimate would change the interpretation, not the theorem. And the quoted bound is
 the worst covered point: the theorems evaluate the advantage function at the finder's
-exact accounted counts, and substituting the larger envelope numbers can only increase
+exact accounted counts, and substituting the larger rounded budgets can only increase
 it. Since generic-attack success falls off steeply below its threshold, an adversary far
 below the target gets a far stronger interpreted bound.
 Reading resource-parameterized claims this way —as attack-cost curves rather than
