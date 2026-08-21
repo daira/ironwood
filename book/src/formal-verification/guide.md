@@ -244,17 +244,24 @@ establishes outright. A reviewer judges the first term and simply reads the seco
 
 ## What you are trusting
 
-### The one hardness assumption
+### A hardness assumption on each curve
 
-**Finding a discrete-log relation on Vesta is infeasible** — no efficient adversary finds
-multipliers, not all zero, cancelling the fixed points to zero. This discharges every branch
-where the argument computes a relation instead of a witness.
+**Finding a discrete-log relation on each of Pallas and Vesta is infeasible** — for each
+curve, no efficient adversary finds multipliers, not all zero, cancelling the points
+output by the group hash to zero. This discharges every branch where the argument computes
+a relation instead of a witness.
 
-Lean proves the arithmetic of the cost — how many hash queries and how much group work the
-reduction spends, each against an explicit ceiling. The final step, that an adversary with
-those resources rarely solves discrete log on Vesta, is supplied as a premise rather than
-derived. That is where a concrete security estimate for Vesta enters, and it enters from
-outside.
+Pallas is relied on for security of the application protocol, both inside and outside the
+Action circuit. Vesta is relied on for knowledge soundness of the SNARK, via the binding
+property of the verifier's commitments.
+
+In all cases, Lean proves the arithmetic of the cost — how many hash queries and how much
+group work the reduction spends, each against an explicit ceiling. It falls on readers of
+these proofs, outside the formalization, to interpret consequences for Zcash's security
+properties according to their assessment of discrete-log hardness of Pallas and Vesta.
+The latter is not a binary property; a reader might reasonably come to different conclusions
+for different timescales based on their assessment of the timeline for quantum computer
+development, for example.
 
 ### Three idealizations
 
@@ -334,8 +341,10 @@ compiler bug would have to arrive at exactly the same wrong answer to slip throu
 
 Everything above, collected.
 
-1. **Discrete log is hard on Vesta** — and the concrete estimate of how hard, which the
-   theorems take as a premise rather than derive, is right.
+1. **Discrete log is hard for considered adversaries on both Pasta curves** — Vesta carries
+   the verifier's knowledge soundness; Pallas carries the Action circuit and the ledger
+   properties built on it. Discrete log hardness is not a binary property; the feasibility
+   of attacks may vary over time and according to the capabilities of an adversary.
 2. **The hash behaves like a random oracle.** BLAKE2b is treated as fresh randomness with no
    exploitable structure, and is not formalized anywhere.
 3. **The attacker is algebraic** — it shows its work for every curve point it outputs. One
