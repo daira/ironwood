@@ -290,15 +290,7 @@ theorem kappaEvent_measure_le_of_coins {qH : ℕ} {ε : ℝ≥0∞}
   refine le_trans (MeasureTheory.measure_union_le _ _) (add_le_add ?_ ?_)
   · exact uniformOfFintype_prod_fiber_bound (badFiber m gen r_idx adv)
       (fun s => badFiber_measure_le m gen r_idx adv (hQ s))
-  · have hswap : (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure
-        {ω : (Q → F) × (Fin m → F) |
-          (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b))}
-        = (PMF.uniformOfFintype ((Fin m → F) × (Q → F))).toOuterMeasure
-          ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b)) := by
-      rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → F) (Fin m → F)),
-        PMF.toOuterMeasure_map_apply]
-      congr 1
-    rw [hswap]
+  · rw [toOuterMeasure_swap_relSetWithCoins gen (fun b O => relFinder m r_idx adv O b)]
     exact relationWithCoins_prob_le_of_textbookDL gen _ hdl
 
 end Discharge
