@@ -1,19 +1,24 @@
 # Interpreting Security
 
-> **Bottom line:** within the formal model, breaking Action is at least as hard as
-> breaking Vesta discrete log: every covered computational failure of Action knowledge
-> soundness yields a DLOG solver. The underlying benchmark therefore remains breaking
-> Vesta DLOG, whose best known classical attacks have an expected-work scale of about
-> $2^{126}$ group operations. This is conventionally summarized as a 126-bit headline
-> security level for Vesta DLOG. At the certified profile, the constructed solver uses
-> less than twice the attacker's group-work budget, giving Action a conservative 125-bit
-> computational-work headline; the advantage function below is the more precise statement.
+> **Bottom line:** within the formal model, breaking the knowledge soundness of the
+> deployed Action verifier is —up to a small statistical error— at least as hard as
+> solving Vesta discrete log: the reduction turns every covered attack into a DLOG
+> solver with comparable resources. The benchmark therefore remains Vesta DLOG, whose
+> best known classical attacks have an expected-work scale of about $2^{126}$ group
+> operations. This is conventionally summarized as a 126-bit headline security level
+> for Vesta DLOG. At the certified profile, the constructed solver uses less than
+> twice the attacker's group-work budget, giving this claim a conservative 125-bit
+> computational-work headline; the advantage function below is the precise statement.
 
-Here “knowledge soundness” means that an accepted proof has a recoverable valid
-*witness*: the private data that justifies the proved statement. “Covered” means inside
+Here “knowledge soundness” means that whoever produced an accepted proof must know a
+valid *witness*: the private data that justifies the proved statement. The extractor
+computes the witness from the prover's declared group-element representations, not
+from the proof alone. “Covered” means inside
 the theorem's scope: an adversary that stays within the resource budgets below, supplies
 a representation for every group element it outputs, and faces Fiat–Shamir challenges
-modelled as a random oracle.
+modelled as a random oracle. The game also samples the verifier's fixed bases; the
+deployed, baked-in list inherits the result through the fixed-bases argument in
+[Security Models](security-models.md#fixed-bases-hash-to-curve-and-the-reference-string).
 
 ## For experts
 
@@ -80,10 +85,9 @@ the full coverage-parameter interpretation.
 
 ## In plain language
 
-Outside the statistical soundness error, a covered protocol attack would imply a DLOG
-break with the resources shown above. No easier protocol-specific computational term
-remains in the bound. The reverse is not claimed: a DLOG solver does not automatically
-forge an Action proof.
+Outside the statistical soundness error, a covered knowledge-soundness attack would
+imply a DLOG break with the resources shown above. No easier protocol-specific computational term
+remains in the bound.
 
 The advantage function says more than any single “security-bit target” could: for any
 query and work budgets, it tells experts exactly where to evaluate their preferred Vesta
@@ -94,7 +98,7 @@ DLOG estimate.
 Choose an amount of Action-attacker group work on the horizontal axis, trace upward to the
 orange curve, and then read the corresponding computational-success scale on the vertical
 axis. The curve shifts the idealized Vesta DLOG reference by the reduction's conservative
-one-bit work loss. Its marked scale is therefore the Action headline: about $2^{125}$
+one-bit work loss. Its marked scale is therefore the headline for this claim: about $2^{125}$
 group operations, derived from Vesta's 126-bit DLOG headline.
 
 The graph shows only group work. The oracle-query budget $q$ remains a separate input in
@@ -142,10 +146,10 @@ not this illustration, is the security claim.
   <polyline class="advantage-rho" points="92,409 242,328 391,247 481,198 541,166 690,84 735,60 765,46 780,43" />
   <circle class="advantage-break-point" cx="765" cy="46" r="6" />
   <line class="advantage-break-callout" x1="759" y1="55" x2="706" y2="238" />
-  <text class="advantage-break-label" x="700" y="256" text-anchor="end">Action computational security</text>
+  <text class="advantage-break-label" x="700" y="256" text-anchor="end">Action knowledge-soundness security</text>
   <text class="advantage-break-label" x="700" y="275" text-anchor="end">≈ 2¹²⁵ work</text>
 </svg>
-<figcaption>The orange line is the idealized Vesta DLOG work curve shifted by the reduction's conservative one-bit work loss. It illustrates Action's 125-bit computational-work headline; it is not a proved upper bound on <code>Adv_DLOG</code>. The equations above are the precise claim.</figcaption>
+<figcaption>The orange line is the idealized Vesta DLOG work curve shifted by the reduction's conservative one-bit work loss. It illustrates the claim's 125-bit computational-work headline; it is not a proved upper bound on <code>Adv_DLOG</code>. The equations above are the precise claim.</figcaption>
 </figure>
 
 Lean proves the adversary-to-DLOG reduction, its resource transformation, and the
