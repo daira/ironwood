@@ -1,8 +1,8 @@
 # The Clean boundary: architecture rule
 
-Status: agreed by the maintainer (2026-07-24). This note is normative for how
-Clean-originated concepts appear in the ironwood codebase; it exists so concurrent
-workstreams converge on one structure instead of each growing local bridge plumbing.
+This note is normative for how Clean-originated concepts appear in the ironwood
+codebase. It exists so that the work converges on one structure, instead of each
+workstream growing local bridge plumbing.
 
 ## The principle
 
@@ -96,10 +96,9 @@ boundary mentions `RichExpression` at all.
 
 Sequencing: items 1–3 are mechanical and ironwood-local; 4 wants co-design with the
 circuit-soundness workstream (the satisfaction-contract shape); 5 rides the next Clean
-pin cycle. Module renames should land as a dedicated cleanup commit, coordinated, not
-mid-workstream.
+pin cycle.
 
-## Review addendum: drawing the boundary precisely
+## Drawing the boundary precisely
 
 The directory boundary is a dependency boundary, not merely a collection of files
 created during the circuit-integration work.
