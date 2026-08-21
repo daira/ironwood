@@ -323,6 +323,20 @@ theorem relationWithCoins_prob_le_of_textbookDL {bound : ℝ≥0∞}
         rw [← ENNReal.div_add_div_same]
     _ ≤ bound + 1 / Fintype.card F := add_le_add hwin hmiss
 
+omit [Nonempty ι] [DecidableEq F] [DecidableEq ρ] in
+/-- The relation event, measured on the coins-first sample space. Basis logs and extractor
+coins are drawn independently and uniformly, so swapping the two components is a measure
+isomorphism: measuring `{ω | (ω.2, ω.1) ∈ relSetWithCoins B A}` under `ρ × (ι → F)` is
+measuring `relSetWithCoins B A` under `(ι → F) × ρ`. An experiment that already samples
+`(coins, logs)` in that order uses this to line its event up with
+`relationWithCoins_prob_le_of_textbookDL`. -/
+theorem toOuterMeasure_swap_relSetWithCoins :
+    (PMF.uniformOfFintype (ρ × (ι → F))).toOuterMeasure
+        {ω : ρ × (ι → F) | (ω.2, ω.1) ∈ ↑(relSetWithCoins B A)}
+      = (PMF.uniformOfFintype ((ι → F) × ρ)).toOuterMeasure ↑(relSetWithCoins B A) := by
+  rw [← map_uniformOfFintype_equiv (Equiv.prodComm ρ (ι → F)), PMF.toOuterMeasure_map_apply]
+  congr 1
+
 /-! ## Expected calls to a fixed call budget -/
 
 /-- Extensional form of a call-budgeted relation finder: run the finder with an online counter and
