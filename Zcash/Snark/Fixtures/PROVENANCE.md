@@ -99,7 +99,7 @@ adversarial proofs.
 Distributional caveat, stated plainly: fixed public seeds make the fabricated scalars
 *constants*, not samples — "nothing up my sleeve" rules out adversarial seed selection but
 does not create the uniform distribution the ε theorems count over. Applying the literal ε
-therefore assumes that seeded expansion behaves as a uniform sample; this premise is listed in
+therefore assumes that seeded expansion behaves as a uniform sample; this premiss is listed in
 `Zcash/Snark/Fingerprint/Match.lean`. A reduction-backed alternative would freeze both
 implementations, use a future public randomness beacon, regenerate the fixtures, and add the
 ChaCha PRG and sampling losses to ε.

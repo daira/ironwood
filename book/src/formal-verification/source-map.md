@@ -356,7 +356,7 @@ Six subtrees carry the heavier machinery:
 - **`Oracle/`** — the squeeze idealization and its deployed gap. `ChallengeUniform` gives the
   exactly-uniform challenge law over `Fp`; `Challenge255` prices the deployed conversion against
   that ideal — a uniform 512-bit digest reduced modulo `p` overshoots uniform by exactly
-  `r(p−r)/(p·2^512) < 2^-260`, stated as the `PMFEventBiasLE` premise the work-factor capstone's
+  `r(p−r)/(p·2^512) < 2^-260`, stated as the `PMFEventBiasLE` premiss the work-factor capstone's
   bias conjunct consumes, with BLAKE2b's idealization as the uniform digest remaining external.
   (The generic oracle-computation machinery — `OracleComp`, the adaptive hybrid, and the
   `PMFEventBiasLE` transport interface — are in `Common/Oracle/`.)

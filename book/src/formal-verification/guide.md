@@ -239,7 +239,7 @@ waved through as an assumption.
 
 Together they bound the probability that the verifier accepts while extraction fails, for
 every bundle size consensus allows. The bound splits in two: a discrete-log term, whose size
-is the reader's premise rather than the theorem's, and a statistical leftover the theorem
+is the reader's premiss rather than the theorem's, and a statistical leftover the theorem
 establishes outright. A reviewer judges the first term and simply reads the second.
 
 ## What you are trusting

@@ -122,10 +122,10 @@ to a lookup argument — lookup registration panics on one — and Clean no long
 that rejection anywhere. Nothing in the present chain becomes unsound as a result,
 because nothing claims it; but a keygen-fidelity theorem relating Clean's
 `configure`/`synthesize` output to halo2's own key generation cannot be stated
-faithfully without it. Such a theorem will need a no-simple-selectors premise
+faithfully without it. Such a theorem will need a no-simple-selectors premiss
 reintroduced explicitly.
 
-When that happens, the premise should not be reinstated in the withdrawn shape. These
+When that happens, the premiss should not be reinstated in the withdrawn shape. These
 are laws of `FormalCircuit.synthesize`: the obligation belongs locally on
 lookup-emitting bundles, preserved compositionally by the circuit combinators, rather
 than reproved across a whole synthesis call graph and reattached at the top-level
@@ -305,7 +305,7 @@ law-dependent permutation-column count described above.
 Add exact query support, degree bounds, permutation-column registration, constant
 column laws, and instance registration. This addresses query coverage, constant-cell
 routing, degree safety, permutation routing, primary-instance registration, invalid
-query declarations, and the local premise of selector-compression coverage.
+query declarations, and the local premiss of selector-compression coverage.
 
 ### Phase D — generic projection and algebra (largely done)
 
