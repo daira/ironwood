@@ -318,6 +318,13 @@ time. Alongside facts about the Vesta curve, the **fingerprint match** is the on
 model to the shipped code: it confirms Lean's assembled sum is identical to the Rust
 verifier's — for the captured proofs in the repository, not for the verifier in general.
 
+The programs those evaluations run are not small. They include the whole fast native
+arithmetic: field operations, curve group operations, and the multi-scalar multiplication
+the fingerprint match assembles. The algorithms themselves are proven correct against the
+group law, inside the kernel, and every proof-carrying replacement of a slow definition by
+a fast one is checked and censused. What the axiom records as trusted is the compiler's
+translation of that proven code into the code that actually ran.
+
 These facts *are* rigorously established; what is not established is that they hold on the
 kernel alone. Being closed and re-checkable, they fail loudly rather than silently — the curve
 facts were computed by an entirely different method when the Pasta curves were designed, so a
@@ -340,6 +347,7 @@ Everything above, collected.
    protocols that sample it; the real one is hashed into existence and baked in.
 6. **The byte layer under the hashing schedule.** What gets hashed, and in what order, is
    checked; how those things become bytes is not.
-7. **A few closed numeric facts trust the compiler.** They are established by running
-   compiled code rather than by the kernel; each is pinned to its owning declaration at
-   build time, and each is independently re-checkable.
+7. **Facts established by running code trust the compiler.** Each is pinned to its
+   owning declaration at build time, and each is independently re-checkable — but the
+   compiled code they run is the whole fast native arithmetic, proven correct in the
+   kernel and executed as the compiler translated it.
