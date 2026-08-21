@@ -518,6 +518,12 @@ computed data.
   `Merkle` proving fixed-depth Merkle trees position-binding up to an exhibited tree-hash collision
   and `Nullifier` reducing a nullifier collision to a discrete-log relation. `Pool` instantiates
   the abstract primitives at the deployed pool, `Value` discharges the transaction-balance premiss
-  against the binding-signature layer, `KeyBindingArm` discharges the key-binding ε in the oracle
-  model, `Capstone` lifts the deterministic layer to a distribution over valid annotated ledgers,
-  and `Completeness` checks the other direction — that an honest wallet's spend actually verifies.
+  against the binding-signature layer, `Capstone` lifts the deterministic layer to a distribution
+  over valid annotated ledgers, and `Completeness` checks the other direction, that an honest
+  wallet's spend actually verifies. The ε's that layer leaves named are then discharged in the
+  challenge-oracle model, one module per arm: `ExtractionArm` splits the transaction-balance
+  premiss into its two arms, a nontrivial `(𝒱, ℛ)` relation or a verifying signature the extractor
+  misses; `ValueRelationArm` prices the relation arm at `ε_DL + 1/|F|`; `ExtractionKappaArm` prices
+  the extraction-failure arm at `(q_H + 2)/|F| + ε_DL`; `KeyBindingArm` does the same for the
+  key-binding ε; and `ConservationExperiment` puts both conservation arms in one sample space, over
+  the adversary's coins, the challenge table, and the logs of the presented bases.

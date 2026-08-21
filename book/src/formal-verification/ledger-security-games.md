@@ -116,7 +116,7 @@ flowchart TD
 <span style="font-size: 1.9rem">➝</span> thin edge: depends on (a reduction, assumption, or model)<br/>
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
 <span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
-<span style="color:#9a6700"> ■ </span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end: composing the per-arm oracle-model discharges into one experiment, RedDSA unforgeability; knowledge soundness's circuit-correctness conditions)<br/>
+<span style="color:#9a6700"> ■ </span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end: the two conservation arms now compose into one oracle-model experiment, over the adversary's coins, the challenge table, and the basis logs; the other capstone arms, RedDSA unforgeability, and knowledge soundness's circuit-correctness conditions remain)<br/>
 <span style="color:#cf222e"> ■ </span> named hypothesis; formalization deferred<br/>
 <span style="color:#57606a"> ■ </span> assumption or heuristic model; terminal by design<br/>
 </p>
