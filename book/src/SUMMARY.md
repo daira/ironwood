@@ -10,7 +10,7 @@
   - [Action Circuit](design/action-circuit.md)
   - [*Orchard-* to *Ironwood-pool* Migration](design/migration.md) <!-- todo -->
 - [Formal Verification](formal-verification.md)
-  - [Guide to the Ironwood Formalization](formal-verification/theorem-guide.md)
+  - [Guide to the Ironwood Formalization](formal-verification/guide.md)
   - [Proof Journey](formal-verification/proof-journey.md)
   - [Proof Map](formal-verification/proof-map.md)
   - [Security Models](formal-verification/security-models.md)
