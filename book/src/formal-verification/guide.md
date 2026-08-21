@@ -79,18 +79,20 @@ control how the honest parties create transactions, generate keys (without telli
 adversary those keys), etc. That is how these properties were originally defined at
 Zcon3 in [Understanding the Security of Zcash](https://raw.githubusercontent.com/daira/zcash-security/main/zcash-security.pdf).
 
-The formalization of *Balance integrity* is in much better shape, and all the important pieces
-have been completed. Modelling honest parties is not an issue for Balance properties; the
-adversary merely has to exhibit an unbalanced consensus-valid ledger. There are still some
-potential gaps, however, described below and on the [Ledger Security Games](ledger-security-games.md)
-page.
+The formalization of *Balance integrity* is in better shape (modelling honest parties
+is not an issue for Balance properties; the adversary merely has to exhibit an
+unbalanced consensus-valid ledger). All the important pieces have been completed, but
+they have not yet been connected up. The remaining **significant gap** is that ledger
+security arguments are not yet tied into the Action circuit knowledge soundness proof
+at all: the games state their circuit premiss over their own abstract types, and no
+definition is currently shared between the two developments
+([#147](https://github.com/zcash/ironwood/issues/147) and
+[#155](https://github.com/zcash/ironwood/issues/155)). Additional caveats are stated
+on the [Ledger Security Games](ledger-security-games.md) page.
 
 For tractability, the modelled ledger also abstracts away from the real protocol in
 several directions:
 
-* The ledger security arguments are not yet properly tied into the Action circuit knowledge
-  soundness proof end-to-end ([#147](https://github.com/zcash/ironwood/issues/147)
-  and [#155](https://github.com/zcash/ironwood/issues/155)).
 * The real protocol has, at the time of writing, six chain value pools: the transparent pool;
   the lockbox (also transparent), and four shielded pools for Sprout, Sapling, Orchard, and
   Ironwood. The modelled ledger has one transparent pool, and one Orchard-protocol shielded
