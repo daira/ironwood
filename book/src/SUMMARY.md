@@ -19,5 +19,6 @@
   - [Group-Hash Indifferentiability](formal-verification/group-hash-indifferentiability.md)
   - [Definitions](formal-verification/definitions.md)
   - [Source Map](formal-verification/source-map.md)
-  - [The Clean Boundary](formal-verification/clean-boundary.md)
-  - [Halo 2 Lawfulness and Certificate Elimination](formal-verification/lawfulness-and-certificate-elimination.md)
+  - [Working Notes](formal-verification/working-notes.md)
+    - [The Clean Boundary](formal-verification/clean-boundary.md)
+    - [Halo 2 Lawfulness and Certificate Elimination](formal-verification/lawfulness-and-certificate-elimination.md)
