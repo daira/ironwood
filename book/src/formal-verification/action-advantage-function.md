@@ -17,32 +17,32 @@ modelled as a random oracle.
 
 ## For experts
 
-For a bundle containing $n$ Actions and an adversary $A$ making at most $Q$
-random-oracle queries and performing at most $W$ Vesta group operations, the reduction
+For a bundle containing $n$ Actions and an adversary $A$ making at most $q$
+random-oracle queries and performing at most $g$ Vesta group operations, the reduction
 gives
 
 $$
 \Pr[\text{verifier accepts but extraction fails}]
 \;\le\;
 \operatorname{Adv}_{\mathrm{DLOG}}
-  \bigl(Q+22,\,W+R(n)\bigr)
-+ \varepsilon_{\mathrm{stat}}(Q,n).
+  \bigl(q+22,\,g+R(n)\bigr)
++ \varepsilon_{\mathrm{stat}}(q,n).
 $$
 
-**$\operatorname{Adv}_{\mathrm{DLOG}}(q,w)$ is the advantage function**: for query budget
-$q$ and work budget $w$, the externally supplied upper bound on the success probability
+**$\operatorname{Adv}_{\mathrm{DLOG}}(q,g)$ is the advantage function**: for query budget
+$q$ and group-operation budget $g$, the externally supplied upper bound on the success probability
 of a Vesta DLOG solver.
 
-**$\varepsilon_{\mathrm{stat}}(Q,n)$ is the statistical soundness error**: it collects
+**$\varepsilon_{\mathrm{stat}}(q,n)$ is the statistical soundness error**: it collects
 the non-DLOG statistical terms, including exceptional random challenges that prevent
-extraction and the random-URS binding term, for an adversary making at most $Q$ oracle
+extraction and the random-URS binding term, for an adversary making at most $q$ oracle
 queries against a bundle containing $n$ Actions.
 
 **Direction of the reduction:**
 
-> Action attacker $A$ using $Q$ queries and $W$ group operations
+> Action attacker $A$ using $q$ queries and $g$ group operations
 > $\longrightarrow$ reduction adds 22 queries and $R(n)$ group operations
-> $\longrightarrow$ Vesta DLOG solver using $Q+22$ queries and $W+R(n)$ group operations.
+> $\longrightarrow$ Vesta DLOG solver using $q+22$ queries and $g+R(n)$ group operations.
 
 The reduction constructs the DLOG solver by running the Action attacker and processing
 its output. $R(n)$ is the extra Vesta group work it performs for a bundle containing $n$
@@ -50,8 +50,8 @@ Actions — reduction overhead, not attacker work or a probability loss. For the
 Action specialization, the reduction also makes 22 oracle queries beyond those made by
 the attacker.
 
-For the certified consensus profile, $Q\le 2^{123}$, $W\le 2^{125}$,
-$R(n)\le 2^{123}$, and $\varepsilon_{\mathrm{stat}}(Q,n)\le 2^{-83}$. The exact bound is
+For the certified consensus profile, $q\le 2^{123}$, $g\le 2^{125}$,
+$R(n)\le 2^{123}$, and $\varepsilon_{\mathrm{stat}}(q,n)\le 2^{-83}$. The exact bound is
 
 $$
 \Pr[\text{failure}]
@@ -97,7 +97,7 @@ axis. The curve shifts the idealized Vesta DLOG reference by the reduction's con
 one-bit work loss. Its marked scale is therefore the Action headline: about $2^{125}$
 group operations, derived from Vesta's 126-bit DLOG headline.
 
-The graph shows only group work. The oracle-query budget $Q$ remains a separate input in
+The graph shows only group work. The oracle-query budget $q$ remains a separate input in
 the equation above, and the statistical term is not plotted. The exact advantage function,
 not this illustration, is the security claim.
 
