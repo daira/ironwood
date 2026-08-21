@@ -71,32 +71,23 @@ exactly what `Common` is for.) The conversion belongs inside the boundary as pri
 plumbing; with an `Expr`-typed pinned view on the interface, nothing outside the
 boundary mentions `RichExpression` at all.
 
-## Current leak inventory (migration backlog)
+## Current state of the boundary
 
-1. `Zcash/Bridge/` — dissolves. It is imported *by* Snark modules, so it is not a layer,
-   just a junk drawer: pasta domain scalars (`omegaOf`/`deltaFp`/`powFast`) →
-   `Snark/Core`; `VerifyingKey.gates_eval_of_gates_eq` → restate as an interface lemma
-   (its current hypothesis is spelled in `flatGates`/`substSelectorMap`/`queryWalkInit`
-   — maximal leakage); Action keygen instances (`actionCS`, `actionOperations`,
-   `actionSelMapDerived`, `actionK`) → superseded by `TopLevelCircuit` methods.
-2. `Zcash/Snark/VkCommit/` → rename `Snark/Keygen/` (mirroring Clean's `Halo2/Keygen`,
-   same concept on the group side); this is a designated boundary module family.
-   `Fast/ParMap` (fully generic) → `Common/`. `Common/ExprRich` → into the boundary.
-3. `Snark/Fixtures/SingleAction/Honest/{PinnedCsMatch,VkMatch}` — restate over the interface
-   (`Certificate.lean` already demonstrates the style: it speaks only `vk`,
-   `derivedVk`, and `TopLevelCircuit` methods).
-4. The cross-language satisfaction seam (`Operation*`, `TopLevel*`, `Resolver*`,
-   the Clean-facing part of `PolynomialEnvironment`, coherence files, …) moves under
-   `Zcash/Circuits/Integration/`, capped by the interface satisfaction theorem. Clean
-   types are allowed inside this directory and remain invisible above it. Pure
-   verifier-native modules such as `CanonicalConstraintModel` do not move with the seam.
-5. Cross-repo: `Circuits/Fixtures/Layout.lean`'s keygen semantics (`V1.copyList`,
-   `runAssembly`, fixed contents) → Clean `Halo2/Keygen`; and eventually
-   `Circuits/TopLevel{,Keygen}.lean` themselves → Clean core.
+Checked against the tree as of [`dc421aa0`](https://github.com/zcash/ironwood/commit/dc421aa04592bf37ebb404e3e562793d029581a5) (2026-08-21):
 
-Sequencing: items 1–3 are mechanical and ironwood-local; 4 wants co-design with the
-circuit-soundness workstream (the satisfaction-contract shape); 5 rides the next Clean
-pin cycle.
+* `Zcash/Bridge/` is dissolved; `Snark/VkCommit/` became the designated boundary
+  family `Snark/Keygen/`; and the `RichExpression` conversion lives inside the
+  boundary (`Circuits/Integration/ExprRich.lean`).
+* The cross-language satisfaction seam lives under `Zcash/Circuits/Integration/`.
+* Clean imports are otherwise confined to `Zcash/Circuits/` and `Snark/Keygen/`.
+  One violation of the greppable rule remains:
+  `Snark/Fixtures/SingleAction/Honest/VkMatch.lean` imports Clean, declares
+  definitions with `Halo2.SelCompressMap` and `Halo2.AnyColumn` in their types, and
+  applies `RichExpression.ofExpr`. It should be restated over the interface, in the style
+  that `Snark/Keygen/Certificate.lean` demonstrates.
+* The cross-repo migrations — `Circuits/Fixtures/Layout.lean`'s keygen semantics
+  into Clean's `Halo2/Keygen`, and eventually `Circuits/TopLevel{,Keygen}.lean`
+  themselves into Clean core — ride Clean pin cycles and have not happened.
 
 ## Drawing the boundary precisely
 

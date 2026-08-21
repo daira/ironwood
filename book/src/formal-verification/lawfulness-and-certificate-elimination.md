@@ -81,23 +81,6 @@ both missing-argument lists are empty, those folds are inactive. The selector ma
 is separate: it can change even with no missing lookup when a configured lookup
 mentions an unallocated selector.
 
-## Classification
-
-Each obligation receives one primary classification:
-
-* **G — generic now:** follows from existing `FormalCircuit`, `TopLevelCircuit`, or
-  compiler guarantees, with additional generic reasoning only.
-* **L — local law needed:** requires a new lawfulness fact attached to the gate,
-  lookup, configure program, region, circuit bundle, or operation stream that creates
-  the relevant data.
-* **R — remove the demand:** the concrete fact exists only because downstream code is
-  specialized to Action constants; make that code consume circuit-derived data
-  generically.
-
-“Local law needed” does not mean adding a sidecar theorem next to every concrete
-circuit. Laws belong in the formal-circuit package or in the object being constructed,
-and should normally be discharged by default tactics and compositional theorems.
-
 ## The concrete computations that remain
 
 The computations that were generically provable, and those that existed only because
