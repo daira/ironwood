@@ -7,25 +7,38 @@ import Zcash.Common.RelationProbabilityCoins
 /-!
 # The conservation relation arm, discharged in the oracle model
 
-The capstone layer bounds the conservation reduction's relation arm by the named `εdlr`. This
-module bounds that arm in the challenge-oracle model, at the reduction's own events: for any
-labeled ledger adversary, the probability that the output ledger is valid *and* the reduction
-computes a nontrivial `(𝒱, ℛ)` relation is at most `ε_DL + 1/|F|` (from
-`relation_prob_le_of_textbookDL`). No query budget appears: the arm's witness is oracle-free
-data, so there is no bad-challenge accounting — this is the easier sibling of the
-extraction-failure arm in `Ledger/ExtractionKappaArm.lean`, over the same experiment.
+A transaction's binding verification key reads two ways. Linearly in the witnessed bundle it is
+`bvk = A • 𝒱 + B • ℛ`, with `A` the integer value imbalance and `B` the net commitment randomness
+(`bindingVK_decomp`). When the extractor pins the binding key it is `bvk = bsk • ℛ`. On a
+transaction that does not balance, so `A ≠ 0`, the two readings subtract to
 
-The reduction's relation branch fires at the prefix's first imbalanced transaction when the
-extractor pins its binding key (`ValueRelationSelection`, computed from the reduction
-hypothesis as in the extraction-failure arm). The finder (`valueRelFinder`) replays the
-adversary at the presented basis, selects that transaction (`failTxOfAnn`), recomputes the
-extractor's value from the run's own data, and rebuilds the relation behind decidable guards:
-the integer imbalance, the no-overflow bound, and the binding-key equation are all decidable,
-so the finder needs no validity proof. On an event sample the guards pass — validity supplies
-the same facts the reduction derived — so the sample lands in the finder's relation-finding
-event, and the tight Jaeger–Tessaro accounting applies. The relation lands in the generic AGM
-witness type at the two value-commitment slots (`toAlgebraicRelationWitnessAt`), which is
-where the distinctness hypothesis `v_idx ≠ r_idx` is consumed.
+    A • 𝒱 + (B − bsk) • ℛ = 0,
+
+a nontrivial `(𝒱, ℛ)` relation. This module prices the samples where that happens.
+
+For any labeled ledger adversary, the probability that the output ledger is valid *and* the
+conservation reduction computes such a relation is at most `ε_DL + 1/|F|`
+(`relationWithCoins_prob_le_of_textbookDL`). No query budget appears: the arm's witness is
+oracle-free data, so there is no bad-challenge accounting. This is the easier sibling of the
+extraction-failure arm in `Ledger/ExtractionKappaArm.lean`, over the same experiment, and it
+discharges the `εdlr` the capstone layer leaves named.
+
+## The reduction
+
+The relation branch fires at the prefix's first imbalanced transaction, where the extractor pins
+its binding key (`ValueRelationSelection`, computed from the reduction hypothesis as in the
+extraction-failure arm). The finder (`valueRelFinder`) replays the adversary at the presented
+basis, selects that transaction (`failTxOfAnn`), recomputes the extractor's value from the run's
+own data, and rebuilds the relation behind three decidable guards: `A ≠ 0`, the no-overflow bound
+`|A| < r`, and the binding-key equation. All three are decidable, so the finder needs no validity
+proof; on a sample in the event they pass, because validity supplies the same facts the reduction
+derived. The relation is placed in the generic AGM witness type at the two value-commitment slots
+of the presented basis (`toAlgebraicRelationWitnessAt`), which is where the distinctness
+hypothesis `v_idx ≠ r_idx` is consumed.
+
+The discrete-log premiss is the coins form: the reduction samples the challenge table as its own
+coins (`TextbookDLWithCoinsAdvantageLE` at `ρ := Q → F`), so one bound for one randomized finder
+replaces a supremum over challenge tables.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -147,6 +160,9 @@ def valueRelFinder (hne_idx : v_idx ≠ r_idx) (i : ℕ)
             (queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ b tx) tx.sighash) with
         | some ℓ => ℓ.key r_idx
         | none => p.2.key r_idx
+      -- the three hypotheses of `ofBundleIntImbalance`, all decidable: the imbalance
+      -- `A = ∑ bundle values − vBalance` is nonzero, `|A| < r` so it survives reduction
+      -- mod `r`, and the extractor's `bsk` really opens `bvk` at the `ℛ` slot.
       if h : (((txBundle tx).map Prod.fst).sum
             - (([] : List (ℤ × ZMod r)).map Prod.fst).sum - tx.vBalance ≠ 0)
           ∧ ((((txBundle tx).map Prod.fst).sum
@@ -162,7 +178,7 @@ omit [Fintype Q] [Inhabited Q] in
 /-- On a relation-arm sample the finder returns a relation, for the finder at any prefix `k`
 at least the failing prefix: the arm breaks at the first imbalanced transaction of its
 prefix, which is the same transaction for every prefix containing it. -/
-theorem valueRelation_finder_isSome [DecidableEq (ZMod r)]
+theorem valueRelation_finder_isSome
     {LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
@@ -266,7 +282,8 @@ the tight Jaeger–Tessaro accounting applies. The DL hypothesis is a single bou
 coin-consuming finder — the reduction samples the challenge table as its own coins — so no
 supremum over tables appears. No query budget appears — the arm's witness
 is oracle-free data. Validity of the output ledger is a conjunct of the measured event, as in
-the extraction-failure arm. -/
+the extraction-failure arm. Kept as a named single-prefix result; the conservation experiment
+consumes the all-prefixes form below. -/
 theorem balanceConservation_valueRelationArm_measure_le {ι : Type u} (p : PMF ι)
     {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
@@ -292,17 +309,10 @@ theorem balanceConservation_valueRelationArm_measure_le {ι : Type u} (p : PMF �
   haveI : Nonempty (Fin m) := ⟨r_idx⟩
   refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
   rw [PMF.toOuterMeasure_map_apply]
-  have hswap : (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).toOuterMeasure
-      {ω : (Q → ZMod r) × (Fin m → ZMod r) | (ω.2, ω.1) ∈ ↑(relSetWithCoins gen
-        (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx i (LA j) O b))}
-      = (PMF.uniformOfFintype ((Fin m → ZMod r) × (Q → ZMod r))).toOuterMeasure
-        ↑(relSetWithCoins gen
-          (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx i (LA j) O b)) := by
-    rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → ZMod r) (Fin m → ZMod r)),
-      PMF.toOuterMeasure_map_apply]
-    congr 1
   refine le_trans (MeasureTheory.measure_mono ?_)
-    (le_trans (le_of_eq hswap) (relationWithCoins_prob_le_of_textbookDL gen _ (hdl j)))
+    (le_trans (le_of_eq (toOuterMeasure_swap_relSetWithCoins gen
+        (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx i (LA j) O b)))
+      (relationWithCoins_prob_le_of_textbookDL gen _ (hdl j)))
   rintro ⟨O, s⟩ ⟨hval, w, heq⟩
   exact Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
     valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr le_rfl hval heq⟩)
@@ -338,17 +348,10 @@ theorem balanceConservationBefore_valueRelationArm_measure_le {ι : Type u} (p :
   haveI : Nonempty (Fin m) := ⟨r_idx⟩
   refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
   rw [PMF.toOuterMeasure_map_apply]
-  have hswap : (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).toOuterMeasure
-      {ω : (Q → ZMod r) × (Fin m → ZMod r) | (ω.2, ω.1) ∈ ↑(relSetWithCoins gen
-        (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b))}
-      = (PMF.uniformOfFintype ((Fin m → ZMod r) × (Q → ZMod r))).toOuterMeasure
-        ↑(relSetWithCoins gen
-          (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b)) := by
-    rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → ZMod r) (Fin m → ZMod r)),
-      PMF.toOuterMeasure_map_apply]
-    congr 1
   refine le_trans (MeasureTheory.measure_mono ?_)
-    (le_trans (le_of_eq hswap) (relationWithCoins_prob_le_of_textbookDL gen _ (hdl j)))
+    (le_trans (le_of_eq (toOuterMeasure_swap_relSetWithCoins gen
+        (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b)))
+      (relationWithCoins_prob_le_of_textbookDL gen _ (hdl j)))
   rintro ⟨O, s⟩ ⟨hval, i, hik, w, heq⟩
   exact Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
     valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr
