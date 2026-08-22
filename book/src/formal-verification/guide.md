@@ -303,7 +303,7 @@ The caveat is not the usual asymptotic hand-wave. An adversary has the protocol'
 lifetime* to attack one specific list, and the cost is amortized over every transaction ever
 made against it. One such computation breaks the whole protocol at once, rather than one
 transaction or one user. [Security
-Models](security-models.md#fixed-bases-hash-to-curve-and-the-reference-string) develops this at
+Models](security-models.md#fixed-bases-the-group-hash-and-the-reference-string) develops this at
 length.
 
 ### How Fiat–Shamir is modelled

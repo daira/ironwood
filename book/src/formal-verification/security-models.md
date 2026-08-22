@@ -110,15 +110,16 @@ state of cryptanalytic knowledge, supplied by the reader rather than by the math
 Rogaway's "human ignorance" approach
 ([Formalizing Human Ignorance](https://eprint.iacr.org/2006/281), Vietcrypt 2006). Even
 outside formalization, time-bounded universal hardness claims for a fixed primitive are
-subtle: free precomputation converts memory into online speed at a quantified exchange
-rate (Corrigan-Gibbs–Kogan,
-[The Discrete-Logarithm Problem with Preprocessing](https://eprint.iacr.org/2017/1113),
-Eurocrypt 2018: generic preprocessing attacks with advice $S$ and online time $T$
-achieve success $ε$ with $S \cdot T^2$ on the order of $ε \cdot N$, and this is
-tight); non-uniform definitions admit unrealistic counterexample algorithms, as
-discussed above
-(Bernstein–Lange); and whether the non-uniform model is the right one at all is itself
-debated (Koblitz–Menezes, [Another look at non-uniformity](https://eprint.iacr.org/2012/359)).
+subtle, for several reasons:
+
+* Free precomputation converts memory into online speed, at a quantified exchange rate
+  (Corrigan-Gibbs–Kogan, [The Discrete-Logarithm Problem with Preprocessing](https://eprint.iacr.org/2017/1113),
+  Eurocrypt 2018): generic preprocessing attacks with advice $S$ and online time $T$
+  achieve success $ε$ with $S \cdot T^2$ on the order of $ε \cdot N$. This result is tight.
+* Non-uniform definitions admit unrealistic counterexample algorithms, as discussed above
+  (Bernstein–Lange).
+* Whether the non-uniform model is the right one at all is itself debated
+  (Koblitz–Menezes, [Another look at non-uniformity](https://eprint.iacr.org/2012/359)).
 
 The Lean interface encodes this division of labour — the mathematics exhibits the
 reduction, and the reader supplies the hardness judgement. `TextbookDLAdvantageLE` and
@@ -179,27 +180,43 @@ strategy class, not an assumption that could be true or false of Pallas or Vesta
 Random-oracle non-instantiability (Canetti–Goldreich–Halevi,
 [The Random Oracle Methodology, Revisited](https://eprint.iacr.org/1998/011)) is the
 standing warning against reading
-in-model theorems as instantiated guarantees. The heuristic earns its keep only if two
-supporting claims hold. First, re-expression: an adversary that is only *incidentally*
-non-algebraic must be re-expressible as an algebraic one at similar cost. Every generic
-adversary is algebraic —it only ever combines the elements it received— so the
-algebraic-adversary restriction is strictly weaker than the generic-group one; the
-substance is the claim that the concrete curves offer no useful operations that are
-neither generic nor algebraic. Second, the *known* deviations of the curves from generic
-must not obstruct the re-expression. Pasta's efficient endomorphism is the sharp
-example: it acts as scalar multiplication by a known cube root of unity, so an adversary
-using it remains algebraic — its outputs still carry representations. The same
-structure genuinely cheapens the best generic attacks (the automorphism-class rho walk
-behind the $2^{126}$ figure above), which the coverage parameters absorb. Deviating from
-generic and obstructing algebraicity are different failures, and the endomorphism is the
-first (since it can reduce the number of group operations required) without being the
-second.
+in-model theorems as instantiated guarantees. The heuristic earns its keep only if three
+supporting claims hold:
 
-The remaining supporting claim is that the modelled basis covers everything a realistic
-adversary can obtain. That is a claim about hash-to-curve, and it belongs with the
-reference-string discussion below.
+1. **Re-expression:** an adversary that is only *incidentally* non-algebraic must
+   be re-expressible as an algebraic one at similar cost.
+2. **Structural compatibility:** an adversary must not be able to make essential
+   use of known structure of a curve that is unavailable within the algebraic model
+   we are using.
+3. **Basis sufficiency:** the basis of group elements provided to the adversary
+   is sufficient to model realistic attacks.
 
-## Fixed bases, hash-to-curve, and the reference string
+The first claim says that our formalization of the algebraic model faithfully
+captures only the intended semantic restrictions; that is, if we write down some
+algorithm for a semantically algebraic attack, we will always be able to meet
+the syntactic requirements of the formalization.
+
+The second claim is about the reasonableness of applying the AGM (in our variant)
+to the particular curves used by our protocol, Pallas and Vesta. That is, do they
+have known structure (or structure that an adversary might know) allowing for
+attacks outside the model that we need to be worried about in practice?
+
+Every generic adversary is algebraic —it only ever combines the elements it received—
+so the algebraic-adversary restriction is strictly weaker than the generic-group one.
+An example of structure that separates them is Pasta's efficient endomorphism: it
+acts as scalar multiplication by a known cube root of unity, so an adversary using
+it remains algebraic — its outputs still carry representations. The same structure
+genuinely cheapens the best *generic* attacks (the automorphism-class rho walk
+behind the $2^{126}$ figure above), which the coverage parameters absorb.
+Deviating from generic and obstructing algebraicity are different failures, and
+the endomorphism is the first (since it can reduce the number of group operations
+required) without being the second.
+
+The third supporting claim is that the modelled basis covers all group elements that
+may be useful to an adversary in realistic attacks. The next section covers that
+issue.
+
+## Fixed bases, the group hash, and the reference string
 
 Several reductions bottom out at discrete log by treating a set of group elements as
 *independent* — for example the value-commitment bases $\mathcal{V}$ and $\mathcal{R}$, the
@@ -215,16 +232,17 @@ and the resulting outputs are baked into the protocol as a Uniform Reference Str
 gap between the two is the standard gap for protocols with a URS. We prove security for
 the family of protocols that sample the bases at random, over the distribution of that
 randomness. Then we argue heuristically that the deployed protocol, which fixes them via
-hash-to-curve, inherits it — provided that the hash-to-curve scheme admits no attack
+the group hash, inherits it — provided that the group hash scheme admits no attack
 more efficient than the algebraic ones bounded by the proven reductions. The
 [group-hash indifferentiability development](group-hash-indifferentiability.md)
 supplies the formal half of that judgement: the deployed group hash is
 indifferentiable from a random oracle into the group, under a named Weil-bound
-hypothesis, with the simulator exhibited as an algorithm. No Lean
-theorem instantiates the soundness endpoints at the deployed bases; identifying Halo2's
-hash-to-curve outputs with the sampled basis is the heuristic step
+hypothesis, with the simulator exhibited as an algorithm.
+
+No Lean theorem instantiates the soundness endpoints at the deployed bases;
+identifying Halo2's group hash outputs with the sampled basis is a heuristic step
 (`Zcash/TrustBoundary.lean` records this scope). The same heuristic underlies every
-fixed-base use of hash-to-curve here, including the value and note commitments, the
+fixed-base use of the group hash here, including the value and note commitments, the
 Merkle hash, and the proof system's reference string. The same primitive also produces
 bases on demand: `DiversifyHash` derives each diversified address base from `GroupHash`
 at key generation.
@@ -252,27 +270,33 @@ concern, not a per-transaction one. See
 [ZIP 2005](https://zips.z.cash/zip-2005#effectsofdiscrete-logarithm-breakingattacksbeforetheswitchtotherecoveryprotocol)
 for further discussion.
 
-What makes a hash-to-curve output a good base is that it comes with no known
+What makes a group-hash output a good base is that it comes with no known
 representation over previously received elements. The same property cuts the other way
 for the adversary model. A realistic adversary can evaluate `GroupHash` directly on
 inputs of its choice, and every output it obtains is a group element held with no
 representation over a fixed basis — so an adversary with that access is not algebraic
-over any fixed finite basis. The faithful modelling makes hash-to-curve itself an oracle
-of the game: the adversary may query it, each fresh output joins the AGM basis as a new
-independent element, and the reduction may embed its challenge in programmed outputs.
-The development does not currently model that access. Each game fixes an enumerated
-basis of the generators its honest algorithms use, and its theorems quantify over
-adversaries algebraic over that basis. Two consequences should be stated plainly. For
-games whose honest parties themselves call `DiversifyHash` —Spendability and Spend
-Authority, where key generation derives the diversified base— the modelled adversary
-cannot express strategies a realistic adversary performs routinely, so those games need
-the oracle in the adversary's interface before their capstones carry their intended
-weight; the indifferentiability result is what licenses giving them that oracle as a
-random oracle. And enumerating, per game, the generators judged relevant leaves out fixed bases
-from other protocol components that a deployed adversary can obtain; nothing known
-suggests they help, but "nothing known suggests" is itself a heuristic judgement, and it
-should be visible rather than implicit. Both are known limitations of the current
-modelling ([#188](https://github.com/zcash/ironwood/issues/188)).
+over any fixed finite basis.
+
+The faithful modelling makes the group hash itself an oracle of the game: the adversary
+may query it, each fresh output joins the AGM basis as a new independent element, and
+the reduction may embed its challenge in programmed outputs. The development does not
+currently model that access. Each game fixes an enumerated basis of the generators its
+honest algorithms use, and its theorems quantify over adversaries algebraic over that
+basis. Two consequences should be stated plainly:
+
+* For games whose honest parties themselves call `DiversifyHash` —Spendability and
+  Spend Authority, where key generation derives the diversified base— the modelled
+  adversary cannot express strategies a realistic adversary performs routinely, so
+  those games need the oracle in the adversary's interface before their capstones
+  carry their intended weight. The indifferentiability result is what licenses giving
+  them that oracle as a random oracle.
+* Enumerating, per game, the generators judged relevant leaves out fixed bases from
+  other protocol components that a deployed adversary can obtain. Nothing known
+  suggests they help, but "nothing known suggests" is itself a heuristic judgement,
+  and it should be visible rather than implicit.
+
+Both are known limitations of the current modelling
+([#188](https://github.com/zcash/ironwood/issues/188)).
 
 These models and their limitations are part of every statement in the development: a
 capstone's bound is no stronger than the adversary class it quantifies over. For the
