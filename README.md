@@ -1,4 +1,4 @@
-# Ironwood $\small\gets \text{Setup}(1^\lambda)$
+# Formalizing Ironwood
 
 $\textsf{Ironwood}$ is a project to deploy a new shielded pool, built to restore
 confidence for all Zcash'rs in the supply integrity of Zcash.
