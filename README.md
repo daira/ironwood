@@ -25,7 +25,7 @@ lake build           # verify everything (exactly what CI runs)
 
 ## Documentation
 
-- [The Ironwood Book](https://zcash.github.io/ironwood/)
+- <a href="https://zcash.github.io/ironwood/" class="raleway">The Ironwood Book</a>
 
 ## License
 
