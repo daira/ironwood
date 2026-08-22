@@ -27,7 +27,7 @@ written during circuit integration:
 The normative architecture rule and current migration guidance are in
 [`clean-boundary.md`](../../../book/src/formal-verification/clean-boundary.md). The next compiler-lawfulness arc is
 specified in
-[`lawfulness-and-certificate-elimination.md`](../../../book/src/formal-verification/lawfulness-and-certificate-elimination.md):
+[`clean-improvements.md`](../../../book/src/formal-verification/clean-improvements.md):
 it inventories the Action-specific computational certificates and the correctness
 obligations currently hidden by synthesis closure, then proposes the local laws and
 generic compiler proofs that should replace them.

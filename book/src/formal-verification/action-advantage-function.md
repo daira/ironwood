@@ -1,4 +1,4 @@
-# Interpreting Security
+# Reading the Security Bound
 
 > **Bottom line:** within the formal model, breaking the knowledge soundness of the
 > deployed Action verifier is —up to a small statistical error— at least as hard as
@@ -18,7 +18,7 @@ the theorem's scope: an adversary that stays within the resource budgets below, 
 a representation for every group element it outputs, and faces Fiat–Shamir challenges
 modelled as a random oracle. The game also samples the verifier's fixed bases; the
 deployed, baked-in list inherits the result through the fixed-bases argument in
-[Security Models](security-models.md#fixed-bases-hash-to-curve-and-the-reference-string).
+[Security Models](security-models.md#fixed-bases-the-group-hash-and-the-reference-string).
 
 ## For experts
 

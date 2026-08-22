@@ -19,7 +19,7 @@ field, discussed below. This page reads the instance in order.
 A generator random-oracle table and one Fiat–Shamir transcript, drawn independently. The URS
 basis is *read from* the table by `orchardGeneratorROBasis`, modelling halo2's parameter
 derivation ($g_i = H(0 \| i)$, $W = H(1)$, $U = H(2)$) — a
-[modelling assumption](security-models.md#fixed-bases-hash-to-curve-and-the-reference-string),
+[modelling assumption](security-models.md#fixed-bases-the-group-hash-and-the-reference-string),
 not a theorem.
 
 The adversary is *adaptive in the statement*: it outputs the public inputs and the proof
