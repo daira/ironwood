@@ -23,4 +23,4 @@
     - [Source Map](formal-verification/source-map.md)
   - [Working Notes](formal-verification/working-notes.md)
     - [The Clean Boundary](formal-verification/clean-boundary.md)
-    - [Halo 2 Lawfulness and Certificate Elimination](formal-verification/lawfulness-and-certificate-elimination.md)
+    - [Clean Circuit Framework Improvements](formal-verification/clean-improvements.md)

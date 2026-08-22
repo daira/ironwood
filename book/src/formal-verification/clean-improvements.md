@@ -1,4 +1,4 @@
-# Halo2 lawfulness and certificate elimination
+# Clean circuit framework improvements
 
 ## Status and scope
 
