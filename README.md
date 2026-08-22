@@ -12,7 +12,7 @@ and accurately document the scope of what is and is not formally verified.
 
 The formalization is a Lean 4 development over Mathlib, and building it
 re-elaborates every proof — a successful build *is* the verification. The single
-command is `lake build`, with two one-time prerequisites: install
+command is `lake build --wfail`, with two one-time prerequisites: install
 [`elan`](https://github.com/leanprover/elan) (the Lean toolchain manager, which
 reads [`lean-toolchain`](lean-toolchain) and installs the pinned toolchain
 automatically), then, from the repository root, fetch Mathlib's prebuilt
@@ -20,8 +20,12 @@ artifacts so it need not be recompiled from source:
 
 ```sh
 lake exe cache get   # one-time: download prebuilt Mathlib artifacts
-lake build           # verify everything (exactly what CI runs)
+lake build --wfail   # verify every proof; --wfail makes warnings fail, as CI does
 ```
+
+CI runs the same build plus source-level consistency checks — census coverage,
+fixture digests, and regeneration diffs — documented in
+[Build and CI Checks](https://zcash.github.io/ironwood/formal-verification/ci-checks.html).
 
 ## Documentation
 
