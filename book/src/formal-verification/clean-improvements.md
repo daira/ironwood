@@ -8,6 +8,19 @@ The certificates that could be eliminated by generalizing their consumers are go
 ([#145](https://github.com/zcash/ironwood/pull/145)); the compositional-lawfulness side
 is in progress ([#202](https://github.com/zcash/ironwood/pull/202)).
 
+The arc serves three purposes:
+
+* **Generality.** Lawfulness is proved once for Clean's primitives and preserved by its
+  circuit combinators, so that the framework can handle further top-level circuits
+  without comparable rework — at present, each new circuit would need its own
+  hand-written whole-circuit certificate modules.
+* **Error reporting.** An incorrectly expressed circuit should fail the local proof
+  obligation that names its mistake, rather than be silently repaired by the keygen
+  model or surface only as an unexplained mismatch against a captured verifying key.
+* **Claim hygiene.** Concrete computation should be confined to checking deployment
+  identity, so that a concrete check cannot silently stand in for a well-formedness
+  property it does not establish.
+
 The deployed verifying-key equality is intentionally **not** part of this cleanup.
 Checking that the circuit-derived key equals the deployed Orchard key is a legitimate
 concrete trust-boundary check. It must not, however, double as evidence that the Clean
