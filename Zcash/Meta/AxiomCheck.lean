@@ -36,15 +36,6 @@ Both commands require their argument to be written fully qualified (`checkFullyQ
 an unqualified name resolves through the census file's `open`s, so a same-base-name cousin in
 an opened namespace can silently capture an entry meant for a declaration that is not in scope
 at all — the assertion then reads as covering one theorem while checking another.
-
-CompElliptic has a sibling `CompElliptic/Meta/AxiomCheck.lean`, but the two have diverged: this
-version is a strict superset, adding the `+native(D₁, …)` owner list (upstream takes a bare
-`+native`, so it cannot state *which* certificate it trusts), the marker parsing and
-owner/module/range provenance checks, `checkFullyQualified`, the exact-set staleness check, the
-`assert_computable` definition-safety check, and the negative regression suite. Ironwood re-checks
-every inherited axiom itself, so the census here
-does not depend on the upstream version's strength; porting this file upstream is tracked
-separately. Improvements made here should be considered for upstream, not assumed present there.
 -/
 
 open Lean Elab Command

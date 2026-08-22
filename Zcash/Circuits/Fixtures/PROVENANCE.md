@@ -32,8 +32,8 @@ the `SimpleFloorPlanner` exactly as `keygen_vk` does.
 | Fact | Status |
 |---|---|
 | halo2_proofs version | 0.3.2 (github.com/zcash/halo2) — recorded in `Layout.lean` |
-| Base (pre-NU 6.3) circuit | orchard 0.14.0 — the `actionBase` dump is byte-identical to the 0.14.0 circuit, verified on the ironwood branch (`TestVkLayoutActionBase.lean`) |
-| Post (NU 6.3 / ironwood) circuit | the orchard ironwood branch (`Circuit::synthesize` with `synthesize_cross_address_checks`) |
+| Pre-NU6.3 circuit | orchard 0.14.0 — the `actionBase` dump is byte-identical to the 0.14.0 circuit (`TestVkLayoutActionBase.lean`) |
+| Post-NU6.3 circuit | orchard 0.15.0 (`Circuit::synthesize` with `synthesize_cross_address_checks`) |
 | Instrumented halo2 / orchard commit hashes | Not pinned to a public commit. The `dump_lean` / `layout_dump` / `dump_layout_action` instrumentation is one-off tooling in local checkouts of halo2/orchard — it exists only to emit these fixtures for the VK-match tests, is not production code, and by decision is not being upstreamed to main. So there is no public commit to pin and no byte-for-byte regeneration from public sources. |
 
 Note that zcash/halo2#922 does **not** close this: it concerns the *separate*
@@ -97,16 +97,16 @@ instrumented checkouts of the actual `zcash/halo2` (halo2_proofs 0.3.2) and
 `zcash/orchard` code: the dump tooling (`halo2_proofs::plonk::dump_lean`,
 `layout_dump`) hooks the real `Circuit::configure` / `keygen_vk` path and serializes
 the real constraint system, selector-compression map, permutation σ, and fixed cells.
-They are not hand-written and not from a reimplementation. For the post-NU 6.3
-circuit there is no deployed source in any case — the orchard ironwood branch *is*
-the circuit-in-development, and that is what was dumped.
+They are not hand-written and not from a reimplementation. The post-NU6.3 circuit is
+now released in orchard 0.15.0, but these dumps were taken earlier, from an
+instrumented pre-release commit rather than from the 0.15.0 release — a commit that
+was never recorded (see *What's missing*).
 
 **What's missing.** Any machine-checkable proof of that lineage. The instrumented
 forks were never published and their commit hashes never recorded, so the generation
-cannot currently be re-run to confirm the checked-in bytes correspond to
-orchard 0.14.0 / the ironwood branch as claimed. Those claims exist only as prose in
-test docstrings. This file therefore marks the fork commits **UNKNOWN**
-rather than inventing pins.
+cannot currently be re-run to confirm the checked-in bytes correspond to orchard
+0.14.0 / 0.15.0 as claimed. Those claims exist only as prose in test docstrings.
+This file therefore marks the fork commits **UNKNOWN** rather than inventing pins.
 
 **What limits the damage.** Two independent corroborations:
 
@@ -128,7 +128,7 @@ rather than inventing pins.
   checked-in bytes — the circuit-side analogue of what `fixtures.yml` already does
   for the `Zcash/Snark/Fixtures/` verifier-fingerprint captures (see
   `Zcash/Snark/Fixtures/PROVENANCE.md`).
-- For the base (pre-NU 6.3) circuit, a stronger check is available: verify the
+- For the pre-NU6.3 circuit, a stronger check is available: verify the
   dumped constraint system against the actual mainnet Orchard verifying key — a
   fixed public artifact — tying the chain to the deployed network rather than to
   any checkout.

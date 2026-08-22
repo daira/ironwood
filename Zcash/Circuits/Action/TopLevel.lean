@@ -22,7 +22,7 @@ theorem initialGeneratorTableIdx_mem
     List.append_nil]
   apply List.mem_append_left
   rw [FormalCircuit.call_operations]
-  simp only [baseCircuit, main, CircuitPreIronwood.synthesize, synthesizeBase,
+  simp only [baseCircuit, main, CircuitPreNU63.synthesize, synthesizeBase,
     Circuit.operations_bind, Circuit.operations_pure, List.append_nil]
   apply List.mem_append_left
   simp only [synthWitness, Circuit.operations_bind, Circuit.operations_pure,

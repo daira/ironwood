@@ -7,7 +7,7 @@ import Zcash.Circuits.Ecc.MulFixed.FullWidth
 import Clean.Halo2.CircuitTypeDeriving
 
 /-!
-# Orchard spend authority (Ironwood)
+# Orchard-protocol spend authority
 
 Reference (ported from actual Rust, not memory):
 `orchard@0.14.0/src/circuit.rs`, the `Spend authority` block in `Circuit::synthesize`

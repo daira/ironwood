@@ -11,7 +11,7 @@ import Zcash.Circuits.Action.SpendAuthority
 import Zcash.Circuits.Action.AddressIntegrity
 
 /-!
-# The Orchard Action circuit (Ironwood): configure
+# The Orchard-protocol Action circuit: configure
 
 Reference (ported from actual Rust, not memory):
 `orchard@0.14.0/src/circuit.rs`, `impl plonk::Circuit for Circuit` —
@@ -438,7 +438,7 @@ def synthNotes (G : Generators) (B : Bases) (W : Witnesses Fp) (cfg : Config)
     (orchardGate cfg.qOrchard cfg.advices).enable 0)
   pure { gdNew, pkdNew }
 
-/-- Rust `AddressPoints` (ironwood `circuit.rs`): the old/new-note diversified-address
+/-- Rust `AddressPoints` (orchard `circuit.rs`): the old/new-note diversified-address
 points the cross-address stage compares — the base circuit's output. -/
 structure AddressPoints (F : Type) where
   gdOld : Point F
@@ -447,7 +447,7 @@ structure AddressPoints (F : Type) where
   pkdNew : Point F
 deriving ProvableStruct
 
-/-- Ironwood `Circuit::synthesize_cross_address_checks` (`circuit.rs:920-1035`): the
+/-- The post-NU6.3 `Circuit::synthesize_cross_address_checks` (`circuit.rs:920-1035`): the
 `"post-NU 6.3 cross-address checks"` region — one row per address coordinate, reusing
 the `q_orchard` gate as `disableCrossAddress − 0 = disableCrossAddress · 1` (value
 row), `disableCrossAddress · (old − new) = 0` (root/anchor row), with both enable
@@ -478,8 +478,8 @@ def synthCrossAddressChecks (cfg : Config) (pts : Var AddressPoints Fp) :
 
 /-- Rust `Circuit::synthesize_base` (`circuit.rs:461-828`): the staged witness /
 integrity-check / note-commitment composition, returning the `AddressPoints` the
-ironwood cross-address stage reads. This alone is the pre-ironwood (fixed post-NU 6.2)
-circuit — see `Action/CircuitPreIronwood.lean`. -/
+post-NU6.3 cross-address stage reads. This alone is the pre-NU6.3 (fixed post-NU6.2)
+circuit — see `Action/CircuitPreNU63.lean`. -/
 def synthesizeBase (G : Generators) (B : Bases) (W : Witnesses Fp) (cfg : Config) :
     Circuit Fp (Var AddressPoints Fp) := do
   let wc ← synthWitness G W cfg
@@ -487,8 +487,8 @@ def synthesizeBase (G : Generators) (B : Bases) (W : Witnesses Fp) (cfg : Config
   let nc ← synthNotes G B W cfg wc cc
   pure { gdOld := wc.gdOld, pkdOld := cc.pkdOld, gdNew := nc.gdNew, pkdNew := nc.pkdNew }
 
-/-- The ironwood (post-NU 6.3) `Circuit::synthesize` — THE top-level circuit this repo
-targets: the base stages plus the cross-address checks region. -/
+/-- The post-NU6.3 `Circuit::synthesize` — the base stages plus the cross-address
+checks region. -/
 def synthesize (G : Generators) (B : Bases) (W : Witnesses Fp) (cfg : Config) :
     Circuit Fp Unit := do
   let pts ← synthesizeBase G B W cfg

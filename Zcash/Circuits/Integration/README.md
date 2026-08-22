@@ -1,4 +1,4 @@
-# Clean-to-Ironwood integration boundary
+# Clean-to-ironwood integration boundary
 
 This directory is the designated implementation boundary between Clean formal
 circuits and ironwood's verifier and soundness development.

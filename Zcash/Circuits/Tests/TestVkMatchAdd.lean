@@ -22,7 +22,7 @@ approach — two leaf gadgets, each with both sides: Add (this file + `TestVkLay
 the minimal example) and Mul (`TestVkMatchMul` + `TestVkLayoutMul`; the LOOKUP and
 selector-compression example). The check that the real circuit is correct is the
 top-level suite: `TestVkMatchAction` (configure, both versions) + `TestVkLayoutAction`
-(ironwood synthesize) + `TestVkLayoutActionBase` (pre-ironwood synthesize) — the other
+(post-NU6.3 synthesize) + `TestVkLayoutActionBase` (pre-NU6.3 synthesize) — the other
 per-gadget tests were subsumed by those and retired (see git history).
 -/
 

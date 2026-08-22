@@ -6,7 +6,7 @@ import Zcash.Circuits.Integration.TopLevelCircuit
 # Circuit-derived full bridge assembly
 
 This module is the generic join between the circuit-derived gate and lookup
-adapters and Ironwood's `FullCircuitBridge`. It keeps the verifier and soundness
+adapters and ironwood's `FullCircuitBridge`. It keeps the verifier and soundness
 layers in their native polynomial language: Clean-specific reconstruction is
 finished here before the resulting bridge is handed to the semantic endpoint.
 -/

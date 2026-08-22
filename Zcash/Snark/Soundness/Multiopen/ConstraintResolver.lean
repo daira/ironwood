@@ -20,8 +20,8 @@ those two views:
   instantiation layer.
 
 The adapter is generic in the verification key and proof string. It does not select a concrete
-Ironwood verification key or duplicate the straight-line AGM argument that produces member-node
-binding.
+Action circuit verification key or duplicate the straight-line AGM argument that produces
+member-node binding.
 -/
 
 namespace Zcash.Snark

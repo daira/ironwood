@@ -184,7 +184,7 @@ less silent. This subtree is the `FixtureCheck` lake target, kept out of `lake b
 captures are large, generated, and slow) but built by CI.
 `Shared/ScheduleMarker` re-encodes captured Fiat–Shamir schedules into the model's marker form;
 `Shared/TamperSweep` is the shared mutation vocabulary of the per-slot negative sweeps; `PostNu63` pins
-the canonical post-NU 6.3 verifying key and URS so fixture drift is visible here, and
+the canonical post-NU6.3 verifying key and URS so fixture drift is visible here, and
 `PostNu63Random` extends the same point equalities to the random captures — kept separate so the
 honest lane does not depend on compiling the random data modules. (The join between the captured
 instance commitments and the circuit-derived family lives in `Keygen/InstanceCapture`.)
@@ -444,7 +444,7 @@ them as data (`SpecOrBreak`) rather than assuming them away.
   decompositions, the gate set, the canonicity checks, and the assembled `Main`/`MainBundle`
   contract at the extracted window scalar.
 - **`Action/`** — the top-level Orchard Action circuit. `Circuit` is the ironwood `configure`
-  and `synthesize` in exact region-creation order; `CircuitPreIronwood` is the post-NU 6.2
+  and `synthesize` in exact region-creation order; `CircuitPreNU63` is the post-NU6.2
   circuit without the cross-address region (both share `configure`);
   `RealBases` instantiates everything at the actual deployed constants; `PublicInput` declares the
   public instance-cell layout and splits the semantic witness into public and private halves;

@@ -16,7 +16,7 @@ turns satisfaction of the verifier-native canonical constraint model into the
 circuit's own statement for every proof in the bundle, and binds that statement
 to the public inputs supplied to an accepting verifier.
 
-The Clean/Ironwood representation work remains exposed as named component
+The Clean/ironwood representation work remains exposed as named component
 conditions.  In particular, `TopLevelCircuitCorrectness` does not contain the
 desired statement or an opaque encoding implication.
 -/

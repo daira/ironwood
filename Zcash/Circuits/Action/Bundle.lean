@@ -1,4 +1,4 @@
-import Zcash.Circuits.Action.CircuitPreIronwood
+import Zcash.Circuits.Action.CircuitPreNU63
 
 /-!
 # The Orchard Action circuit: bundle contract (spec / extract / elaborated)
@@ -142,16 +142,16 @@ theorem synthNotes_regionCount (G : Generators) (B : Bases) (W : Witnesses Fp)
 stage, the 91-region note stage — 394. -/
 theorem synthesize_regionCount (G : Generators) (B : Bases) (W : Witnesses Fp)
     (cfg : Config) (i : RegionIndex) :
-    Operations.regionCount ((CircuitPreIronwood.synthesize G B W cfg).operations i)
+    Operations.regionCount ((CircuitPreNU63.synthesize G B W cfg).operations i)
       = 394 := by
-  simp only [CircuitPreIronwood.synthesize, synthesizeBase, circuit_norm,
+  simp only [CircuitPreNU63.synthesize, synthesizeBase, circuit_norm,
     Circuit.operations_bind, Circuit.operations_pure, Operations.regionCount_append]
   rw [synthWitness_regionCount, synthChecks_regionCount, synthNotes_regionCount]
 
 /-- The base Action synthesis with its one fixed hint-backed witness program. -/
 def main (G : Generators) (B : Bases) (cfg : Config) :
     Var unit Fp → Circuit Fp (Var AddressPoints Fp) := fun _ =>
-  CircuitPreIronwood.synthesize G B hintWitnesses cfg
+  CircuitPreNU63.synthesize G B hintWitnesses cfg
 
 theorem main_regionCount (G : Generators) (B : Bases) (cfg : Config)
     (input : Var unit Fp) (i : RegionIndex) :
@@ -351,8 +351,8 @@ def SpecBase (G : Generators) (B : Bases) (wit : ActionData) : Prop :=
   wit.vOld * (1 - wit.enableSpend) = 0 ∧
   wit.vNew * (1 - wit.enableOutput) = 0
 
-/-- The pre-ironwood bundle's contract: the base statement, plus the output cells
-carrying the four witnessed address points (what the ironwood cross-address stage
+/-- The pre-NU6.3 bundle's contract: the base statement, plus the output cells
+carrying the four witnessed address points (what the post-NU6.3 cross-address stage
 consumes). -/
 def Spec (G : Generators) (B : Bases)
     (_ : Value unit Fp) (out : Value AddressPoints Fp) (wit : ActionData) :
@@ -776,7 +776,7 @@ instance elaborated (G : Generators) (B : Bases) (cfg : Config) :
   regionCount _ := 394
   output_eq := by
     intro _ i₀
-    simp only [main, CircuitPreIronwood.synthesize, synthesizeBase,
+    simp only [main, CircuitPreNU63.synthesize, synthesizeBase,
       Circuit.output_bind, Circuit.output_pure,
       synthWitness_output, synthWitness_nextRegionIndex, synthChecks_output,
       synthChecks_nextRegionIndex, synthNotes_output]
@@ -794,7 +794,7 @@ theorem soundness (G : Generators) (B : Bases) (cfg : Config) :
   let input_var_rivk := hintWitnesses.rivk
   let input_var_rcmOld := hintWitnesses.rcmOld
   let input_var_rcmNew := hintWitnesses.rcmNew
-  simp only [CircuitPreIronwood.synthesize, synthesizeBase, circuit_norm] at hc
+  simp only [CircuitPreNU63.synthesize, synthesizeBase, circuit_norm] at hc
   have hW := hc.1
   have hCk := hc.2.1
   have hN := hc.2.2
@@ -1212,7 +1212,7 @@ theorem completeness (G : Generators) (B : Bases) (cfg : Config) :
   let input_var_rcmNew := hintWitnesses.rcmNew
   let input_var_merkleSib := hintWitnesses.merkleSib
   let input_var_merkleSwap := hintWitnesses.merkleSwap
-  simp only [CircuitPreIronwood.synthesize, synthesizeBase,
+  simp only [CircuitPreNU63.synthesize, synthesizeBase,
     circuit_norm] at hwit ⊢
   have hWw := hwit.1
   have hWc := hwit.2.1
@@ -1913,7 +1913,7 @@ def baseCircuit (G : Generators) (B : Bases) :
   soundness := soundness G B
   completeness := completeness G B
 
-/-! ## The ironwood (post-NU 6.3) circuit bundle
+/-! ## The post-NU6.3 circuit bundle
 
 The main circuit: the proven base circuit called as a subcircuit, then the
 `"post-NU 6.3 cross-address checks"` region on its output cells. -/
@@ -1925,7 +1925,7 @@ private theorem aafi_output (instCol : Column .instance) (r : ℕ)
 
 derive_contract_bridges base (G : Generators) (B : Bases) := baseCircuit G B
 
-/-- The deployed ironwood synthesis: the fixed hint-backed Action witness program,
+/-- The deployed post-NU6.3 synthesis: the fixed hint-backed Action witness program,
 followed by the cross-address region. The verifier-visible input is `unit`; prover
 choices enter only through `hintWitnesses` and the runtime `ProverHint`. -/
 def mainPost (G : Generators) (B : Bases) (cfg : Config) :
@@ -2005,7 +2005,7 @@ def extractPost (cfg : Config) (_ : Var unit Fp) (i : RegionIndex)
       env.env.get cfg.primary (DISABLE_CROSS_ADDRESS : ℤ) :=
   rfl
 
-/-- The ironwood Action statement: the base §4.17.4 statement, plus the post-NU 6.3
+/-- The post-NU6.3 Action statement: the base §4.17.4 statement, plus the post-NU6.3
 cross-address binding — a nonzero `DISABLE_CROSS_ADDRESS` instance row forces the new
 note's diversified address to equal the old note's. -/
 def SpecPost (G : Generators) (B : Bases)
@@ -2013,7 +2013,7 @@ def SpecPost (G : Generators) (B : Bases)
   SpecBase G B wit ∧
   (wit.disableCrossAddress ≠ 0 → wit.gdOld = wit.gdNew ∧ wit.pkdOld = wit.pkdNew)
 
-/-- Honest-prover preconditions for the ironwood circuit: the base preconditions, and
+/-- Honest-prover preconditions for the post-NU6.3 circuit: the base preconditions, and
 the cross-address rows hold at the honest values (the flag is off, or the addresses
 coincide). -/
 def ProverAssumptionsPost (G : Generators) (B : Bases)
@@ -2241,9 +2241,9 @@ theorem completenessPost
       · rw [w7, w1]
         ring
 
-/-- Rust `impl Circuit for Circuit` on the ironwood branch (post-NU 6.3) as a
-proof-carrying bundle: the e2e Orchard Action statement (§4.17.4 + cross-address
-binding, breaks-as-data) over the extracted primary-instance rows and witness data. -/
+/-- Rust post-NU6.3 `impl Circuit for Circuit` as a proof-carrying bundle: the e2e
+Orchard Action statement (§4.17.4 + cross-address binding, breaks-as-data) over the
+extracted primary-instance rows and witness data. -/
 def circuit (G : Generators) (B : Bases) :
     FormalCircuit Fp Unit Config unit unit where
   name := "OrchardAction"
