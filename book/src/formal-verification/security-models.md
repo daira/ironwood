@@ -101,8 +101,8 @@ and the challenge is hidden perfectly rather than computationally. What the redu
 gains is private knowledge of the pairs. A returned relation among the bases then becomes
 a linear equation in $z$, solvable unless the relation's coefficients land on the single
 $1/|\mathbb{F}|$ hyperplane where the $y$ component cancels — the form of reduction the
-definitions page calls [programmed-basis](definitions.md#programmed-basis). The argument is
-Jaeger–Tessaro's proof of their Lemma 3, presented there as a careful use of
+definitions page calls [programmed-basis](definitions.md#programmed-basis). The argument
+is Jaeger–Tessaro's proof of their Lemma 3, presented there as a careful use of
 self-reducibility techniques.
 
 The judgement that the exhibited solver is beyond reach is a statement about the current
@@ -151,37 +151,36 @@ voiding every binding property here (see the lifetime caveat below)— and no sm
 so that no adversary with a meaningful guarantee is excluded.
 
 The near-coincidence with Pollard rho's estimated cost on Vesta (about $2^{126}$, using
-the curve's automorphisms) is therefore a stopping rationale, not a dependence: a revised
-attack estimate would change the interpretation, not the theorem. And the quoted bound is
-the worst covered point: the theorems evaluate the advantage function at the finder's
-exact accounted counts, and substituting the larger rounded budgets can only increase
-it. Since generic-attack success falls off steeply below its threshold, an adversary far
-below the target gets a far stronger interpreted bound.
-Reading resource-parameterized claims this way —as attack-cost curves rather than
-single thresholds— follows Bernstein,
+the curve's automorphisms) is therefore a stopping rationale, not a dependence: a
+revised attack estimate would change the interpretation, not the theorem. And the
+quoted bound is the worst covered point: the theorems evaluate the advantage function
+at the finder's exact accounted counts, and substituting the larger rounded budgets can
+only increase it. Since generic-attack success falls off steeply below its threshold,
+an adversary far below the target gets a far stronger interpreted bound. Reading
+resource-parameterized claims this way —as attack-cost curves rather than single
+thresholds— follows Bernstein,
 [Understanding brute force](https://cr.yp.to/snuffle/bruteforce-20050425.pdf), 2005.
 
 ## The algebraic-adversary restriction
 
-An algebraic adversary is one that, whenever it outputs a group element, also supplies a
-representation: coefficients expressing that element over the elements it has received
-(Fuchsbauer–Kiltz–Loss,
+An algebraic adversary is one that, whenever it outputs a group element, also supplies
+a representation: coefficients expressing that element over the elements it has
+received (Fuchsbauer–Kiltz–Loss,
 [The Algebraic Group Model and its Applications](https://eprint.iacr.org/2017/620),
-Crypto 2018). Only
-the provenance of output group elements is restricted. The computation deciding the
-coefficients is unrestricted — the adversary may inspect encodings, branch on bits, and
-use any structure it can see. In this development the restriction is part of the
-adversary's *type* in the online-AGM layer, not a named hypothesis on any capstone —
-which is why this page states it: conditions carried by the quantifier domain are as
-load-bearing as named hypotheses, and less visible in theorem statements.
+Crypto 2018). Only the provenance of output group elements is restricted. The
+computation deciding the coefficients is unrestricted — the adversary may inspect
+encodings, branch on bits, and use any structure it can see. In this development the
+restriction is part of the adversary's *type* in the online-AGM layer, not a named
+hypothesis on any capstone — which is why this page states it: conditions carried by
+the quantifier domain are as load-bearing as named hypotheses, and less visible in
+theorem statements.
 
 Like the random-oracle model, this is a heuristic restriction of the adversary's
 strategy class, not an assumption that could be true or false of Pallas or Vesta.
 Random-oracle non-instantiability (Canetti–Goldreich–Halevi,
 [The Random Oracle Methodology, Revisited](https://eprint.iacr.org/1998/011)) is the
-standing warning against reading
-in-model theorems as instantiated guarantees. The heuristic earns its keep only if three
-supporting claims hold:
+standing warning against reading in-model theorems as instantiated guarantees. The
+heuristic earns its keep only if three supporting claims hold:
 
 1. **Re-expression:** an adversary that is only *incidentally* non-algebraic must
    be re-expressible as an algebraic one at similar cost.
@@ -219,25 +218,25 @@ issue.
 ## Fixed bases, the group hash, and the reference string
 
 Several reductions bottom out at discrete log by treating a set of group elements as
-*independent* — for example the value-commitment bases $\mathcal{V}$ and $\mathcal{R}$, the
-Sinsemilla generators, and the proof system's inner-product reference string. Independence
-is what turns "find a nontrivial relation among these elements" into the discrete-log game:
-the reduction models each base as a random multiple of one generator and embeds its
-discrete-log challenge into that randomness.
+*independent* — for example the value-commitment bases $\mathcal{V}$ and $\mathcal{R}$,
+the Sinsemilla generators, and the proof system's inner-product reference string.
+Independence is what turns "find a nontrivial relation among these elements" into the
+discrete-log game: the reduction models each base as a random multiple of one generator
+and embeds its discrete-log challenge into that randomness.
 
 In the deployed protocol, though, these bases are *fixed*. Each is produced once, by
 hashing public strings to the curve with `GroupHash` (spec
 [§5.4.9.8](https://zips.z.cash/protocol/protocol.pdf#concretegrouphashpallasandvesta)),
-and the resulting outputs are baked into the protocol as a Uniform Reference String. The
-gap between the two is the standard gap for protocols with a URS. We prove security for
-the family of protocols that sample the bases at random, over the distribution of that
-randomness. Then we argue heuristically that the deployed protocol, which fixes them via
-the group hash, inherits it — provided that the group hash scheme admits no attack
-more efficient than the algebraic ones bounded by the proven reductions. The
+and the resulting outputs are baked into the protocol as a Uniform Reference String.
+The gap between the two is the standard gap for protocols with a URS. We prove security
+for the family of protocols that sample the bases at random, over the distribution of
+that randomness. Then we argue heuristically that the deployed protocol, which fixes
+them via the group hash, inherits it — provided that the group hash scheme admits no
+attack more efficient than the algebraic ones bounded by the proven reductions. The
 [group-hash indifferentiability development](group-hash-indifferentiability.md)
-supplies the formal half of that judgement: the deployed group hash is
-indifferentiable from a random oracle into the group, under a named Weil-bound
-hypothesis, with the simulator exhibited as an algorithm.
+supplies the formal half of that judgement: the deployed group hash is indifferentiable
+from a random oracle into the group, under a named Weil-bound hypothesis, with the
+simulator exhibited as an algorithm.
 
 No Lean theorem instantiates the soundness endpoints at the deployed bases;
 identifying Halo2's group hash outputs with the sampled basis is a heuristic step
