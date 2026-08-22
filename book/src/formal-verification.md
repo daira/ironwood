@@ -3,9 +3,13 @@
 Ironwood's formal verification is a Lean 4 development (over Mathlib) in this repository:
 verifier soundness for the deployed Halo 2 verifier under `Zcash/Snark/`, and the protocol
 security-property layers (binding-signature balance, key binding, and the ledger-model
-security games) under `Zcash/Security/`. This page documents two development-wide
-conventions — how security breaks are represented, and what the development is allowed to
-trust — and where the model idealizes the deployed verifier.
+security games) under `Zcash/Security/`.
+
+The [Guide to the Ironwood Formalization](formal-verification/guide.md) is the reader-facing
+overview of what is proved and what a reader of the theorems is trusting;
+[Security Models](formal-verification/security-models.md) develops the adversary models and
+where hardness judgements live. This page documents two development-wide conventions — how
+security breaks are represented, and how what the development trusts is checked at build time.
 
 ## Breaks as computed data
 
@@ -26,8 +30,9 @@ The convention:
 
 * **Break events are structures carrying the breaking data** (the colliding queries, the
   relation coefficients), with `Prop` certificates attached. Examples:
-  `RandomOracle.Collision` and `RandomOracle.CollisionUpToSign` (the ±-collision shape produced by
-  coordinate-extractor arguments — and the Merkle tree-hash collision computed by `Merkle.collisionOfWrongLeaf` is a `Collision` directly), `Ledger.NoteCommitBreak`, and
+  `RandomOracle.Collision` and `RandomOracle.CollisionUpToSign` (the ±-collision shape
+  produced by coordinate-extractor arguments — and the Merkle tree-hash collision computed
+  by `Merkle.collisionOfWrongLeaf` is a `Collision` directly), `Ledger.NoteCommitBreak`, and
   `BindingSignature.NontrivialRelation` (the discrete-log relation computed from a
   non-balancing verifying bundle).
 * **Reductions are plain computable `def`s** producing them, such as
@@ -66,11 +71,11 @@ different trust standards.
 **General, quantified theorems** (the soundness statements and security reductions) rest, in
 their abstract form over an arbitrary `Fp`-module, only on the standard classical axioms
 `propext`, `Classical.choice`, and `Quot.sound` — no `sorry`, no additional axioms, no compiler
-trust. Instantiated at a concrete Pasta curve they additionally inherit one compiler-trust
-axiom: CompElliptic's curve point-count, a closed computational fact discharged by `native_decide`
-(below). This applies to both the SNARK soundness endpoints (Vesta) and the Action circuit
-soundness (Pallas). The `+native` flag on the corresponding build-time checks records
-exactly which endpoints carry it.
+trust. Instantiated at a concrete Pasta curve they additionally inherit the compiler-trust
+axioms of the closed computational facts they rest on, discharged by `native_decide` (below).
+The `+native` annotations on the corresponding build-time checks record exactly which
+endpoints carry them, and the resulting trusted set is stated in reader-facing form in the
+Guide's [What you are trusting](formal-verification/guide.md#what-you-are-trusting).
 
 **`@[csimp]` replacement lemmas** get their own `assert_axioms` entries in
 `Zcash/TrustBoundary.lean`, enforced by `scripts/check_csimp_census.sh` in CI: the compiler
@@ -100,10 +105,11 @@ the kernel's GMP-backed bignum arithmetic. The principal such facts in this repo
 four derived-form fingerprint boundary theorems `nonInteractiveFingerprint_matches_derived`
 (the generated per-capture `fingerprint_matches` are their raw forms): numeric checks that the
 Lean verifier's assembled multi-scalar multiplication equals the Rust verifier's on each
-captured proof — two honest, two at random inputs. The CompElliptic dependency applies the same discipline to its concrete
-curve-arithmetic facts (cardinalities, primality certificates). Such facts are independently
-re-checkable (another implementation, or hand computation, would compute the same result),
-so a miscompiled or buggy oracle could in principle be caught by disagreement.
+captured proof — two honest, two at random inputs. The CompElliptic dependency applies the
+same discipline to its concrete curve-arithmetic facts (cardinalities, primality
+certificates). Such facts are independently re-checkable (another implementation, or hand
+computation, would compute the same result), so a miscompiled or buggy oracle could in
+principle be caught by disagreement.
 
 These boundaries are *checked at build time*, not merely documented. `Zcash.TrustBoundary` is the
 top-level census for reusable library claims — the key-binding, birthday, ledger, and
@@ -116,12 +122,12 @@ modules and are enforced by `FixtureCheck`. The obligations use two commands fro
 
 * `assert_axioms d` fails the build unless `d` rests only on the standard classical axioms
   (`propext`, `Classical.choice`, `Quot.sound`) — in particular no `sorry` and no `native_decide`;
-  `assert_axioms d +native` additionally permits the toolchain-dependent `native_decide`
-  compiler-trust axiom that the curve-instantiated endpoints carry. Unlike a `#guard_msgs`-pinned
-  `#print axioms`, it states the expected tier in one line and stays green across toolchain bumps
-  that rename the `native_decide` axiom, while still failing the moment a declaration reaches beyond
-  its tier. It covers the general soundness theorems, probability bounds, and run-time/query-charge
-  lemmas.
+  `assert_axioms d +native(…)` additionally permits the toolchain-dependent `native_decide`
+  compiler-trust axioms of the named owning declarations, which the curve-instantiated
+  endpoints carry. Unlike a `#guard_msgs`-pinned `#print axioms`, it states the expected tier
+  in one line and stays green across toolchain bumps that rename the `native_decide` axiom,
+  while still failing the moment a declaration reaches beyond its tier. It covers the
+  general soundness theorems, probability bounds, and run-time/query-charge lemmas.
 * `assert_computable d` additionally requires `d` to be a plain `def` — not `noncomputable` — so it
   guards the *breaks-as-computed-data* discipline: the data-producing reductions (a collision, fold,
   peel, or fork turned into a discrete-log relation) stay genuinely computable, closing the gap
@@ -140,10 +146,11 @@ boundary theorems, documenting precisely *which*
 compiler-trust axiom `native_decide` adds — on this toolchain a per-declaration axiom
 (`…_native.native_decide.ax_1_1`), where older Lean versions used the global `Lean.ofReduceBool` —
 because for a captured fingerprint match the exact axiom set *is* the claim, the case
-`Zcash.Meta.AxiomCheck` reserves the pinned form for. CI builds all five default targets —
-`Zcash`, `FixtureCheck`, `CircuitCheck`, `MetaCheck`, and `SecurityCheck` — and each
-`fingerprint_matches`'s `native_decide` compiles and runs
-the verifier, so anything `noncomputable` on the assembled-verifier path fails the build.
+`Zcash.Meta.AxiomCheck` reserves the pinned form for. CI builds all the default lake targets
+(`scripts/check_build_coverage.sh` checks that CI and the lakefile agree on that list, and
+that every Lean module is reachable from it), and each `fingerprint_matches`'s
+`native_decide` compiles and runs the verifier, so anything `noncomputable` on the
+assembled-verifier path fails the build.
 
 What the fixture captures actually *check* is the statement of record in each family's
 `Boundary.lean` — `nonInteractiveFingerprint_matches_derived` — with the quantified match and its
@@ -168,17 +175,15 @@ are recorded in `Zcash/Circuits/Fixtures/PROVENANCE.md`.
 
 ## Modelling boundaries
 
-The trust discipline above bounds what the *proofs* rest on. One boundary sits outside it, in
-what the statements *model*: it is neither an axiom nor a compiler-trust question, so no census
-sees it.
-
-**Fiat–Shamir is idealized.** The deployed verifier derives each challenge by hashing the
-transcript so far with BLAKE2b and reducing 64 bytes to a field element. The development models
-that as an abstract `squeeze` (`Verifier/FiatShamir.lean`) and, in the security layer, as a
-uniform random oracle — the assumption that carries interactive soundness to the deployed
-non-interactive check. Identifying the deployed hash with that oracle is external, over and
-above the byte-level boundary noted above: the fixtures check challenge schedules against typed
-captures, not against transcript bytes.
+The trust discipline above bounds what the *proofs* rest on. The boundaries in what the
+statements *model* —the random-oracle treatment of the challenge hash, the
+algebraic-adversary restriction, the abstract types standing in for byte-level encodings, and
+the sampled bases standing in for the deployed fixed ones— are neither axioms nor
+compiler-trust questions, so no census sees them. The Guide's
+[What you are trusting](formal-verification/guide.md#what-you-are-trusting) states each of
+these boundaries and collects the whole set;
+[Security Models](formal-verification/security-models.md) develops the adversary models they
+define and where the hardness judgements live.
 
 Coined terms and shorthand for the development are
 collected on the [Definitions](formal-verification/definitions.md) page.
