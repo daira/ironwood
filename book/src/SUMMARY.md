@@ -21,6 +21,7 @@
   - [Reference]()
     - [Definitions](formal-verification/definitions.md)
     - [Source Map](formal-verification/source-map.md)
+    - [Build and CI Checks](formal-verification/ci-checks.md)
   - [Working Notes](formal-verification/working-notes.md)
     - [The Clean Boundary](formal-verification/clean-boundary.md)
     - [Clean Circuit Framework Improvements](formal-verification/clean-improvements.md)
