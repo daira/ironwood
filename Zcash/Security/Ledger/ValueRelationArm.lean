@@ -1,6 +1,6 @@
 import Mathlib.Tactic.Ring
 import Zcash.Common.Oracle.LabeledOracleComp
-import Zcash.Security.Ledger.ExtractionKappaArm
+import Zcash.Security.Ledger.ExtractionKnowledgeError
 import Zcash.Security.BindingSignature.DiscreteLog
 import Zcash.Common.RelationProbabilityCoins
 
@@ -13,7 +13,7 @@ labeled ledger adversary, the probability that the output ledger is valid *and* 
 computes a nontrivial `(𝒱, ℛ)` relation is at most `ε_DL + 1/|F|` (from
 `relationWithCoins_prob_le_of_textbookDL`). No query budget appears: the arm's witness is oracle-free
 data, so there is no bad-challenge accounting — this is the easier sibling of the
-extraction-failure arm in `Ledger/ExtractionKappaArm.lean`, over the same experiment.
+extraction-failure arm in `Ledger/ExtractionKnowledgeError.lean`, over the same experiment.
 
 The reduction's relation branch fires at the prefix's first imbalanced transaction when the
 extractor pins its binding key (`ValueRelationSelection`, computed from the reduction
