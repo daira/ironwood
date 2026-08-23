@@ -1008,6 +1008,7 @@ assert_axioms Zcash.Snark.challenge255_eventBias_le
 assert_axioms Zcash.Snark.challenge255_weightedBias_le
 assert_axioms Zcash.Snark.challenge255_joint_eventBias_le
 assert_axioms Zcash.Snark.challenge255Bias_le
+assert_axioms Zcash.Snark.challenge255_joint_charge_le_at_2pow123
 assert_axioms Zcash.Snark.challenge255_badSet_le
 -- Zero-basis acceptance scaffolding (`Soundness.Composition.ZeroBasisAcceptance`): structural,
 -- computation-free steps toward an accepting run of the adaptive knowledge machinery.
@@ -1017,7 +1018,14 @@ assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
 -- bridge a deployment interpretation supplies, one identification field per model floor.
 assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The record's certified query ceiling at its profile's work limit; its proof adds no native
+-- owners beyond the record's type.
+assert_axioms Zcash.Snark.ActionDeploymentInstantiation.challengeQueryBound_le_workLimit +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique

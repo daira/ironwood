@@ -512,8 +512,16 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_know
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
--- The deployment-record consumer adds the kernel-checked joint Challenge255 hybrid and no new
--- trusted axiom owner beyond the ideal work-factor capstone it transports.
+-- The deployment-record consumers add the kernel-checked joint Challenge255 hybrid and its
+-- `2^-136` pricing, and no new trusted axiom owner beyond the ideal work-factor capstone they
+-- transport: the rung leaves the charge symbolic, the endpoint states the closed number.
+assert_axioms Zcash.Snark.Capstone.adaptiveStatementDeployedKnowledgeFailure_le_jointCharge +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
+  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
