@@ -198,9 +198,10 @@ build-time obligations; `SingleAction/Honest/VkMatch` computes the capture's con
 to the ones derived end to end from the ported `configure` as a standalone diagnostic, not a
 soundness or fixture-trust input. The multi-action capture additionally
 carries the shape/VK **faithfulness** checks, the adversarial **negative** fixtures, the degree,
-schedule and static-check modules, the adaptive-statement knowledge-failure endpoints — its `2^123`
-work-factor instantiation and the conditionally staged-certified `2^123` and `2^125` adversary-work
-ones — data-coupled programmed-basis and verifier-commitment accounting, explicit adversary and
+schedule and static-check modules, the adaptive-statement knowledge-failure endpoints — the
+conditionally staged-certified `2^125` adversary-work one, with the declared-profile `2^123`
+instantiation as its pinned rung — data-coupled programmed-basis and verifier-commitment
+accounting, explicit adversary and
 complete-program staging-fidelity obligations, mechanically composed reduction work, a direct-decode
 bound derived from a required family invariant, and a separate oracle-query budget, and
 `CapturedZeroFamily` — the shape-generic zero prover instantiated at the
@@ -377,9 +378,9 @@ Six subtrees carry the heavier machinery:
 
 Where the deployed Action circuit's own statements are stated. `Action.lean` states the
 endpoints — knowledge-soundness bounds for every consensus-valid bundle size, in compositional
-error-formula form, in resource-accounted finite-security form at the `2^123` work factor, in
-the staged-certified forms carrying their group-work accounting at `2^123` and `2^125` adversary
-work, and in the deployed form that consumes an `ActionDeploymentInstantiation`, charges the
+error-formula form with declared and with staged-certified group-work accounting, in the
+staged-certified finite-security form at `2^125` adversary work, and in
+the deployed form that consumes an `ActionDeploymentInstantiation`, charges the
 joint Challenge255 bias once for the whole transcript, and prices that charge at `2^-136` against
 the record's certified query ceiling. Knowledge soundness is the only property advertised: it implies
 the plain-soundness statement, so that is not stated separately. Legacy fixed-statement endpoints

@@ -58,7 +58,7 @@ inside the complete program. Equality/list work and random-oracle queries are se
 DLOG group-operation budget. Direct-coordinate work is derived from the family's required
 fixed-representation cap; this generic endpoint does not construct the concrete family instance
 that must satisfy it. The older
-declared-resource endpoint remains pinned alongside the `2^123` and `2^125` staged forms.
+declared-resource instantiation remains pinned as a rung alongside the `2^125` staged form.
 -/
 
 -- The adaptive lane's live breaks and witnesses must remain computed data. The two complete
@@ -504,8 +504,10 @@ assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_kn
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- The same bound priced at the `2^123` work-factor target, with the extractor's random-oracle and
--- group-work envelopes and the finder's certified read set discharged alongside it.
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_2pow123_knowledge_finite_security +native(
+-- group-work envelopes and the finder's certified read set discharged alongside it.  A rung, not
+-- an endpoint: the deployed endpoint transports it, and it is pinned directly so that transport
+-- cannot silently widen its base.
+assert_axioms Zcash.Snark.Capstone.adaptiveStatementKnowledgeFailure_le_at_2pow123 +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
@@ -523,12 +525,6 @@ assert_axioms Zcash.Snark.Capstone.adaptiveStatementDeployedKnowledgeFailure_le_
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_deployed_2pow123_knowledge_finite_security +native(
-  CompElliptic.Fields.Pasta.pallasBase,
-  Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
-  Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
-  Zcash.Snark.Keygen.certificate,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.Snark.Capstone.orchard_action_adaptiveStatement_certified_2pow123_knowledge_finite_security +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Fixture.vk_chunk_width_le, Zcash.Snark.Fixture.vk_gates_degree_le,
   Zcash.Snark.Fixture.vk_lookup_input_degree_le, Zcash.Snark.Fixture.vk_lookup_table_degree_le,
