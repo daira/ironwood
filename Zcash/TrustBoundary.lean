@@ -772,11 +772,11 @@ assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_ex
 /-! ## The integrity experiment
 
 The non-negativity and conservation arms in one sample space: over the same experiment, a
-valid output ledger violates balance integrity at some prefix with probability at most
-`(εm + εnc + εkb) + ((ε_rel + 1/|F|) + ((qH+2)/|F| + ε_κ))`. A violation is the shielded pool
-going negative, or the pools failing to sum to the minted issuance. The three non-negativity
-arms are named bounds over this experiment. The two conservation arms are the coin-consuming
-finders. -/
+valid output ledger violates balance integrity at some prefix — the shielded pool going
+negative, or the pools failing to sum to the minted issuance — except with a probability
+bounded by the non-negativity side plus the conservation side. The non-negativity side is one
+named bound on the combined Balance-subset arm event; the conservation side is the two
+coin-consuming finders. -/
 
 assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_experiment
 
