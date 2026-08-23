@@ -275,8 +275,9 @@ and the shared relation finder fit a `2^126` random-oracle/group-work envelope a
 statistical remainder; the finder and the extractor consult the table only inside the certified
 read set.  Complete adversary and reduction group work are explicit profile premises; the
 separately costed assembly/basis component fits its derived formula at every table.  The final
-conjunct transports the bound to any challenge law within `εBias` of uniform, which is how the
-deployed endpoint consumes it. -/
+conjunct also records a generic whole-distribution `εBias` transport.  The deployed endpoint
+instead consumes the first conjunct and proves its dedicated joint Challenge255 observer hybrid
+below. -/
 theorem adaptiveStatementKnowledgeFailure_le_at_2pow123
     (numProofs : ℕ) (hn : numProofs ≤ orchardConsensusMaxProofs)
     {T : Type*} [DecidableEq T]
