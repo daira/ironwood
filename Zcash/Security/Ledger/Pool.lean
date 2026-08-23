@@ -169,7 +169,7 @@ def noteHash (n : Note PallasGroup Fp Fp) : Option (Point Fp) :=
   hashToPoint orchardGenerators.S noteQ (noteScalars n).chunks
 
 /-- The deployed note commitment: the Sinsemilla hash of the note message, plus the
-blinding term `[rcm] NoteCommitR`.
+blinding term `rcm • NoteCommitR`.
 
 The blinding addition is the complete group addition, matching both the protocol spec's
 `SinsemillaCommit` (§5.4.8.4, complete addition since spec version 2021.2.16) and the
@@ -237,7 +237,7 @@ theorem commitIvkHash_eq_some_of_hashToPoint {ak nk : Fp} {p : Point Fp}
   exact PallasGroup.ofPoint?_eq_some p hp
 
 /-- The deployed circuit's key-binding interface: the bare `Commit^ivk` opening
-`Extract(hashPoint + [rivk] CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
+`Extract(hashPoint + rivk • CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
 blinding addition is the complete group addition, matching both §5.4.8.4 and the
 deployed gadget. -/
 def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)

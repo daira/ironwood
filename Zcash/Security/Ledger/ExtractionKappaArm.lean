@@ -62,7 +62,7 @@ variable (gen : G) (v_idx r_idx : Fin m) (queryOf : G → G → MSG → Q)
   (toSig : SIG → RedDSA.Sig (ZMod r) G)
 
 /-- The primitives at a sampled challenge table `O` and basis logs `s`. The value commitment
-is the Pedersen commitment at the sampled slots `𝒱 = [s v_idx] gen`, `ℛ = [s r_idx] gen`.
+is the Pedersen commitment at the sampled slots `𝒱 = (s v_idx) • gen`, `ℛ = (s r_idx) • gen`.
 Binding verification is the Schnorr equation at base ℛ, with the challenge read off the table
 at the query point `queryOf R vk m`. A record update of `P₀`, so the tree depth — and with it
 the ledger type — does not depend on the sample. -/

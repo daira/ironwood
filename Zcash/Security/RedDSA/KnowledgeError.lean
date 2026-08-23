@@ -114,7 +114,7 @@ def effectiveRep (O : Q → F) (s : Fin m → F) : QueryRep F m :=
   ((adv (scalarBasis gen s)).findLabel O (dischargeOut m gen adv O s).queryPoint).getD
     (dischargeOut m gen adv O s).announced
 
-/-- The Schnorr verification equation `[S] ℛ = R + [c] bvk`, with `R` and `bvk` read off the
+/-- The Schnorr verification equation `S • ℛ = R + c • bvk`, with `R` and `bvk` read off the
 effective representation at the presented basis. -/
 def Verifies (O : Q → F) (s : Fin m → F) : Prop :=
   letI b := scalarBasis gen s

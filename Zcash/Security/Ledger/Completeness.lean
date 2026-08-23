@@ -190,7 +190,7 @@ def action (hs : HonestAction P kv ledger) (sig : SIG) :
   w := hs.witness
   sig := sig
 
-/-- A dummy note: zero value, addressed to `kw` (`pk_d = [ivk] g_d`) with diversified
+/-- A dummy note: zero value, addressed to `kw` (`pk_d = ivk • g_d`) with diversified
 base `gd`. The wallet's random samples (`gd`, `ρ`, `ψ`) are parameters, since the
 model has no randomness. -/
 def dummyNote (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
