@@ -624,18 +624,19 @@ assert_computable Zcash.Security.RedDSA.bindingSig_relation_of_nontrivial +choic
 
 /-! ## The binding-signature knowledge error
 
-The κ-discharge: over the challenge oracle's whole table and the logs of the `m`
-presented bases, a labeled algebraic adversary within query budget `qH` produces a
-verifying binding signature whose effective representation has a pivot with probability at
-most `(qH + 1)/|F| + ε_DL + 1/|F|` (`kappaEvent_measure_le`) — the straight-line AGM+ROM
-extraction of Fuchsbauer–Plouviez–Seurin, in the key-only setting. Challenge queries carry
-the adversary's representations as labels the oracle never sees; the representation in
-effect at the output's query point is the first annotation there, or the announced output
-representation when the run never queried the point — the squeeze's fallback branch, which
-plays the game's own final challenge query. The relation finder replaying the adversary is
-computable, and is the discrete-log adversary that the named `ε_DL` hypothesis constrains.
-Degeneracy needs no side condition: at base `0` the hypothesis itself forces
-`ε ≥ 1 − 1/|F|` (`textbookDLAdvantageLE_base_zero`). -/
+The κ-discharge in the challenge-oracle model. Over the whole challenge table and the logs
+of the `m` presented bases, a labeled algebraic adversary within query budget `qH`
+produces a verifying binding signature. Its effective representation has a pivot only with
+a probability linear in the query budget, with a denominator of #F above the discrete-log
+advantage (`kappaEvent_measure_le`). This is the straight-line AGM+ROM extraction of
+Fuchsbauer–Plouviez–Seurin, in the key-only setting. Challenge queries carry the
+adversary's representations as labels the oracle never sees. The representation in effect
+at the output's query point is the first annotation there, or the announced output
+representation when the run never queried the point. That is the squeeze's fallback
+branch, which plays the game's own final challenge query. The relation finder replaying
+the adversary is computable, and is the discrete-log adversary that the named `ε_DL`
+hypothesis constrains. Degeneracy needs no side condition: at base `0` the hypothesis
+itself forces `ε ≥ 1 − 1/#F` (`textbookDLAdvantageLE_base_zero`). -/
 
 assert_computable Zcash.Security.RedDSA.dischargeOut
 assert_computable Zcash.Security.RedDSA.dischargeChallenge
@@ -693,13 +694,13 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_ke
 
 /-! ## The key-binding arms' ε, discharged
 
-The Balance-subset and Spend Authority key-binding arms' probability in the
-key-binding oracle model: `(n + 4)(n + 3)/|RIVK|` for any `n`-query-bounded ledger
-adversary, inherited from the key-binding layer's bound at an unchanged query count.
-The bounded events are the reductions' own; the composite machine recovers the arm's
-witness pair from the adversary's output by an oracle-free computable lookup
-(`kbPairOf` from the ledger for Balance; `kwAt` at the announced indices for Spend
-Authority), identified with the reduction's pair by the localization theorems. -/
+The Balance-subset and Spend Authority key-binding arms' probability, a birthday bound
+quadratic in the query count with a denominator of #RIVK, inherited from the key-binding
+layer's bound at an unchanged query count. The bounded events are the reductions' own. The
+composite machine recovers the arm's witness pair from the adversary's output by an
+oracle-free computable lookup (`kbPairOf` from the ledger for Balance; `kwAt` at the
+announced indices for Spend Authority), identified with the reduction's pair by the
+localization theorems. -/
 
 assert_computable Zcash.Security.Ledger.Model.BalanceBreak.kbPair
 assert_computable Zcash.Security.Ledger.Model.kbPairOf
@@ -713,15 +714,15 @@ assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_l
 
 /-! ## The extraction-failure arm's κ, discharged in the oracle model
 
-The conservation reduction's extraction-failure arm, bounded in the challenge-oracle
-model: `(qH + 2)/|F| + ε_DL` for any `qH`-query-bounded labeled algebraic ledger
-adversary, from the knowledge-error bound at an unchanged query count. The extractor
-(`kappaExtractor`) reads the `key` coefficient at the ℛ slot off the representation in
-effect at the signature's query point. The composite machine recovers the failing
-transaction and its announced representation oracle-free (`failTxOfAnn`, identified with
-the reduction's own selection by the localization theorems) and returns its signature
-data; the all-prefixes form costs no factor of `k`, because every prefix's failure arm
-breaks at the ledger's first imbalanced transaction. -/
+The conservation reduction's extraction-failure arm is bounded in the challenge-oracle
+model. The bound is linear in the query budget with a denominator of #F, above the
+discrete-log advantage, inherited from the knowledge-error bound at an unchanged query
+count. The extractor (`kappaExtractor`) reads the `key` coefficient at the ℛ slot off the
+representation in effect at the signature's query point. The composite machine recovers
+the failing transaction and its announced representation oracle-free (`failTxOfAnn`,
+identified with the reduction's own selection by the localization theorems) and returns
+its signature data. The all-prefixes form costs no factor of `k`, because every prefix's
+failure arm breaks at the ledger's first imbalanced transaction. -/
 
 assert_computable Zcash.Security.Ledger.Model.kappaPrimitivesAt +choice
 assert_computable Zcash.Security.Ledger.Model.kappaShapeAt +choice
@@ -757,10 +758,11 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_valueRelatio
 
 /-! ## The conservation experiment
 
-Both conservation arms in one sample space: over the adversary's coins, the challenge
-table, and the basis logs, a valid output ledger violates conservation (or the cap) at
-some prefix with probability at most `(ε_rel + 1/|F|) + ((qH+2)/|F| + ε_κ)`
-(`balanceConservationBefore_measure_le_experiment`,
+Both conservation arms in one sample space: the adversary's coins, the challenge table,
+and the basis logs. A valid output ledger violates conservation (or the cap) at some
+prefix only with a probability bounded by the relation arm's discrete-log advantage and
+the extraction-failure arm's knowledge error, above an additive loss linear in the query
+budget with a denominator of #F (`balanceConservationBefore_measure_le_experiment`,
 `shieldedBalanceCapBefore_measure_le_experiment`). The discrete-log hypotheses are single
 bounds for coin-consuming finders, per adversary coin — no supremum over challenge tables
 remains in the experiment. -/
@@ -1269,19 +1271,20 @@ assert_axioms Zcash.Snark.preX4SqueezePoint_inj
 -- compressed expressions — the combined bound the `x`-squeeze schedule's `epsilonX` prices.
 assert_axioms Zcash.Snark.natDegree_combineConstraints_le
 -- The quantified random match, generic half (`Fingerprint/SampleSpace`,
--- `Fingerprint/Rational/{GoodEvent,Representation,Family}`, `Fingerprint/{Match,Epsilon}`): the
--- structured sample space rebuilds a well-formed proof
--- string at every point; the good event's enumerated denominator factors are individually
--- nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing under products; the ε
--- theorem bounds a competing coefficient family's agreement with `assemble?` at a uniform
--- point by `(D + Σ totalDegree (denFactors vk)) / p`; the challenge-restricted variant pins
--- the proof-string slots to an arbitrary assignment and prices the same bound over the
--- challenge coordinates alone — the factors are challenge-only and restriction does not raise
--- degree; the cross-denominator variants admit a competing family with its own denominators
--- from the enumerated factor closure, cross-multiplied (`RationalCoeffFamily.mulDen`) to the
--- summed budget `D + Dden`; and a `Perm` of pair lists with
--- duplicate-free second components is realized by the base-matching index bijection — the
--- `Perm`→positional bridge the per-capture `fingerprint_matches_positional` facts instantiate.
+-- `Fingerprint/Rational/{GoodEvent,Representation,Family}`,
+-- `Fingerprint/{Match,Epsilon}`). The structured sample space rebuilds a well-formed
+-- proof string at every point. The good event's enumerated denominator factors are
+-- individually nonzero, jointly priced by per-factor Schwartz–Zippel, and nonvanishing
+-- under products. The ε theorem bounds a competing coefficient family's agreement with
+-- `assemble?` at a uniform point by a Schwartz–Zippel bound — the total degree with a
+-- denominator of #F. The challenge-restricted variant pins the proof-string slots to an
+-- arbitrary assignment and prices the same bound over the challenge coordinates alone,
+-- since the factors are challenge-only and restriction does not raise degree. The
+-- cross-denominator variants admit a competing family with its own denominators from the
+-- enumerated factor closure, cross-multiplied (`RationalCoeffFamily.mulDen`) to the
+-- summed degree budget. A `Perm` of pair lists with duplicate-free second components is
+-- realized by the base-matching index bijection — the `Perm`→positional bridge the
+-- per-capture `fingerprint_matches_positional` facts instantiate.
 assert_axioms Zcash.Snark.proofStringWellFormed_toProofString
 assert_axioms Zcash.Snark.toProofString_ofInputs
 assert_axioms Zcash.Snark.denFactors_ne_zero
@@ -1325,10 +1328,10 @@ assert_axioms Zcash.Snark.grouped_ids_eq
 assert_axioms Zcash.Snark.grouped_points_eq
 assert_axioms Zcash.Snark.grouped_sets_eq
 assert_axioms Zcash.Snark.assembleAt_some
--- The IPA scalar walk (`Fingerprint/Rational/IpaWalk`): the deployed grouping's members carry
--- zero scalar blocks (hypothesis-free), so the assembled `w`/`u`/`g` scalars take their closed
--- IPA forms, each represented — `computeB` at `2^k + k + 1`, the `computeS` entries at `1 + k`,
--- and every `g`-coordinate given a representation of the opening value.
+-- The IPA scalar walk (`Fingerprint/Rational/IpaWalk`): the deployed grouping's members
+-- carry zero scalar blocks (hypothesis-free), so the assembled `w`/`u`/`g` scalars take
+-- their closed IPA forms, each given an explicit representation — `computeB`, the
+-- `computeS` entries, and every `g`-coordinate the opening value's.
 assert_axioms Zcash.Snark.assembleQueries_grouped_gwuZero
 assert_axioms Zcash.Snark.assembleFinalMsm_wScalar_of_gwuZero
 assert_axioms Zcash.Snark.assembleFinalMsm_uScalar_of_gwuZero
@@ -1446,8 +1449,9 @@ assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_basis_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.SequentialCut.surfaceEvent_prob_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The state-surface discharge: each Action semantic failure event contained in
--- its cut state surface and priced at `(Q + 1) * epsilon`, views supplying every read.
+-- The state-surface discharge: each Action semantic failure event contained in its cut
+-- state surface and priced linearly in the squeeze count at the per-squeeze bad-root
+-- bound, views supplying every read.
 assert_axioms Zcash.Snark.ActionTerminal.vkAt +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
@@ -1778,9 +1782,9 @@ assert_computable Zcash.Snark.deployedDirectDecodeOps +choice
 -- The semantic challenge remainder (`Composition.SemanticChallengeRemainder`): the bundle-wide
 -- permutation and lookup exclusions priced from their card bounds, summed with the `y` fold-split
 -- term.  These terms are charged separately from the compressed-identity ceiling.
--- The index-generic squeeze bridge (`Composition.PrefixedSqueeze`): a bad-root event at any
--- pre-IPA squeeze costs `(Q + 1) * epsilon`, so the y/beta/gamma/theta surfaces are priced the
--- same way the x surface already was.
+-- The index-generic squeeze bridge (`Composition.PrefixedSqueeze`): a bad-root event at
+-- any pre-IPA squeeze costs the same bound, linear in the number of squeeze points, so
+-- the y/beta/gamma/theta surfaces are priced the same way the x surface already was.
 assert_axioms Zcash.Snark.preIpaLen_strictMono
 assert_axioms Zcash.Snark.algebraicFullPrefixesPre_eq_of_eq_at +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.algebraicFullPrefixesPre_ne_at +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
