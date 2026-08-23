@@ -43,6 +43,57 @@ variable (gen : G) (v_idx r_idx : Fin m) (queryOf : G → G → MSG → Q)
 variable {kv : KeyBindingInterface KW G IVK NK}
 variable {issuance : ℕ → ℕ} {maxActions : ℕ}
 
+/-- The challenge-oracle experiment distribution: the adversary's coins `j`, a uniform
+challenge table `Q → ZMod r`, and uniform logs `Fin m → ZMod r` of the `m` presented bases. -/
+noncomputable def challengeExperiment {ι : Type u} (p : PMF ι) :
+    PMF (ι × ((Q → ZMod r) × (Fin m → ZMod r))) :=
+  p.bind fun j => (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j)
+
+/-- The sample-space lift of a per-primitives ledger event: the samples on which the
+adversary's output ledger, run at the sampled primitives `kappaPrimitivesAt`, is valid and
+lands in `Event` at those primitives. -/
+def sampledLedgerEvent {ι : Type u}
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (Event : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)) :
+    Set (ι × ((Q → ZMod r) × (Fin m → ZMod r))) :=
+  setOf fun x =>
+    ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
+        kv issuance maxActions (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
+      (⟨_, hval⟩ : ValidAnnotated (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig
+          x.2.1 x.2.2) kv issuance maxActions)
+        ∈ Event (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
+
+omit [DecidableEq G] [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- `sampledLedgerEvent` is monotone in the event family: it preserves `⊆`. -/
+theorem sampledLedgerEvent_mono {ι : Type u}
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    {E₁ E₂ : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)} (h : ∀ P, E₁ P ⊆ E₂ P) :
+    sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA E₁
+      ⊆ sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA E₂ :=
+  fun _ ⟨hval, hx⟩ => ⟨hval, h _ hx⟩
+
+omit [DecidableEq G] [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- `sampledLedgerEvent` preserves unions: it is a join-homomorphism, since the `∃ hval`
+that lifts the event distributes over the disjunction. -/
+theorem sampledLedgerEvent_union {ι : Type u}
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (E₁ E₂ : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)) :
+    sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA (fun P => E₁ P ∪ E₂ P)
+      = sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA E₁
+        ∪ sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA E₂ := by
+  ext x
+  constructor
+  · rintro ⟨hval, hx | hx⟩
+    exacts [Or.inl ⟨hval, hx⟩, Or.inr ⟨hval, hx⟩]
+  · rintro (⟨hval, hx⟩ | ⟨hval, hx⟩)
+    exacts [⟨hval, Or.inl hx⟩, ⟨hval, Or.inr hx⟩]
+
 /-- **The all-prefixes extraction-failure arm, with a single randomized reduction.** As
 `balanceConservationBefore_extractFailArm_measure_le`, with the per-table DL hypothesis
 replaced by one bound for the coin-consuming relation finder, per adversary coin. -/
@@ -128,17 +179,10 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
     (hdlκ : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
       (fun b O => relFinder m r_idx
         (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j)) O b) ε_κ) :
-    ((p.bind fun j =>
-        (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j))).toOuterMeasure
-        (setOf fun (x : ι × ((Q → ZMod r) × (Fin m → ZMod r))) =>
-          ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-              kv issuance maxActions
-              (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-            (⟨_, hval⟩ : ValidAnnotated (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig
-                x.2.1 x.2.2) kv issuance maxActions)
-              ∈ balanceConservationViolationBefore (P := kappaPrimitivesAt m gen v_idx r_idx
-                  queryOf P₀ toSig x.2.1 x.2.2) (kv := kv) (issuance := issuance)
-                  (maxActions := maxActions) k)
+    (challengeExperiment m p).toOuterMeasure
+        (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
+          (fun P => balanceConservationViolationBefore (P := P) (kv := kv) (issuance := issuance)
+            (maxActions := maxActions) k))
       ≤ (ε_rel + 1 / Fintype.card (ZMod r))
         + (((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε_κ) := by
   have hrel := balanceConservationBefore_valueRelationArm_measure_le m gen v_idx r_idx
@@ -184,17 +228,10 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     (hdlκ : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
       (fun b O => relFinder m r_idx
         (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j)) O b) ε_κ) :
-    ((p.bind fun j =>
-        (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j))).toOuterMeasure
-        (setOf fun (x : ι × ((Q → ZMod r) × (Fin m → ZMod r))) =>
-          ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-              kv issuance maxActions
-              (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-            (⟨_, hval⟩ : ValidAnnotated (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig
-                x.2.1 x.2.2) kv issuance maxActions)
-              ∈ shieldedBalanceCapViolationBefore (P := kappaPrimitivesAt m gen v_idx r_idx
-                  queryOf P₀ toSig x.2.1 x.2.2) (kv := kv) (issuance := issuance)
-                  (maxActions := maxActions) k)
+    (challengeExperiment m p).toOuterMeasure
+        (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
+          (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := kv) (issuance := issuance)
+            (maxActions := maxActions) k))
       ≤ (ε_rel + 1 / Fintype.card (ZMod r))
         + (((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε_κ) := by
   have hrel := balanceConservationBefore_valueRelationArm_measure_le m gen v_idx r_idx
