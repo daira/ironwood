@@ -148,20 +148,8 @@ two coin-consuming finders of the conservation experiment, whose Orchard dischar
 theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → Fq) (s : Fin m → Fq) (q : Q) (ℓ : QueryRep Fq m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R
-            (bvkAt m v_idx r_idx (primitives verify bverify) (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx (primitives verify bverify) (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → Fq) (s : Fin m → Fq),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx (primitives verify bverify) (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf
+      (primitives verify bverify) toSig (LA j))
     (hr : (maxActions + 1) * (primitives verify bverify).valueBound
       ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD) (k : ℕ)
     {ε_sinsemilladlr ε_rel ε_κ : ℝ≥0∞}
@@ -182,7 +170,7 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
         + ((ε_rel + 1 / Fintype.card Fq)
           + (((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq + ε_κ)) :=
   balanceIntegrityBefore_measure_le_experiment m gen v_idx r_idx queryOf (primitives verify bverify)
-    toSig p hne_idx hQ halgLabel halgOut hr k
+    toSig p hne_idx hQ halg hr k
     (le_trans (MeasureTheory.measure_mono
       (sampledBalanceSubsetArms_subset_orchardRelation verify bverify issuance maxActions m gen
         v_idx r_idx queryOf toSig LA k)) hsin)

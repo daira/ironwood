@@ -102,20 +102,7 @@ theorem balanceIntegrityBefore_measure_le_experiment {ι : Type u} (p : PMF ι)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_nonneg ε_rel ε_κ : ℝ≥0∞}
     (hnn : (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
@@ -139,7 +126,7 @@ theorem balanceIntegrityBefore_measure_le_experiment {ι : Type u} (p : PMF ι)
           + (((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε_κ)) := by
   have hcons := balanceConservationBefore_measure_le_experiment m gen v_idx r_idx queryOf P₀
     toSig (kv := kv) (issuance := issuance) (maxActions := maxActions)
-    p hne_idx hQ halgLabel halgOut hr k hdlRel hdlκ
+    p hne_idx hQ halg hr k hdlRel hdlκ
   exact le_trans
     (toOuterMeasure_le_add₂ _
       (sampledBalanceIntegrity_subset m gen v_idx r_idx queryOf P₀ toSig LA k))

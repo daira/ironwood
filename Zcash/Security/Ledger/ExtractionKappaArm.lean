@@ -27,18 +27,18 @@ are not separated out of `Primitives`. The challenge hash reads the table at
 algebraic hypotheses, shrinking the covered adversary class.
 
 The adversary outputs an annotated ledger: each transaction paired with the announced
-representation of its commitment and binding key. Being algebraic is the pair of hypotheses
-`halgLabel` and `halgOut`: query-time labels and announced representations evaluate to the
-transactions' actual elements. The extractor (`kappaExtractor`) reads the `key` coefficient
-at the ℛ slot of the representation in effect at the signature's query point; it is defined
-per sample and obtains that representation from the run's own data, so no representation
-appears among the `Extractor` interface's arguments (the caveat in
-`Ledger/ExtractionArm.lean`). A key without a pivot is on the ℛ line, where the extractor
-succeeds, so an extraction failure lands in the knowledge-error event's pivot arm. The
-failing transaction is recovered oracle-free from the annotated output (`failTxOfAnn`), so
-the composite machine returning its signature data is covered by the knowledge-error bound
-at an unchanged query count; validity of the output ledger is a conjunct of the bounded
-event, as in `Ledger/KeyBindingArm.lean`.
+representation of its commitment and binding key. Being algebraic is the
+`AlgebraicAtBindingPoints` structure: its `atLabel` and `atOutput` fields say that
+query-time labels and announced representations evaluate to the transactions' actual
+elements. The extractor (`kappaExtractor`) reads the `key` coefficient at the ℛ slot of the
+representation in effect at the signature's query point; it is defined per sample and
+obtains that representation from the run's own data, so no representation appears among the
+`Extractor` interface's arguments (the caveat in `Ledger/ExtractionArm.lean`). A key without
+a pivot is on the ℛ line, where the extractor succeeds, so an extraction failure lands in
+the knowledge-error event's pivot arm. The failing transaction is recovered oracle-free from
+the annotated output (`failTxOfAnn`), so the composite machine returning its signature data
+is covered by the knowledge-error bound at an unchanged query count; validity of the output
+ledger is a conjunct of the bounded event, as in `Ledger/KeyBindingArm.lean`.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -103,6 +103,40 @@ theorem bvkAt_eq (O : Q → ZMod r) (s : Fin m → ZMod r)
     bvkAt m v_idx r_idx P₀ (scalarBasis gen s) tx
       = tx.bvk (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O s) :=
   rfl
+
+/-- **The adversary is algebraic at the binding-signature points.** For each transaction it
+outputs, and at each challenge query it makes, the adversary announces how it built two group
+elements out of the presented basis: the binding signature's nonce `R`, and the transaction's
+binding verification key `bvk`. Each announcement is a `QueryRep`: a pair of coefficient
+vectors, one for `R` and one for `bvk`. On its own that is only a claim — nothing in the type
+forces the coefficients to be correct. This structure is the assumption that they are correct:
+each vector, evaluated against the presented basis by `representationEval`, yields the group
+element it names (`R` from the commitment vector, `bvk` from the key vector).
+
+This module's docstring explains why the reduction needs the assumption, and why only at these
+two points. Consumed by `extractFail_mem_kappaEvent`. -/
+structure AlgebraicAtBindingPoints
+    (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))) :
+    Prop where
+  /-- At query time: the label recorded at a challenge query represents the querying
+  transaction's nonce and binding key. The half that pins the query's one bad challenge before
+  the oracle answers. -/
+  atLabel : ∀ (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q) (ℓ : QueryRep (ZMod r) m),
+    (LA (scalarBasis gen s)).findLabel O q = some ℓ →
+    ∀ p ∈ (LA (scalarBasis gen s)).run O,
+      queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
+          p.1.sighash = q →
+        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
+        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
+          = representationEval (scalarBasis gen s) ℓ.key
+  /-- At output time: each transaction's announced representation represents its own nonce and
+  binding key. The half the extractor falls back on when the run never queried that point. -/
+  atOutput : ∀ (O : Q → ZMod r) (s : Fin m → ZMod r),
+    ∀ p ∈ (LA (scalarBasis gen s)).run O,
+      (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
+      ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
+        = representationEval (scalarBasis gen s) p.2.key
 
 /-- The first transaction of the length-`i` prefix failing the net-value equation, paired
 with its announced representation: the transaction at which the conservation reduction's

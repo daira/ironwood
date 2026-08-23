@@ -101,20 +101,7 @@ theorem balanceConservationBefore_extractFailArm_measure_le_of_coins {ι : Type 
     {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε : ℝ≥0∞}
     (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
       (fun b O => relFinder m r_idx
@@ -147,7 +134,7 @@ theorem balanceConservationBefore_extractFailArm_measure_le_of_coins {ι : Type 
   rintro ⟨O, s⟩ ⟨hval, i, hik, e, heq⟩
   dsimp only at hval heq
   exact extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-    (halgLabel j) (halgOut j) hr (le_of_lt hik) hval heq
+    ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval heq
 
 /-- **The conservation experiment.** Over the adversary's coins, the challenge table, and the
 basis logs, the probability that the output ledger is valid and violates balance conservation
@@ -159,20 +146,7 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_rel ε_κ : ℝ≥0∞}
     (hdlRel : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
       (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_rel)
@@ -189,7 +163,7 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
     queryOf P₀ toSig (kv := kv) (issuance := issuance) (maxActions := maxActions)
     p hne_idx hr k hdlRel
   have hκ := balanceConservationBefore_extractFailArm_measure_le_of_coins m gen v_idx r_idx
-    queryOf P₀ toSig (kv := kv) (issuance := issuance) p hQ halgLabel halgOut hr k hdlκ
+    queryOf P₀ toSig (kv := kv) (issuance := issuance) p hQ halg hr k hdlκ
   refine le_trans (MeasureTheory.measure_mono ?_)
     (le_trans (MeasureTheory.measure_union_le _ _) (add_le_add hrel hκ))
   rintro ⟨j, O, s⟩ ⟨hval, hviol⟩
@@ -208,20 +182,7 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_rel ε_κ : ℝ≥0∞}
     (hdlRel : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
       (fun b O => valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_rel)
@@ -238,7 +199,7 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     queryOf P₀ toSig (kv := kv) (issuance := issuance) (maxActions := maxActions)
     p hne_idx hr k hdlRel
   have hκ := balanceConservationBefore_extractFailArm_measure_le_of_coins m gen v_idx r_idx
-    queryOf P₀ toSig (kv := kv) (issuance := issuance) p hQ halgLabel halgOut hr k hdlκ
+    queryOf P₀ toSig (kv := kv) (issuance := issuance) p hQ halg hr k hdlκ
   refine le_trans (MeasureTheory.measure_mono ?_)
     (le_trans (MeasureTheory.measure_union_le _ _) (add_le_add hrel hκ))
   rintro ⟨j, O, s⟩ ⟨hval, hviol⟩
