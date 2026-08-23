@@ -24,6 +24,7 @@ import Zcash.Security.Ledger.ExtractionArm
 import Zcash.Security.Ledger.ExtractionKappaArm
 import Zcash.Security.Ledger.ValueRelationArm
 import Zcash.Security.Ledger.ConservationExperiment
+import Zcash.Security.Ledger.IntegrityExperiment
 import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR

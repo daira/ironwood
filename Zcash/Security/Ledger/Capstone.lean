@@ -462,6 +462,32 @@ theorem balanceIntegrityViolationBefore_subset {VB : Type*}
     · exact absurd (ω.2.transparent_nonneg i) h'
     · exact Or.inr ⟨i, hik, balanceConservationViolation_subset perTx i h'⟩
 
+/-- The premiss-free integrity containment: a violation lands in one of the three
+non-negativity arms or in the conservation violation itself — all per-primitives events, no
+transaction-balance premiss. This is the form the challenge-oracle experiment consumes: the
+conservation arm is then bounded wholesale by the conservation experiment, rather than
+re-routed through the premiss's relation and extraction-failure arms. -/
+theorem balanceIntegrityViolationBefore_subset_conservation (k : ℕ) :
+    balanceIntegrityViolationBefore (P := P) (kv := kv) (issuance := issuance)
+        (maxActions := maxActions) k
+      ⊆ (balanceSubsetBreakEventUpTo k .merkle
+          ∪ balanceSubsetBreakEventUpTo k .noteCommit
+          ∪ balanceSubsetBreakEventUpTo k .keyBinding)
+        ∪ balanceConservationViolationBefore (P := P) (kv := kv) (issuance := issuance)
+            (maxActions := maxActions) k := by
+  rintro ω ⟨i, hik, hω⟩
+  rcases not_and_or.mp hω with h | h
+  · cases i with
+    | zero => exact absurd (shieldedPoolBalance_zero ω.1).symm.le h
+    | succ j =>
+        rcases shieldedBalanceNonNegativeViolation_succ_subset j h with (h' | h') | h'
+        · exact Or.inl (Or.inl (Or.inl ⟨j, Nat.lt_of_succ_lt hik, h'⟩))
+        · exact Or.inl (Or.inl (Or.inr ⟨j, Nat.lt_of_succ_lt hik, h'⟩))
+        · exact Or.inl (Or.inr ⟨j, Nat.lt_of_succ_lt hik, h'⟩)
+  · rcases not_and_or.mp h with h' | h'
+    · exact absurd (ω.2.transparent_nonneg i) h'
+    · exact Or.inr ⟨i, hik, h'⟩
+
 /-- **Balance integrity at every prefix, from one bound per shared arm event.** For any
 adversary, the probability that balance integrity is violated (the shielded pool goes
 negative or the pools fail to sum to the minted issuance) at some prefix `i < k` is at
