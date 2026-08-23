@@ -46,6 +46,7 @@ import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
 import Zcash.Security.Ledger.OrchardCapstone
+import Zcash.Security.Ledger.OrchardIntegrityExperiment
 import Zcash.Snark.Soundness.Pricing.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
@@ -805,6 +806,34 @@ named bound on the combined Balance-subset arm event; the conservation side is t
 coin-consuming finders. -/
 
 assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_experiment
+
+/-! ## The Orchard integrity experiment
+
+The Orchard instantiation of the integrity experiment: the three Balance-subset
+non-negativity arms collapse onto the single Sinsemilla discrete-log-relation advantage.
+`kappaOrchardBalanceSubsetOrRelation` routes each arm's break at the sampled primitives —
+the deployed Orchard note-commitment, key-binding, and Merkle structure, which the sampling
+leaves fixed — so a valid output Orchard ledger violates balance integrity at some prefix
+only with that advantage plus the conservation experiment's bound. -/
+
+assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrityBefore_measure_le_experiment +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 
 /-! ## Binding-signature relation reductions
 

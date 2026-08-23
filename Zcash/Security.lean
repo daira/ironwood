@@ -29,6 +29,7 @@ import Zcash.Security.Ledger.KeyBindingDLR
 import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
 import Zcash.Security.Ledger.OrchardCapstone
+import Zcash.Security.Ledger.OrchardIntegrityExperiment
 import Zcash.Security.Common.RandomOracle
 import Zcash.Security.Common.Birthday
 import Zcash.Security.RedDSA.Basic
