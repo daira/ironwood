@@ -33,7 +33,7 @@ open Halo2 Fixtures Halo2.FloorPlanner
 #guard SimpleFloorPlanner.starts Test.Layout.ops
   = (mulLayout.regions.filter (·.name ≠ "table_idx")).map (·.start)
 
-/-! ## V1: the full Action circuit (ironwood + pre-ironwood base)
+/-! ## V1: the full Action circuit (post-NU6.3 + pre-NU6.3 base)
 
 The derived starts / constants are checked against the JSON fixtures at `#eval` time; the
 fixtures are loaded by name through their SHA-256 pins (see `Fixtures/Json.lean`). Orchard's

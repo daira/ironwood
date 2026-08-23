@@ -13,8 +13,9 @@ import Zcash.Common.DiscreteLogRelation
 
 This module formalizes the algebraic heart of the Zcash binding-signature *balance* argument
 (Zcash protocol specification §4.13 Sapling / §4.14 Orchard), abstracted over an arbitrary
-`F`-module `M` so that it applies to both the Pallas (Orchard, Ironwood) and Jubjub (Sapling)
-value-commitment groups. Here `F` will be instantiated with the scalar field `ZMod r`.
+`F`-module `M` so that it applies to both the Pallas (Orchard-protocol) and Jubjub
+(Sapling-protocol) value-commitment groups. Here `F` will be instantiated with the scalar
+field `ZMod r`.
 
 ## The setting
 

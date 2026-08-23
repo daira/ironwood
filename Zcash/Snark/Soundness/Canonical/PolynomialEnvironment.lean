@@ -82,6 +82,18 @@ theorem rowPolynomial_natDegree_lt {n : ℕ}
 def zeroPaddedRows {n : ℕ} (values : List Fp) : Fin n → Fp :=
   fun i => values.getD (i : ℕ) 0
 
+/-- Appending trailing zero rows leaves the zero-padded row family unchanged: the suffix only
+replaces default zeros with explicit ones. -/
+theorem zeroPaddedRows_append_replicate_zero {n m : ℕ} (values : List Fp) :
+    zeroPaddedRows (n := n) (values ++ List.replicate m 0) = zeroPaddedRows values := by
+  funext i
+  simp only [zeroPaddedRows, List.getD_eq_getElem?_getD]
+  rcases lt_or_ge (i : ℕ) values.length with hi | hi
+  · rw [List.getElem?_append_left hi]
+  · rw [List.getElem?_append_right hi, List.getElem?_replicate,
+      List.getElem?_eq_none hi]
+    by_cases hj : (i : ℕ) - values.length < m <;> simp [hj]
+
 /-- The coefficient-form instance polynomial for a zero-padded public column. -/
 def instanceRowPolynomial (n : ℕ)
     (omega : Fp) (values : List Fp) : CPoly :=

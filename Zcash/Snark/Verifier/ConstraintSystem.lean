@@ -10,7 +10,7 @@ integration boundary.
 
 namespace Zcash.Snark
 
-/-- The Ironwood-native constraint-system data consumed by the verifier. -/
+/-- The ironwood-native constraint-system data consumed by the verifier. -/
 structure VerifierCS (numLookups : ℕ) (F : Type*) where
   gates : List (Expr F)
   permutationChunks : List (List (ColumnRef × ℕ))

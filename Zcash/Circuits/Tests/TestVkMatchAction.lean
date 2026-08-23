@@ -10,7 +10,7 @@ import Zcash.Circuits.Action.Circuit
 Projects the `ConstraintSystem` produced by the ported `Action.Circuit.configure` to the
 `CsFixture` shape — via the Rust-dumped selector map applied mechanically — and checks it
 EQUAL to the fixture dumped from the actual Rust circuit after `compress_selectors`
-(`actionPost.json`). `configure` is version-independent (post-NU 6.2 and 6.3 share the
+(`actionPost.json`). `configure` is version-independent (post-NU6.2 and 6.3 share the
 CS), so this single test covers both top-level circuits.
 
 The fixtures are JSON data files loaded by name at `#eval` time (see `Fixtures/Json.lean`

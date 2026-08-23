@@ -6,7 +6,7 @@ import Clean.Halo2.TopLevel
 /-!
 # Circuit-owned verifier data
 
-`Halo2.TopLevelCircuit.verifierCS` is the single Ironwood-native projection of a
+`Halo2.TopLevelCircuit.verifierCS` is the single ironwood-native projection of a
 closed Clean circuit. It translates the circuit's pinned expressions and permutation
 columns into the types consumed by the verifier, without introducing proof parameters,
 commitments, or a second source of circuit configuration.
@@ -23,7 +23,7 @@ variable
 
 /--
 The circuit-owned verifier constraint system: Clean's pinned circuit data
-translated once into Ironwood's expression and column-reference types.
+translated once into ironwood's expression and column-reference types.
 -/
 def verifierCS
     (top : TopLevelCircuit F Config PublicInput) :

@@ -81,14 +81,15 @@ import Zcash.Circuits.Action.Circuit
 import Zcash.Circuits.Action.Bundle
 import Zcash.Circuits.Action.RealBases
 import Zcash.Circuits.Action.Spec
+import Zcash.Circuits.Action.Separation
 import Clean.Halo2.TopLevel
 import Zcash.Circuits.Action.TopLevel
 import Zcash.Circuits.Action.SelectorCoherence
 import Zcash.Circuits.Integration
 
 /-!
-# Ironwood circuits
+# Orchard-protocol circuits
 
-Aggregator for the Ironwood (halo2-native) circuit modules. Ironwood is kept separate
-from the main `Clean` library export and can be built with `lake build Zcash`.
+Aggregator for the Orchard-protocol (halo2-native) circuit modules. These are kept
+separate from the main `Clean` library export and can be built with `lake build Zcash`.
 -/

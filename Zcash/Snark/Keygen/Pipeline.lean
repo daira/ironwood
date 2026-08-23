@@ -275,14 +275,14 @@ theorem toVerifierKey_permutationCommonCommitment
       top.instanceQueryLayout := by
   simp only [toVerifierKey]
 
-/-- The derived key uses the circuit's Ironwood-native gate expressions. -/
+/-- The derived key uses the circuit's ironwood-native gate expressions. -/
 @[simp] theorem toVerifierKey_gates
     (top : TopLevelCircuit Fp Config PublicInput)
     (urs : URS G) :
     (top.toVerifierKey urs).gates = top.verifierCS.gates := by
   simp only [toVerifierKey]
 
-/-- The derived key uses the circuit's Ironwood-native permutation chunks. -/
+/-- The derived key uses the circuit's ironwood-native permutation chunks. -/
 @[simp] theorem toVerifierKey_permutationChunks
     (top : TopLevelCircuit Fp Config PublicInput)
     (urs : URS G) :
@@ -290,7 +290,7 @@ theorem toVerifierKey_permutationCommonCommitment
       top.verifierCS.permutationChunks := by
   simp only [toVerifierKey]
 
-/-- The derived key uses the circuit's Ironwood-native lookup input expressions. -/
+/-- The derived key uses the circuit's ironwood-native lookup input expressions. -/
 @[simp] theorem toVerifierKey_lookupInputExprs
     (top : TopLevelCircuit Fp Config PublicInput)
     (urs : URS G)
@@ -299,7 +299,7 @@ theorem toVerifierKey_permutationCommonCommitment
       top.verifierCS.lookupInputExprs lookup := by
   simp only [toVerifierKey]
 
-/-- The derived key uses the circuit's Ironwood-native lookup table expressions. -/
+/-- The derived key uses the circuit's ironwood-native lookup table expressions. -/
 @[simp] theorem toVerifierKey_lookupTableExprs
     (top : TopLevelCircuit Fp Config PublicInput)
     (urs : URS G)

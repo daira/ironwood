@@ -11,7 +11,7 @@ import Mathlib.Tactic.Ring
 import Zcash.Security.Common.RandomOracle
 
 /-!
-# Key binding (Orchard / Ironwood)
+# Orchard-protocol Key binding
 
 The deterministic layer of the
 [ZIP 2005 key-binding theorem (ROM)](https://zips.z.cash/zip-2005#thm-key-binding-rom): a

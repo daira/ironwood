@@ -8,7 +8,7 @@ import Clean.Halo2.CircuitTypeDeriving
 import Zcash.Circuits.Ecc.MulFixed.Short
 
 /-!
-# Orchard value commitment (Ironwood)
+# Orchard-protocol value commitment
 
 Reference (ported from actual Rust, not memory):
 `orchard@0.14.0/src/circuit/gadget.rs::value_commit_orchard` (lines 115-148):

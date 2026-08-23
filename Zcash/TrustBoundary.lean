@@ -1,4 +1,5 @@
 import Zcash.Circuits.Action.RealBases
+import Zcash.Circuits.Action.Separation
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
 import Zcash.Arithmetic.FastMsm
@@ -2642,3 +2643,27 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeplo
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintBadX_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statisticalSurfaceEvent_prob_le +native(Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le +native(Zcash.Snark.actionConstantCellAddressFailures_eq_nil, Zcash.Snark.actionConstantSites_fit, Zcash.Snark.actionCopyActiveRowFailures_eq_nil, Zcash.Snark.actionCopyAddressFailures_eq_nil, Zcash.Snark.actionCopyBounds, Zcash.Snark.actionMissingConstantAllocations_eq_nil, CompElliptic.Fields.Pasta.pallasBase, Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil, Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil, Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated, Zcash.Snark.ActionGateCoherence.domainExponent_lt, Zcash.Snark.ActionGateCoherence.gateData_eq, Zcash.Snark.ActionGateCoherence.selectorDegree, Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt, Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq, Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq, Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt, Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero, Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check, Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check, Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+
+/-! ## Pre- and post-NU6.3 circuit separation
+
+`Zcash/Circuits/Action/Separation.lean` pins the structural fact that the NU6.3 upgrade
+adds exactly the cross-address clause to the Action statement. They are theorems, so they
+get `assert_axioms`. `preNU63_synthesize_eq_base` reaches the fixed-base construction and
+`crossAddressBinding_nontrivial` evaluates a deployed-base inequality, so both inherit the
+`native_decide` compiler-trust axioms; the other two stay at the standard tier. -/
+
+assert_axioms Zcash.Circuits.Action.Separation.preNU63_synthesize_eq_base +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_axioms Zcash.Circuits.Action.Separation.specPost_iff_base_and_crossAddress
+assert_axioms Zcash.Circuits.Action.Separation.preNU63_spec_omits_crossAddress
+assert_axioms Zcash.Circuits.Action.Separation.crossAddressBinding_nontrivial +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Action.Separation.crossAddressBinding_nontrivial,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)

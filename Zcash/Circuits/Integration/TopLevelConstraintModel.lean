@@ -5,7 +5,7 @@ import Zcash.Snark.Soundness.Canonical.ConstraintModel
 # Circuit-derived canonical constraint models
 
 This module closes the domain-law boundary between a Clean top-level circuit and
-Ironwood's verifier-native canonical constraint model. Arbitrary verification
+ironwood's verifier-native canonical constraint model. Arbitrary verification
 keys still require an explicit proof that their blinding rows fit the domain;
 a key derived from `TopLevelCircuit` carries that fact by construction.
 -/

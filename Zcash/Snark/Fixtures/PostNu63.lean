@@ -5,14 +5,14 @@ import Mathlib.Util.AssertNoSorry
 /-!
 # Post-NU6.3 fixture provenance
 
-Cross-capture checks for the canonical Post-NU6.3 Orchard/Ironwood verifying key and URS. During
-fixture generation, Orchard first compares the exact `PinnedVerificationKey` debug representation
-against its checked-in `circuit_description_post_nu6_3`; Halo2 then derives and emits the transcript
-representation below from that same verified key object.
+Cross-capture checks for the canonical Post-NU6.3 Orchard-protocol verifying key and URS. During
+fixture generation, the `orchard` implementation first compares the exact `PinnedVerificationKey`
+debug representation against its checked-in `circuit_description_post_nu6_3`; `halo2` then derives
+and emits the transcript representation below from that same verified key object.
 
-Lean does not reimplement Halo2's `Debug` serialization or BLAKE2b derivation. The hand-pinned scalar
-here makes fixture drift visible in this repository, while the Rust regeneration assertion binds it
-to the full canonical pinned key.
+Lean does not reimplement `halo2`'s `Debug` serialization or BLAKE2b derivation. The hand-pinned
+scalar here makes fixture drift visible in this repository, while the Rust regeneration assertion
+binds it to the full canonical pinned key.
 
 The point-level equalities below identify the two captures' URS and verifying-key commitment
 points; the multi-action verifying-key certificate (`Fixtures/MultiAction/Honest/VkCertificate.lean`)
@@ -64,6 +64,14 @@ theorem singleAction_uses_canonicalVk :
 
 theorem multiAction_uses_canonicalVk :
     Fixture2.capturedVkTranscriptRepr = canonicalVkTranscriptRepr := by
+  native_decide
+
+/-- Every `capturedPoint` reference used to build either captured augmented URS is backed by its
+point table.  The `2^k` generators occupy indices `0, ..., 2^k - 1`, followed by `w` and `u`; this
+separately guards the inner `capturedPoints.getD` from silently substituting the identity. -/
+theorem captures_urs_point_references_in_bounds :
+    2 ^ Fixture.shape.k + 2 ≤ Fixture.capturedPoints.length ∧
+      2 ^ Fixture2.shape.k + 2 ≤ Fixture2.capturedPoints.length := by
   native_decide
 
 /-- Both captures use the same deterministic Halo2 URS (`g`, then `w` and `u` occupy the first

@@ -1,13 +1,12 @@
 import Zcash.Circuits.Tests.TestVkLayoutAction
 
 /-!
-# VK-layout test: the pre-ironwood (fixed post-NU 6.2) Action circuit
+# VK-layout test: the pre-NU6.3 (fixed post-NU6.2) Action circuit
 
 The base-circuit counterpart of `TestVkLayoutAction`: the same mirror WITHOUT the
-cross-address stage (`aProgramBase`), against the `actionBase` dump (byte-identical to
-the 0.14.0 circuit — verified on the ironwood branch), loaded from
-`actionBaseLayout.json` at `#eval` time. The constraint system (and so the SelMap) is
-shared between the two versions.
+cross-address stage (`aProgramBase`), against the `actionBase` dump (byte-identical
+to the 0.14.0 circuit), loaded from `actionBaseLayout.json` at `#eval` time. The
+constraint system (and so the SelMap) is shared between the two versions.
 -/
 
 namespace Zcash.Circuits.Fixtures.Test.LayoutActionBase

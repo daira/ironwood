@@ -5,7 +5,7 @@ import Zcash.Circuits.Integration.TopLevelAssignment
 /-!
 # Top-level circuit correctness interface
 
-This module packages the named Clean/Ironwood representation boundaries consumed
+This module packages the named Clean/ironwood representation boundaries consumed
 by the generic soundness terminal.  It deliberately contains no final circuit
 statement and no opaque encoding implication.
 -/

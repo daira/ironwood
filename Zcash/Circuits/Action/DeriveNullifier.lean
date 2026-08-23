@@ -8,14 +8,14 @@ import Zcash.Circuits.Poseidon.Hash
 import Zcash.Circuits.Utilities.AddChip
 
 /-!
-# Orchard nullifier derivation (Ironwood)
+# Orchard-protocol nullifier derivation
 
 Reference (ported from actual Rust, not memory):
 `orchard@0.14.0/src/circuit/gadget.rs::derive_nullifier` (lines 154-206):
 `nf = extract_p(cm + [poseidon_hash(nk, rho) + psi] NullifierK)` — four layouter pieces
 in source order:
 1. `PoseidonHash::init` + `hash([nk, rho])` (`ConstantLength<2>` on the Pow5 chip; the
-   Ironwood `Poseidon.hash` bundle at capacity `2·2⁶⁴`);
+   Orchard-protocol `Poseidon.hash` bundle at capacity `2·2^{64}`);
 2. `add_chip.add(hash, psi)` (region `"c = a + b"`, `add_chip.rs:71-91`);
 3. `FixedPointBaseField::from_inner(NullifierK).mul(scalar)` (the
    `Ecc.MulFixed.BaseFieldElem` bundle);
@@ -41,10 +41,10 @@ structure Input (F : Type) where
   cm : Point F
 deriving ProvableStruct
 
-/-- The `ConstantLength<2>` hash value is the one-padded-block hash at capacity `2·2⁶⁴`:
-the message is exactly one rate-2 block, so the donor scheduler's fold is a single
-absorb/permute step — the value-level bridge onto the Ironwood `Poseidon.hash` bundle's
-`HashPaddedBlock` contract. -/
+/-- The `ConstantLength<2>` hash value is the one-padded-block hash at capacity
+`2·2^{64}`: the message is exactly one rate-2 block, so the donor scheduler's fold
+is a single absorb/permute step — the value-level bridge onto the Orchard-protocol
+`Poseidon.hash` bundle's `HashPaddedBlock` contract. -/
 theorem constantLength_value_two (a b : Fp) :
     Hash.ConstantLength.value #v[a, b]
       = Hash.HashPaddedBlock.value roundConstants (Hash.ConstantLength.capacity 2)

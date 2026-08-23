@@ -45,7 +45,8 @@ def finFn {F : Type*} [Zero F] {n : ℕ} (f : Fin n → F) : ℕ → F :=
 /-- View a `Fin n`-indexed family of group elements as a total `ℕ`-indexed function (`default`
 out of range), like `finFn`. Caveat: an out-of-range index aliases `default` rather than erroring
 — the Vesta identity in the concrete fixtures, and `0` in abstract shape fixtures — so faithfulness
-rests on the VK's query indices being in range. -/
+rests on the VK's query indices being in range.  For the deployed key that is discharged, not
+assumed: see the degradation-site note on `VerifyingKey` (`Verifier/Key.lean`). -/
 def finFnG {G : Type*} [Inhabited G] {n : ℕ} (f : Fin n → G) : ℕ → G :=
   fun i => if h : i < n then f ⟨i, h⟩ else default
 

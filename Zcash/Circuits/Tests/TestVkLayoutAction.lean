@@ -1,7 +1,7 @@
 import Zcash.Circuits.Fixtures.ActionSelMap
 import Zcash.Circuits.Fixtures.Json
 import Zcash.Circuits.Action.RealBases
-import Zcash.Circuits.Action.CircuitPreIronwood
+import Zcash.Circuits.Action.CircuitPreNU63
 import Zcash.Circuits.Fixtures.Layout
 import Zcash.Circuits.Action.Circuit
 
@@ -58,17 +58,17 @@ def aW : Action.Circuit.Witnesses Fp :=
     merkleSib := fun _ => .native fun _ => #v[(0 : Fp)],
     merkleSwap := fun _ _ => false }
 
-/-- THE REAL ironwood (post-NU 6.3) circuit, at the REAL certified bases. -/
+/-- THE REAL post-NU6.3 circuit, at the REAL certified bases. -/
 def aProgram : Circuit Fp Unit :=
   Action.Circuit.synthesize aG Action.orchardBases aW aCfg
 
-/-- The real pre-ironwood (fixed post-NU 6.2) circuit, at the same bases. -/
+/-- The real pre-NU6.3 (fixed post-NU6.2) circuit, at the same bases. -/
 def aProgramBase : Circuit Fp Unit := do
-  let _ ← Action.CircuitPreIronwood.synthesize aG
+  let _ ← Action.CircuitPreNU63.synthesize aG
     Action.orchardBases aW aCfg
   pure ()
 
-/-! ## The reconstructed layout products vs the ported Action stack (ironwood)
+/-! ## The reconstructed layout products vs the ported Action stack (post-NU6.3)
 
 All checks live in ONE `#eval` so the shared reconstruction (ops → regions → copy list →
 σ → fixed) evaluates exactly once; the fixture is loaded by name through its SHA-256 pin

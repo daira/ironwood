@@ -9,7 +9,7 @@ import Zcash.Circuits.NoteCommit.MainTheorems
 import Clean.Halo2.CircuitTypeDeriving
 
 /-!
-# NoteCommit main circuit (Ironwood)
+# Orchard-protocol NoteCommit main circuit
 
 Reference (ported from actual Rust, not memory):
 `orchard@0.14.0/src/circuit/note_commit.rs` — `NoteCommitChip::commit` (lines 1596-1798).
