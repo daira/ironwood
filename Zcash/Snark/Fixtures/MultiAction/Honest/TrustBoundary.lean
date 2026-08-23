@@ -675,6 +675,13 @@ assert_axioms Zcash.Snark.Fixture2.straightLineInterface_nonempty_at_captured_sh
 -- certificate — only the Vesta point count, through the `Fp`-module structure on the curve.
 assert_axioms Zcash.Snark.FixtureMax.orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The compressed-identity bounds the package is assembled from: the generator-random-oracle form
+-- is its direct input, the plain form the leaf nothing consumes. Both carry the `_prob_le` marker
+-- under an `_at_consensus_max` qualifier, which the census matches, so both are pinned here.
+assert_axioms Zcash.Snark.FixtureMax.straightLineConstraintFailure_prob_le_at_consensus_max +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.FixtureMax.straightLineConstraintFailure_prob_le_at_consensus_max_generatorRO +native(
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 -- `whitespace := lax` collapses all whitespace, so the pin is insensitive to how
 -- `#print axioms` line-wraps the list (a formatting artifact of the axiom-name lengths).
