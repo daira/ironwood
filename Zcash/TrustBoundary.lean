@@ -253,12 +253,21 @@ assert_axioms Zcash.Security.GroupHash.vesta_indiffFromROCapped +native(
 -- TwoOracle.lean: the two-oracle → one-oracle collapse
 assert_axioms Zcash.Security.GroupHash.twoOracleIndiffFromRO
 
-/-! ## Key binding — computed break reductions -/
+/-! ## Key binding — computed break reductions
+
+The computed reductions from a key-binding break to an up-to-sign random-oracle collision:
+`ofOpeningBreak` from a bare commitment-opening break, `ofBreak` from a full key-binding
+break. -/
 
 assert_computable Zcash.Security.RandomOracle.CollisionUpToSign.ofOpeningBreak +choice
 assert_computable Zcash.Security.RandomOracle.CollisionUpToSign.ofBreak +choice
 
-/-! ## Key binding — theorems -/
+/-! ## Key binding — theorems
+
+The key-binding argument's supporting theorems: the extractor's `ivk` domain-size bound,
+the `Commit^ivk` opening ±-pinning, and the derivation constraints that pin `nk`, `ak`,
+and `qk`-or-`sk` from the final random-oracle query. `toInterface` packages them into the
+games-facing key-binding interface. -/
 
 assert_axioms Zcash.Security.KeyBinding.Extractor.card_ivk_ge
 assert_axioms Zcash.Security.KeyBinding.commit_scalar_pm
@@ -273,13 +282,22 @@ assert_axioms Zcash.Security.KeyBinding.qk_or_sk_pinned
 assert_axioms Zcash.Security.KeyBinding.collision_mem_shifted_pm
 assert_axioms Zcash.Security.KeyBinding.toInterface
 
-/-! ## Birthday bound -/
+/-! ## Birthday bound
+
+The birthday bound for up-to-sign collisions in the random-oracle model: the shifted-±
+collision count, its fraction of the table, and the closed form quadratic in the query
+count. -/
 
 assert_axioms Zcash.Security.Birthday.card_shifted_pm_collision_le
 assert_axioms Zcash.Security.Birthday.shifted_pm_collision_fraction_le
 assert_axioms Zcash.Security.Birthday.birthday_closed_form
 
-/-! ## Key binding — whole-table random-oracle model -/
+/-! ## Key binding — whole-table random-oracle model
+
+The key-binding probability layer over the whole random-oracle table: the break event's
+measure bounded through the birthday collision count, in adaptive, query-bounded, mixture,
+and product forms, culminating in `toInterface_break_measure_le` — the games-facing bound
+inherited by the ledger key-binding arms. -/
 
 assert_computable Zcash.Security.KeyBinding.finalQueryEquiv
 assert_axioms Zcash.Security.KeyBinding.eval_restrict
@@ -310,11 +328,13 @@ assert_axioms Zcash.Security.toInterface_break_measure_le
 
 /-! ## Ledger-layer break reductions
 
-Most of these data-producing reductions rest on `propext` and `Quot.sound` only — no
-`Classical.choice` even in erased positions, the strict (flagless) `assert_computable`
-tier. The exception is `nfOldEqOrBreak`: it decides the `nk`-equality branch on
-`DecidableEq NK`, so choice arrives with its proof terms in erased positions (the
-`+choice` tier). The reduction data is still a direct term of the inputs. -/
+The Layer-B computed reductions at the ledger layer: a wrong-leaf Merkle path to a
+tree-hash collision (`collisionOfWrongLeaf`), a note-commitment opening collision
+(`noteCommitBreakOfNe`), a random-oracle collision to its up-to-sign form
+(`Collision.upToSign`), and the nullifier-equality-or-key-binding branch
+(`nfOldEqOrBreak`). Only `nfOldEqOrBreak` needs `Classical.choice`, in erased proof terms
+alone (it decides an `nk`-equality branch on `DecidableEq NK`); the reduction data is a
+direct term of the inputs. -/
 
 assert_computable Zcash.Security.RandomOracle.Collision.upToSign
 assert_computable Zcash.Security.Ledger.Merkle.collisionOfWrongLeaf
@@ -385,8 +405,12 @@ assert_computable Zcash.Security.Ledger.Model.balanceSubsetOrBreak +choice
 
 /-! ## Balance integrity
 
-`+choice` on the three endpoints is again the erased-positions tier: choice arrives with
-the `ring`/`omega` proof terms in their `Prop` fields, never the data path. -/
+The deterministic Balance-integrity layer: the value-accounting definitions and
+pool-balance sum lemmas, the conservation, cap, and integrity break reductions
+(`balanceConservationOrBreak`, `shieldedBalanceCapOrBreak`, `balanceIntegrityOrBreak`),
+and shielded-pool non-negativity (`shieldedPoolBalance_nonneg`). `+choice` on the
+reductions is the erased-positions tier: choice arrives with the `ring`/`omega` proof
+terms, never the data path. -/
 
 assert_computable Zcash.Security.Ledger.Model.txNetValue
 assert_computable Zcash.Security.Ledger.Model.issuanceTotal
@@ -784,10 +808,11 @@ assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_expe
 
 /-! ## Binding-signature relation reductions
 
-Unlike the ledger break reductions, these depend on `Classical.choice` (`+choice`). It enters
-only through erased `Prop` certificate fields (the arithmetic side proofs); the relation
-coefficients themselves are direct terms of the inputs, and the plain-`def` check means the data
-cannot have been conjured from mere propositional existence. -/
+The binding-signature balance reductions: an imbalanced bundle exhibits a nontrivial
+discrete-log relation among the value-commitment bases (`NontrivialRelation.ofImbalance`
+and the bundle-mod, bundle-int, Orchard, and Sapling variants). `+choice` enters only
+through erased `Prop` certificate fields; the relation coefficients are direct terms of
+the inputs. -/
 
 assert_computable Zcash.Security.BindingSignature.NontrivialRelation.ofImbalance +choice
 assert_computable Zcash.Security.BindingSignature.NontrivialRelation.ofBundleModImbalance +choice
