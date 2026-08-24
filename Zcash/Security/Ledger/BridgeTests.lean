@@ -165,17 +165,15 @@ theorem path_iff_guarded_smoke
         ∀ i, ∃ b, Pool.merkle.compress i (children i) = some b :=
   Merkle.path_iff_guarded_defined
 
-/-- The circuit-level postcondition refines directly to the ledger action alternative. -/
-theorem actionSpec_bridge_smoke {MSG SIG : Type*}
+/-- The circuit-level postcondition refines directly to ledger action data or a computed
+discrete-log relation. -/
+def actionSpec_bridge_smoke {MSG SIG : Type*}
     (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     (input : PublicInputs Fp) (wit : PrivateWitness)
     (h : ActionSpec input wit) :
-    ActionBreak (combine input wit) ∨
-      ∃ inst w, PublicProjection (combine input wit) inst ∧
-        ActionSatisfied (Pool.primitives spendAuthVerify bindingVerify) Pool.keyBinding inst w ∧
-        CrossAddressSatisfied (combine input wit) w ∧
-        EnableFlagsSatisfied (combine input wit) w :=
-  actionSpec_to_ledger spendAuthVerify bindingVerify input wit h
+    ActionLedgerSuccess spendAuthVerify bindingVerify (combine input wit) ⊕'
+      ActionDLBreak :=
+  actionSpecToLedgerData spendAuthVerify bindingVerify input wit h
 
 open Zcash.Meta
 
@@ -235,7 +233,7 @@ assert_axioms Zcash.Security.Ledger.Bridge.guardedPath_of_exact +native(
   Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
-assert_axioms Zcash.Security.Ledger.BridgeTests.actionSpec_bridge_smoke +native(
+assert_computable Zcash.Security.Ledger.BridgeTests.actionSpec_bridge_smoke +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
@@ -264,6 +262,32 @@ assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +nati
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+
+-- The full Action-to-ledger bridge is data end to end: the key-binding witness, the
+-- success construction, and the dispatching bridge are plain compiled `def`s, at the
+-- same budget as the classifiers they consume (`Classical.choice` and the deployed
+-- certificates enter only through erased `Prop` positions).
+assert_computable Zcash.Security.Ledger.Bridge.commitIvkWitness +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.ActionLedgerSuccess.ofSpec +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.actionSpecToLedgerData +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,

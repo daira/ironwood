@@ -167,11 +167,11 @@ satisfy this interface (the latter enforces strictly more).
 
 This is the security-game statement — the abstract ledger meaning of a successful
 action — and it is deliberately separate from the circuit-facing `ActionSpec`:
-`Bridge.actionSpec_to_ledger` verifies that every `ActionSpec` case becomes either this
-statement or an exhibited `Bridge.ActionBreak`. The interface itself stays
-`Prop`-only; the breaks-as-computed-data pattern applies at the bridge
-(`Bridge.classifyAction`, reduced onward to the games-facing discrete-log-relation
-object by `Bridge.relationOfBreakData`), not here.
+`Bridge.actionSpecToLedgerData` turns every `ActionSpec` case into either a ledger
+action satisfying this statement (`Bridge.ActionLedgerSuccess`, with the instance and
+witness as data) or the computed discrete-log relation of a Sinsemilla escape
+(`Bridge.ActionDLBreak`). The interface itself stays `Prop`-only; the
+everything-as-computed-data pattern applies at the bridge, not here.
 
 TODO: Verify the exact Action interface the Balance and Spendability games consume.
 The NU6.3 flag conditions belong in the game instance rather than a circuit-facing
