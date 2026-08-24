@@ -22,7 +22,7 @@ So each definition sits on a three-layer stack:
   Layer-A break (`NontrivialRelation.ofImbalance`, `Merkle.collisionOfWrongLeaf`,
   `noteCommitBreakOfNe`). Deterministic; no hardness assumption.
 - **Layer C — probability.** The bound that producing the break is hard: the birthday
-  bound $q \cdot (q-1)/|\mathbb{F}|$, or the discrete-log advantage. The only layer that
+  bound $q \cdot (q-1)/\FieldSize$, or the discrete-log advantage. The only layer that
   consumes an assumption.
 
 ## How the layers compose
@@ -165,7 +165,7 @@ view is identical to the honestly sampled game, so its success probability is un
 and the challenge is hidden perfectly rather than computationally. What the reduction
 gains is private knowledge of the pairs. A returned relation among the bases then becomes
 a linear equation in $z$, solvable unless the relation's coefficients land on the single
-$1/|\mathbb{F}|$ hyperplane where the $y$ component cancels — the form of reduction the
+$1/\FieldSize$ hyperplane where the $y$ component cancels — the form of reduction the
 definitions page calls [programmed-basis](definitions.md#programmed-basis). The argument
 is Jaeger–Tessaro's proof of their Lemma 3, presented there as a careful use of
 self-reducibility techniques.

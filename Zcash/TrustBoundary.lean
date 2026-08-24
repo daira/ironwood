@@ -768,7 +768,7 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailA
 /-! ## The conservation relation arm, discharged in the oracle model
 
 The conservation reduction's relation arm, bounded in the challenge-oracle model:
-`ε_DL + 1/|F|` for any labeled ledger adversary, with no query-budget term — the arm's
+`ε_DL + 1/#F` for any labeled ledger adversary, with no query-budget term — the arm's
 witness is oracle-free data. The finder (`valueRelFinder`) rebuilds the reduction's
 relation behind decidable guards and lands it in the generic AGM witness type at the two
 value-commitment slots (`toAlgebraicRelationWitnessAt`); the selection is computed data

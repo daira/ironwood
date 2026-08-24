@@ -267,7 +267,7 @@ theorem kappaEvent_measure_le {qH : ℕ} {ε : ℝ≥0∞}
     (fun O => relFiber_measure_le m gen r_idx adv (hdl O))
 
 /-- **The knowledge error bounded, with a single randomized reduction:
-κ ≤ (qH+1)/|F| + (ε_DL + 1/|F|).** As `kappaEvent_measure_le`, with the per-table DL
+κ ≤ (qH+1)/#F + (ε_DL + 1/#F).** As `kappaEvent_measure_le`, with the per-table DL
 hypothesis replaced by one bound for the coin-consuming finder — the reduction samples the
 challenge table as its own coins (`TextbookDLWithCoinsAdvantageLE` at `ρ := Q → F`), so the
 supremum over tables disappears. -/

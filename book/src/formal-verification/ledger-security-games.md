@@ -129,7 +129,7 @@ section 3), adapted to the ±-randomized variant, together with the same straigh
 AGM+ROM extraction of Fuchsbauer–Plouviez–Seurin
 ([Blind Schnorr Signatures and Signed ElGamal Encryption in the Algebraic Group Model](https://eprint.iacr.org/2019/877),
 Theorem 1) that discharges the binding-signature extractability node at
-$(q_H + 2)/|\mathbb{F}| + \varepsilon_{\mathrm{DL}}$. The two arms differ in the signing
+$(q_H + 2)/\FieldSize + \varepsilon_{\mathrm{DL}}$. The two arms differ in the signing
 oracle: the binding-signature extraction has none to simulate, because the signature
 extracted from is the adversary's own, while the RedDSA unforgeability game has one.
 The planned discharge is to simulate the signing oracle by programming the challenge

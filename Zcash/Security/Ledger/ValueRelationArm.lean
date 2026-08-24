@@ -10,7 +10,7 @@ import Zcash.Common.RelationProbabilityCoins
 The capstone layer bounds the conservation reduction's relation arm by the named `εdlr`. This
 module bounds that arm in the challenge-oracle model, at the reduction's own events: for any
 labeled ledger adversary, the probability that the output ledger is valid *and* the reduction
-computes a nontrivial `(𝒱, ℛ)` relation is at most `ε_DL + 1/|F|` (from
+computes a nontrivial `(𝒱, ℛ)` relation is at most `ε_DL + 1/#F` (from
 `relationWithCoins_prob_le_of_textbookDL`). No query budget appears: the arm's witness is oracle-free
 data, so there is no bad-challenge accounting — this is the easier sibling of the
 extraction-failure arm in `Ledger/ExtractionKnowledgeError.lean`, over the same experiment.
@@ -261,7 +261,7 @@ omit [Inhabited Q] in
 /-- **The conservation relation arm, discharged.** For any labeled ledger adversary in the
 challenge-oracle model, the probability that its output ledger is valid and the conservation
 reduction at prefix `i`, with the effective-representation extractor, computes a nontrivial
-relation is at most `ε + 1/|F|`: the finder replaying the adversary rebuilds the relation, and
+relation is at most `ε + 1/#F`: the finder replaying the adversary rebuilds the relation, and
 the tight Jaeger–Tessaro accounting applies. The DL hypothesis is a single bound for the
 coin-consuming finder — the reduction samples the challenge table as its own coins — so no
 supremum over tables appears. No query budget appears — the arm's witness

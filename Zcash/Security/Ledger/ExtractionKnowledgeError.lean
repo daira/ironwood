@@ -13,7 +13,7 @@ The capstone layer bounds the conservation reduction's extraction-failure arm by
 knowledge error κ. This module bounds that arm in the challenge-oracle model, at the
 reduction's own events: for any `qH`-query-bounded labeled algebraic ledger adversary, the
 probability that the output ledger is valid *and* the reduction lands in the arm is at most
-`(qH+1)/|F| + (ε_DL + 1/|F|) = (qH+2)/|F| + ε_DL` (from `kappaEvent_measure_le`). As with
+`(qH+1)/#F + (ε_DL + 1/#F) = (qH+2)/#F + ε_DL` (from `kappaEvent_measure_le`). As with
 the key-binding arm, the bound is joint with validity; the capstones' named κ ranges over an
 abstract `PMF (ValidAnnotated …)`, and the experiment-to-`PMF` connection is the
 joint-experiment composition (#107).
@@ -407,7 +407,7 @@ theorem extractFail_mem_kappaEvent
 algebraic ledger adversary in the challenge-oracle model, the probability that its output
 ledger is valid and the conservation reduction at prefix `i`, with the effective-representation
 extractor, lands in the extraction-failure arm is at most
-`(qH+1)/|F| + (ε + 1/|F|) = (qH+2)/|F| + ε`. `halgLabel` and `halgOut` model the hypothesis
+`(qH+1)/#F + (ε + 1/#F) = (qH+2)/#F + ε`. `halgLabel` and `halgOut` model the hypothesis
 that the adversary is algebraic: query-time labels and announced representations evaluate to
 the transactions' actual elements at their query points. The bound takes textbook-DL
 advantage at most `ε` for the relation finder replaying the composite. The failing
