@@ -27,17 +27,16 @@ zero-randomness commitment to `vBalance` — is then the binding-signature layer
 `bindingVK` of the witnessed bundle (`bvk_eq`, via `cv_net_eq`).
 
 The premiss discharge itself lives in `Zcash.Security.Ledger.ExtractionArm`:
-`ValueShape.premissOrBreakFallible` decides the net-value equation and, on failure,
-computes the relation with `NontrivialRelation.ofBundleIntImbalance`, with the
-extractor's failures exhibited as data. Its no-overflow bound comes from the
-statement's value ranges, validity's action count and `vBalance` range, and one
-numeric hypothesis `(maxActions + 1) * valueBound ≤ r` (deployed:
-`(maxActions + 1) · 2^64 ≪ r ≈ 2^254`). A *total* extraction hypothesis — every
-verifying `bvk` comes with its scalar — would carry no computational content: in a
-cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
-choose-the-witness extractor that no one can run. That is why the extractor is a
-bare function and its failures are events with a named probability `κ`, discharged in
-`RedDSA/KnowledgeError` (#107 tracks the surrounding glue).
+`ValueShape.premissOrBreakFallible` decides the net-value equation and, on failure, computes the
+relation with `NontrivialRelation.ofBundleIntImbalance`, with the extractor's failures exhibited as
+data. Its no-overflow bound comes from the statement's value ranges, validity's action count and
+`vBalance` range, and one numeric hypothesis in the `vSum` shape, `maxActions · (valueBound − 1) +
+vBalanceBound < r` (deployed: the Orchard `vSumBound`, far below `r ≈ 2^254`). A *total* extraction
+hypothesis — every verifying `bvk` comes with its scalar — would carry no computational content: in
+a cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
+choose-the-witness extractor that no one can run. That is why the extractor is a bare function and
+its failures are events with a named probability `κ`, discharged in `RedDSA/KnowledgeError` (#107
+tracks the surrounding glue).
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -89,21 +88,22 @@ theorem bvk_eq (S : ValueShape P)
   simp
 
 /-- The witnessed net value of a satisfied transaction is bounded by the action count
-times the value bound. -/
+times the per-action net-value endpoint `valueBound − 1`: the statement's strict value
+ranges make each action's net value at most `valueBound − 1` in magnitude. -/
 theorem txNetValue_natAbs_le
     {tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
     (hsat : ∀ a ∈ tx.actions, ActionSatisfied P kv a.inst a.w) :
-    (txNetValue tx).natAbs ≤ tx.actions.length * P.valueBound := by
+    (txNetValue tx).natAbs ≤ tx.actions.length * (P.valueBound - 1) := by
   suffices h : ∀ L : List (Action KW (ZMod r) G RHO PSI MHASH MENC SIG P.depth),
       (∀ a ∈ L, ActionSatisfied P kv a.inst a.w) →
       ((L.map fun x => (x.w.note_old.v : ℤ) - x.w.note_new.v).sum).natAbs
-        ≤ L.length * P.valueBound by
+        ≤ L.length * (P.valueBound - 1) by
     exact h tx.actions hsat
   intro L hL
   induction L with
   | nil => simp
   | cons a t ih =>
-      have h1 : ((a.w.note_old.v : ℤ) - a.w.note_new.v).natAbs ≤ P.valueBound := by
+      have h1 : ((a.w.note_old.v : ℤ) - a.w.note_new.v).natAbs ≤ P.valueBound - 1 := by
         have hv1 := (hL a (by simp)).v_old_lt
         have hv2 := (hL a (by simp)).v_new_lt
         omega
@@ -113,8 +113,8 @@ theorem txNetValue_natAbs_le
             + ((t.map fun x => (x.w.note_old.v : ℤ) - x.w.note_new.v).sum).natAbs := by
             simp only [List.map_cons, List.sum_cons]
             exact Int.natAbs_add_le _ _
-        _ ≤ P.valueBound + t.length * P.valueBound := Nat.add_le_add h1 h2
-        _ = (a :: t).length * P.valueBound := by
+        _ ≤ (P.valueBound - 1) + t.length * (P.valueBound - 1) := Nat.add_le_add h1 h2
+        _ = (a :: t).length * (P.valueBound - 1) := by
             simp only [List.length_cons]
             ring
 

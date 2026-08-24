@@ -366,8 +366,10 @@ theorem orchardBalanceConservationBefore_measure_le_kerr
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
     (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
     (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
-    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify
-        bindingVerify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (hr : maxActions
+          * ((primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify).valueBound - 1)
+        + (primitives spendAuthVerify bindingVerify).vBalanceBound
+      < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
     (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
@@ -387,8 +389,10 @@ theorem orchardBalanceIntegrity_measure_le_kerr
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
     (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
     (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
-    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify
-        bindingVerify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (hr : maxActions
+          * ((primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify).valueBound - 1)
+        + (primitives spendAuthVerify bindingVerify).vBalanceBound
+      < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
     (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ)
     {ε_sinsemilladlr εdlr κ : ℝ≥0∞}
     (hsin : A.toOuterMeasure

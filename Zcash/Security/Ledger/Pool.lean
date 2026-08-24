@@ -226,6 +226,7 @@ schemes; the concrete RedPallas instantiations compose downstream. -/
 def primitives (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop) :
     Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG SIG where
   valueBound := 2 ^ 64
+  vBalanceBound := 2 ^ 63
   emb := PallasGroup.embedFp
   emb_injective := PallasGroup.embedFp_injective
   extract := extract

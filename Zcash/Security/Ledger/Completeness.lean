@@ -294,7 +294,7 @@ theorem honestTx_valid
         + ((issuance ledger.length : ℤ) + (honestTx spends sighash bindingSig).vBalance))
     (hbind : P.bindingVerify ((honestTx spends sighash bindingSig).bvk P) sighash
         bindingSig)
-    (hvb : (honestTx spends sighash bindingSig).vBalance.natAbs < P.valueBound)
+    (hvb : (honestTx spends sighash bindingSig).vBalance.natAbs ≤ P.vBalanceBound)
     (hbound : spends.length ≤ maxActions) :
     ValidLedger P kv issuance maxActions (ledger ++ [honestTx spends sighash bindingSig]) := by
   have hmem : ∀ tx ∈ ledger ++ [honestTx spends sighash bindingSig],
@@ -438,7 +438,7 @@ def spendabilityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK]
     (htrans : 0 ≤ transparentPoolBalance issuance ledger ledger.length
         + ((issuance ledger.length : ℤ) + (honestTx [(hs, sig)] sighash bsig).vBalance))
     (hbind : P.bindingVerify ((honestTx [(hs, sig)] sighash bsig).bvk P) sighash bsig)
-    (hvb : (honestTx [(hs, sig)] sighash bsig).vBalance.natAbs < P.valueBound)
+    (hvb : (honestTx [(hs, sig)] sighash bsig).vBalance.natAbs ≤ P.vBalanceBound)
     (hbound : 1 ≤ maxActions) :
     ValidLedger P kv issuance maxActions (ledger ++ [honestTx [(hs, sig)] sighash bsig])
       ⊕' Respend ledger hs.rcm_old hs.note_old

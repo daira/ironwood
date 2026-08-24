@@ -175,7 +175,7 @@ failing the net-value equation; the selection is computed from the fold hypothes
 def allConservedOrBreak_extractFail
     (hval : ValidLedger P kv issuance maxActions ledger)
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (L : List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth))
     (hL : ∀ tx ∈ L, tx ∈ ledger)
@@ -215,7 +215,7 @@ first imbalanced transaction; the selection is computed from the reduction hypot
 def balanceConservationOrBreak_extractFail
     (hval : ValidLedger P kv issuance maxActions ledger)
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ)
     {e : RedDSA.ExtractionFailure B.sch E}
     (h : balanceConservationOrBreak (issuance := issuance)
@@ -320,7 +320,7 @@ theorem extractFail_mem_kappaEvent
         (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
         ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
           = representationEval (scalarBasis gen s) p.2.key)
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) {i k : ℕ} (hik : i ≤ k)
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) {i k : ℕ} (hik : i ≤ k)
     {O : Q → ZMod r} {s : Fin m → ZMod r}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O s) kv issuance
       maxActions (((LA (scalarBasis gen s)).run O).map Prod.fst))

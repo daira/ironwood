@@ -196,7 +196,7 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_dl : ℝ≥0∞}
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_dl : ℝ≥0∞}
     (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
       conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
@@ -236,7 +236,7 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_dl : ℝ≥0∞}
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_dl : ℝ≥0∞}
     (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
       conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_dl) :
     (challengeExperiment m p).toOuterMeasure

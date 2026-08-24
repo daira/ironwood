@@ -67,6 +67,26 @@ structure BindingSigShape (P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC M
   verify_iff : ∀ (bvk : G) (m : MSG) (σ : SIG),
     P.bindingVerify bvk m σ ↔ sch.Verify bvk m (toSig σ)
 
+/-- **The valid imbalance fits the field.** A valid transaction's integer imbalance has
+magnitude at most the `vSum` shape `maxActions · (valueBound − 1) + vBalanceBound` —the
+statement's strict value ranges bound each action's net value, validity bounds the action
+count and the declared balance— which the no-overflow hypothesis places below `r`. The
+shared discharge of both conservation arms' `natAbs < r` obligations. -/
+theorem ValidLedger.imbalance_natAbs_lt
+    {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
+    (hval : ValidLedger P kv issuance maxActions ledger)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
+    {tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth} (htx : tx ∈ ledger) :
+    (txNetValue tx - tx.vBalance).natAbs < r :=
+  calc (txNetValue tx - tx.vBalance).natAbs
+      ≤ (txNetValue tx).natAbs + tx.vBalance.natAbs := Int.natAbs_sub_le _ _
+    _ ≤ maxActions * (P.valueBound - 1) + P.vBalanceBound :=
+        Nat.add_le_add
+          (le_trans (txNetValue_natAbs_le (P := P) (kv := kv) (hval.satisfied tx htx))
+            (Nat.mul_le_mul_right _ (hval.action_bound tx htx)))
+          (hval.vbalance_bound tx htx)
+    _ < r := hr
+
 /-- **The transaction-balance premiss discharge, with a fallible extractor.** Decide
 the per-transaction net-value equation. On failure, run the extractor `E` on the
 transaction's verifying binding signature. If `E` pins `bvk = [bsk] Rbase`, the witnessed
@@ -79,7 +99,7 @@ def ValueShape.premissOrBreakFallible [DecidableEq G]
     (S : ValueShape P) (B : BindingSigShape P S)
     (hval : ValidLedger P kv issuance maxActions ledger)
     -- + 1 is for the valueBalance
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ledger) :
     (txNetValue tx = tx.vBalance)
@@ -94,16 +114,7 @@ def ValueShape.premissOrBreakFallible [DecidableEq G]
         exact sub_ne_zero.mpr heq)
       (by
         simp only [List.map_nil, List.sum_nil, sub_zero, txBundle_fst_sum]
-        have h1 := txNetValue_natAbs_le (P := P) (kv := kv) (hval.satisfied tx htx)
-        have h2 := hval.vbalance_bound tx htx
-        have hb : tx.actions.length * P.valueBound ≤ maxActions * P.valueBound :=
-          Nat.mul_le_mul_right _ (hval.action_bound tx htx)
-        calc (txNetValue tx - tx.vBalance).natAbs
-            ≤ (txNetValue tx).natAbs + tx.vBalance.natAbs := Int.natAbs_sub_le _ _
-          _ < maxActions * P.valueBound + P.valueBound :=
-              Nat.add_lt_add_of_le_of_lt (le_trans h1 hb) h2
-          _ = (maxActions + 1) * P.valueBound := by ring
-          _ ≤ r := hr)
+        exact hval.imbalance_natAbs_lt hr htx)
       ((bvk_eq S (hval.satisfied tx htx)).symm.trans hex)))
   else
     .inr (.inr ⟨tx.bvk P, tx.sighash, B.toSig tx.bindingSig,
@@ -118,7 +129,7 @@ variable (kv) in
 /-- `premissOrBreakFallible` as the per-sample premiss the probabilistic capstones
 consume, at the break type `NontrivialRelation ⊕' ExtractionFailure`. -/
 def txBalancePremissFallible (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (ω : ValidAnnotated P kv issuance maxActions)
     (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ω.1) :
@@ -132,7 +143,7 @@ variable (kv) in
 nontrivial `(Vbase, Rbase)` relation. Bounded onward by DL hardness (via the AGM layer's
 relation-to-DL handoff); its named bound is the `εdlr` slot. -/
 def valueRelationEvent (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ) :
     Set (ValidAnnotated P kv issuance maxActions) :=
   {ω | ∃ b, balanceConservationOrBreak (issuance := issuance)
@@ -144,7 +155,7 @@ verifying binding signature whose key the extractor misses
 (`RedDSA.ExtractionFailure`, carried as data in the branch). Its named bound is the
 knowledge error `κ`. -/
 def extractFailEvent (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ) :
     Set (ValidAnnotated P kv issuance maxActions) :=
   {ω | ∃ e, balanceConservationOrBreak (issuance := issuance)
@@ -154,7 +165,7 @@ def extractFailEvent (S : ValueShape P) (B : BindingSigShape P S)
 the arm's named `κ` is a bound on the adversary's probability of beating the
 extractor, and nothing else. -/
 theorem extractFailEvent_failure (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ)
     {ω : ValidAnnotated P kv issuance maxActions}
     (hω : ω ∈ extractFailEvent kv S B hr E i) :
@@ -165,7 +176,7 @@ theorem extractFailEvent_failure (S : ValueShape P) (B : BindingSigShape P S)
 /-- The transaction-balance premiss arm splits into the relation arm and the
 extraction-failure arm. -/
 theorem txBalanceBreakEvent_fallible_subset (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ) :
     txBalanceBreakEvent (txBalancePremissFallible (issuance := issuance) kv S B hr E) i
       ⊆ valueRelationEvent kv S B hr E i ∪ extractFailEvent kv S B hr E i := by
@@ -183,7 +194,7 @@ knowledge error, which is the form a forking discharge of `κ` composes with. -/
 theorem balanceConservation_measure_le_kerr
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEvent kv S B hr E i) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEvent kv S B hr E i) ≤ κ) :
@@ -200,7 +211,7 @@ issuance. -/
 theorem shieldedBalanceCap_measure_le_kerr
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEvent kv S B hr E i) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEvent kv S B hr E i) ≤ κ) :
@@ -217,7 +228,7 @@ variable (kv) in
 /-- The all-prefixes relation arm: at some prefix `i < k`, the conservation reduction
 computes a nontrivial `(Vbase, Rbase)` relation. -/
 def valueRelationEventBefore (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) :
     Set (ValidAnnotated P kv issuance maxActions) :=
   {ω | ∃ i, i < k ∧ ω ∈ valueRelationEvent kv S B hr E i}
@@ -226,7 +237,7 @@ variable (kv) in
 /-- The all-prefixes extraction-failure arm: at some prefix `i < k`, the reduction
 exhibits a verifying binding signature whose key the extractor misses. -/
 def extractFailEventBefore (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) :
     Set (ValidAnnotated P kv issuance maxActions) :=
   {ω | ∃ i, i < k ∧ ω ∈ extractFailEvent kv S B hr E i}
@@ -234,7 +245,7 @@ def extractFailEventBefore (S : ValueShape P) (B : BindingSigShape P S)
 /-- A conservation violation at some prefix lands in the all-prefixes relation arm or
 the all-prefixes extraction-failure arm, at that same prefix. -/
 theorem balanceConservationViolationBefore_subset_fallible (S : ValueShape P)
-    (B : BindingSigShape P S) (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (B : BindingSigShape P S) (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) :
     balanceConservationViolationBefore (P := P) (kv := kv) (issuance := issuance)
         (maxActions := maxActions) k
@@ -249,7 +260,7 @@ theorem balanceConservationViolationBefore_subset_fallible (S : ValueShape P)
 
 /-- A cap violation at some prefix lands in the same two all-prefixes arms. -/
 theorem shieldedBalanceCapViolationBefore_subset_fallible (S : ValueShape P)
-    (B : BindingSigShape P S) (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (B : BindingSigShape P S) (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) :
     shieldedBalanceCapViolationBefore (P := P) (kv := kv) (issuance := issuance)
         (maxActions := maxActions) k
@@ -269,7 +280,7 @@ all-prefixes relation arm or the one all-prefixes extraction-failure arm. -/
 theorem balanceConservationBefore_measure_le_kerr
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEventBefore kv S B hr E k) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEventBefore kv S B hr E k) ≤ κ) :
@@ -286,7 +297,7 @@ minted issuance at some prefix. -/
 theorem shieldedBalanceCapBefore_measure_le_kerr
     (A : PMF (ValidAnnotated P kv issuance maxActions))
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEventBefore kv S B hr E k) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEventBefore kv S B hr E k) ≤ κ) :

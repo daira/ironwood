@@ -101,7 +101,7 @@ theorem balanceIntegrityBefore_measure_le_experiment {ι : Type u} (p : PMF ι)
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε_nonneg ε_dl : ℝ≥0∞}
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_nonneg ε_dl : ℝ≥0∞}
     (hnn : (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
           (fun P => balanceSubsetBreakEventUpTo (P := P) (kv := kv) (issuance := issuance)

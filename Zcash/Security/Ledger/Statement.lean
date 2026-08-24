@@ -84,6 +84,11 @@ and lemmas. `emb` is the embedding of base-field values used as scalars
 spend-authorization scheme. -/
 structure Primitives (F G IVK NK RHO PSI MHASH MENC MSG SIG : Type*) where
   valueBound : ℕ
+  /-- The magnitude bound on a transaction's declared value balance
+  (`|vBalance| ≤ vBalanceBound`; the signed two's-complement endpoint `2^63` at the
+  intended instantiation). Separate from `valueBound` so the no-overflow hypothesis
+  takes the `vSum` shape `maxActions · (valueBound − 1) + vBalanceBound`. -/
+  vBalanceBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
   extract : G → MHASH

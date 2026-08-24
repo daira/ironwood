@@ -152,8 +152,9 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf
       (primitives spendAuthVerify bindingVerify) toSig (LA j))
-    (hr : (maxActions + 1) * (primitives spendAuthVerify bindingVerify).valueBound
-      ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD) (k : ℕ)
+    (hr : maxActions * ((primitives spendAuthVerify bindingVerify).valueBound - 1)
+        + (primitives spendAuthVerify bindingVerify).vBalanceBound
+      < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD) (k : ℕ)
     {ε_sinsemilladlr ε_dl : ℝ≥0∞}
     (hsin : (challengeExperiment m p).toOuterMeasure
       (sampledOrchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx queryOf

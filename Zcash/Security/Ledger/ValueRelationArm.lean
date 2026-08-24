@@ -66,7 +66,7 @@ fold hypothesis. -/
 def allConservedOrBreak_valueRelation
     (hval : ValidLedger P kv issuance maxActions ledger)
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (L : List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth))
     (hL : ∀ tx ∈ L, tx ∈ ledger)
@@ -104,7 +104,7 @@ the reduction hypothesis. -/
 def balanceConservationOrBreak_valueRelation
     (hval : ValidLedger P kv issuance maxActions ledger)
     (S : ValueShape P) (B : BindingSigShape P S)
-    (hr : (maxActions + 1) * P.valueBound ≤ r)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ)
     {w : BindingSignature.NontrivialRelation (F := ZMod r) S.Vbase S.Rbase}
     (h : balanceConservationOrBreak (issuance := issuance)
@@ -167,7 +167,7 @@ theorem valueRelation_finder_isSome [DecidableEq (ZMod r)]
     {LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) {i k : ℕ} (hik : i ≤ k)
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) {i k : ℕ} (hik : i ≤ k)
     {O : Q → ZMod r} {s : Fin m → ZMod r}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O s) kv issuance
       maxActions (((LA (scalarBasis gen s)).run O).map Prod.fst))
@@ -225,22 +225,7 @@ theorem valueRelation_finder_isSome [DecidableEq (ZMod r)]
   have hc2 : (((txBundle tx).map Prod.fst).sum
       - (([] : List (ℤ × ZMod r)).map Prod.fst).sum - tx.vBalance).natAbs < r := by
     simp only [List.map_nil, List.sum_nil, sub_zero, txBundle_fst_sum]
-    have h1 := txNetValue_natAbs_le (P := kappaPrimitivesAt m gen v_idx r_idx queryOf P₀
-      toSig O s) (kv := kv) (hval.satisfied tx htx)
-    have h2 := hval.vbalance_bound tx htx
-    have hb : tx.actions.length * (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀
-          toSig O s).valueBound
-        ≤ maxActions * (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O s).valueBound :=
-      Nat.mul_le_mul_right _ (hval.action_bound tx htx)
-    calc (txNetValue tx - tx.vBalance).natAbs
-        ≤ (txNetValue tx).natAbs + tx.vBalance.natAbs := Int.natAbs_sub_le _ _
-      _ < maxActions * (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O
-            s).valueBound
-          + (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O s).valueBound :=
-          Nat.add_lt_add_of_le_of_lt (le_trans h1 hb) h2
-      _ = (maxActions + 1) * (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig O
-            s).valueBound := by ring
-      _ ≤ r := hr
+    exact hval.imbalance_natAbs_lt hr htx
   have hc3 : bindingVK (scalarBasis gen s v_idx) (scalarBasis gen s r_idx)
       (castBundle (txBundle tx)) (castBundle []) (tx.vBalance : ZMod r)
       = (match (LA (scalarBasis gen s)).findLabel O
