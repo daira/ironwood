@@ -19,7 +19,7 @@ Balance-subset break is the same data as at the deployed primitives, and the Orc
 (`relationOfKeyBindingBreak`, `relationOfNoteCommitBreak`, `relationOfMerkleCollision`) apply
 unchanged. The reductions are deterministic and need no value/binding-side hypotheses, so this
 discharge is independent of the conservation side, which the abstract experiment still handles
-through its coin-consuming finders.
+through its combined coin-consuming finder.
 -/
 
 -- The Orchard reducers carry Sinsemilla chunk exponents beyond the default threshold, as in
@@ -138,13 +138,14 @@ theorem sampledBalanceSubsetArms_subset_orchardRelation (k : ℕ) :
 
 /-- **The Orchard integrity experiment.** Over the adversary's coins, the challenge table, and the
 basis logs, the probability that the output Orchard ledger is valid and violates balance integrity
-at some prefix `i < k` is at most
-`ε_sinsemilladlr + ((ε_rel + 1/|F|) + ((qH+2)/|F| + ε_κ))`. This is the abstract integrity
-experiment with the non-negativity side discharged at the Orchard instantiation: the three
-Balance-subset arms collapse onto the single advantage `ε_sinsemilladlr` of computing a nontrivial
-Sinsemilla discrete-log relation (`sampledBalanceSubsetArms_subset_orchardRelation`), replacing the
-abstract `ε_nonneg` with one term and no factor of three. The conservation side is unchanged — the
-two coin-consuming finders of the conservation experiment, whose Orchard discharge is separate. -/
+at some prefix `i < k` is at most `ε_sinsemilladlr + (ε_dl + (qH+2)/#F)`. This is the abstract
+integrity experiment with the non-negativity side discharged at the Orchard instantiation: the
+three Balance-subset arms collapse onto the single advantage `ε_sinsemilladlr` of computing a
+nontrivial Sinsemilla discrete-log relation (`sampledBalanceSubsetArms_subset_orchardRelation`),
+replacing the abstract `ε_nonneg` with one term and no factor of three. The conservation side is
+the abstract experiment's combined coin-consuming finder, so the whole bound carries one
+discrete-log advantage per side: `ε_sinsemilladlr` among the fixed Sinsemilla bases, `ε_dl` at the
+sampled value-commitment bases. -/
 theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
@@ -152,28 +153,23 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
       (primitives verify bverify) toSig (LA j))
     (hr : (maxActions + 1) * (primitives verify bverify).valueBound
       ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD) (k : ℕ)
-    {ε_sinsemilladlr ε_rel ε_κ : ℝ≥0∞}
+    {ε_sinsemilladlr ε_dl : ℝ≥0∞}
     (hsin : (challengeExperiment m p).toOuterMeasure
       (sampledOrchardRelationEventUpTo verify bverify issuance maxActions m gen v_idx r_idx queryOf
         toSig LA k) ≤ ε_sinsemilladlr)
-    (hdlRel : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
-      (fun b O => valueRelFinder m v_idx r_idx queryOf (primitives verify bverify) toSig hne_idx k
-        (LA j) O b) ε_rel)
-    (hdlκ : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
-      (fun b O => relFinder m r_idx
-        (kappaComposite m v_idx r_idx queryOf (primitives verify bverify) toSig k (LA j)) O b) ε_κ) :
+    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
+      conservationRelFinder m v_idx r_idx queryOf (primitives verify bverify) toSig hne_idx k
+        (LA j) O b) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf (primitives verify bverify) toSig LA
           (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding) (issuance := issuance)
             (maxActions := maxActions) k))
-      ≤ ε_sinsemilladlr
-        + ((ε_rel + 1 / Fintype.card Fq)
-          + (((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq + ε_κ)) :=
+      ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
   balanceIntegrityBefore_measure_le_experiment m gen v_idx r_idx queryOf (primitives verify bverify)
     toSig p hne_idx hQ halg hr k
     (le_trans (MeasureTheory.measure_mono
       (sampledBalanceSubsetArms_subset_orchardRelation verify bverify issuance maxActions m gen
         v_idx r_idx queryOf toSig LA k)) hsin)
-    hdlRel hdlκ
+    hdl
 
 end Zcash.Security.Ledger.Bridge

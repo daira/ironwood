@@ -784,14 +784,18 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_valueRelatio
 /-! ## The conservation experiment
 
 Both conservation arms in one sample space: the adversary's coins, the challenge table,
-and the basis logs. A valid output ledger violates conservation (or the cap) at some
-prefix only with a probability bounded by the relation arm's discrete-log advantage and
-the extraction-failure arm's knowledge error, above an additive loss linear in the query
-budget with a denominator of #F (`balanceConservationBefore_measure_le_experiment`,
-`shieldedBalanceCapBefore_measure_le_experiment`). The discrete-log hypotheses are single
-bounds for coin-consuming finders, per adversary coin — no supremum over challenge tables
-remains in the experiment. -/
+and the basis logs. One combined machine (`conservationRelFinder`) replays the adversary
+and returns whichever arm's relation the sample yields, so a valid output ledger violates
+conservation (or the cap) at some prefix only with a single discrete-log advantage, above
+an additive loss linear in the query budget with a denominator of #F
+(`balanceConservationBefore_measure_le_experiment`,
+`shieldedBalanceCapBefore_measure_le_experiment`). The discrete-log hypothesis is a single
+bound for the combined coin-consuming finder, per adversary coin — no supremum over
+challenge tables remains in the experiment. -/
 
+assert_computable Zcash.Security.Ledger.Model.conservationRelFinder +choice
+assert_axioms Zcash.Security.Ledger.Model.conservationRelFinder_isSome
+assert_axioms Zcash.Security.Ledger.Model.conservationRelOrBadChallenge_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le_of_coins
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experiment
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experiment
@@ -802,8 +806,8 @@ The non-negativity and conservation arms in one sample space: over the same expe
 valid output ledger violates balance integrity at some prefix — the shielded pool going
 negative, or the pools failing to sum to the minted issuance — except with a probability
 bounded by the non-negativity side plus the conservation side. The non-negativity side is one
-named bound on the combined Balance-subset arm event; the conservation side is the two
-coin-consuming finders. -/
+named bound on the combined Balance-subset arm event; the conservation side is the combined
+coin-consuming finder's discrete-log bound. -/
 
 assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_experiment
 
