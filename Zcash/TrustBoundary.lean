@@ -737,17 +737,17 @@ assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
 
-/-! ## The extraction-failure arm's κ, discharged in the oracle model
+/-! ## The extraction-failure arm's κ in the oracle model
 
-The conservation reduction's extraction-failure arm is bounded in the challenge-oracle
-model. The bound is linear in the query budget with a denominator of #F, above the
-discrete-log advantage, inherited from the knowledge-error bound at an unchanged query
-count. The extractor (`kappaExtractor`) reads the `key` coefficient at the ℛ slot off the
-representation in effect at the signature's query point. The composite machine recovers
-the failing transaction and its announced representation oracle-free (`failTxOfAnn`,
-identified with the reduction's own selection by the localization theorems) and returns
-its signature data. The all-prefixes form costs no factor of `k`, because every prefix's
-failure arm breaks at the ledger's first imbalanced transaction. -/
+The conservation reduction's extraction-failure arm, placed in the challenge-oracle model:
+an extraction-failure sample lands in the knowledge-error event of the composite machine at
+an unchanged query count (`extractFail_mem_kappaEvent`), which the conservation experiment
+consumes through its combined finder. The extractor (`kappaExtractor`) reads the `key`
+coefficient at the ℛ slot off the representation in effect at the signature's query point.
+The composite machine recovers the failing transaction and its announced representation
+oracle-free (`failTxOfAnn`, identified with the reduction's own selection by the
+localization theorems) and returns its signature data. Any prefix's failure arm breaks at
+the ledger's first imbalanced transaction, so the containment costs no factor of `k`. -/
 
 assert_computable Zcash.Security.Ledger.Model.kappaPrimitivesAt +choice
 assert_computable Zcash.Security.Ledger.Model.kappaShapeAt +choice
@@ -762,24 +762,22 @@ assert_axioms Zcash.Security.Ledger.Model.kappaComposite_queryBound
 assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_extractFail +choice
 assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_extractFail +choice
 assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEvent
-assert_axioms Zcash.Security.Ledger.Model.balanceConservation_extractFailArm_measure_le
-assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le
 
-/-! ## The conservation relation arm, discharged in the oracle model
+/-! ## The conservation relation arm in the oracle model
 
-The conservation reduction's relation arm, bounded in the challenge-oracle model:
-`ε_DL + 1/#F` for any labeled ledger adversary, with no query-budget term — the arm's
-witness is oracle-free data. The finder (`valueRelFinder`) rebuilds the reduction's
-relation behind decidable guards and lands it in the generic AGM witness type at the two
-value-commitment slots (`toAlgebraicRelationWitnessAt`); the selection is computed data
-(`ValueRelationSelection`), and the all-prefixes form costs no factor of `k`. -/
+The conservation reduction's relation arm, placed in the challenge-oracle model: on every
+relation-arm sample the finder returns a relation (`valueRelation_finder_isSome`), with no
+bad-challenge accounting — the arm's witness is oracle-free data. The finder
+(`valueRelFinder`) rebuilds the reduction's relation behind decidable guards and lands it
+in the generic AGM witness type at the two value-commitment slots
+(`toAlgebraicRelationWitnessAt`); the selection is computed data
+(`ValueRelationSelection`), and the conservation experiment's combined finder consumes the
+arm at every prefix. -/
 
 assert_computable Zcash.Security.Ledger.Model.valueRelFinder +choice
 assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_valueRelation +choice
 assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_valueRelation +choice
 assert_axioms Zcash.Security.Ledger.Model.valueRelation_finder_isSome
-assert_axioms Zcash.Security.Ledger.Model.balanceConservation_valueRelationArm_measure_le
-assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_valueRelationArm_measure_le
 
 /-! ## The conservation experiment
 
@@ -796,7 +794,6 @@ challenge tables remains in the experiment. -/
 assert_computable Zcash.Security.Ledger.Model.conservationRelFinder +choice
 assert_axioms Zcash.Security.Ledger.Model.conservationRelFinder_isSome
 assert_axioms Zcash.Security.Ledger.Model.conservationRelOrBadChallenge_measure_le
-assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_extractFailArm_measure_le_of_coins
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experiment
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experiment
 

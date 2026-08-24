@@ -184,48 +184,6 @@ theorem conservationRelOrBadChallenge_measure_le (hne_idx : v_idx ≠ r_idx) (k 
   push_cast
   ring_nf
 
-/-- **The all-prefixes extraction-failure arm, with a single randomized reduction.** As
-`balanceConservationBefore_extractFailArm_measure_le`, with the per-table DL hypothesis
-replaced by one bound for the coin-consuming relation finder, per adversary coin. -/
-theorem balanceConservationBefore_extractFailArm_measure_le_of_coins {ι : Type u} (p : PMF ι)
-    {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
-      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε : ℝ≥0∞}
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen
-      (fun b O => relFinder m r_idx
-        (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j)) O b) ε) :
-    ((p.bind fun j =>
-        (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j))).toOuterMeasure
-        (setOf fun (x : ι × ((Q → ZMod r) × (Fin m → ZMod r))) =>
-          ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-              kv issuance maxActions
-              (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-            ∃ i, i < k ∧ ∃ e, balanceConservationOrBreak (issuance := issuance)
-                (fun tx htx => (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                  |>.premissOrBreakFallible
-                    (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                    hval hr
-                    (kappaExtractor m gen r_idx queryOf P₀ k (LA x.1) x.2.1 x.2.2)
-                    tx htx) i
-              = .inr (.inr e))
-      ≤ ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε := by
-  refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
-  rw [PMF.toOuterMeasure_map_apply]
-  refine le_trans (le_trans (MeasureTheory.measure_mono ?hsub)
-    (kappaEvent_measure_le_of_coins m gen r_idx
-      (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
-      (fun s => kappaComposite_queryBound m v_idx r_idx queryOf P₀ toSig (hQ j _))
-      (hdl j))) (le_of_eq ?heq)
-  case heq =>
-    rw [add_comm ε, ← add_assoc, ENNReal.div_add_div_same]
-    norm_cast
-  rintro ⟨O, s⟩ ⟨hval, i, hik, e, heq⟩
-  dsimp only at hval heq
-  exact extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-    ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval heq
-
 /-- **The conservation experiment.** Over the adversary's coins, the challenge table, and the
 basis logs, the probability that the output ledger is valid and violates balance conservation
 at some prefix `i < k` — the capstone's `balanceConservationViolationBefore`, at the sampled

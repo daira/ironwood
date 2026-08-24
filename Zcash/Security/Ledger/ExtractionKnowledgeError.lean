@@ -7,14 +7,16 @@ import Zcash.Security.RedDSA.KnowledgeError
 import Zcash.Security.KeyBinding.Probability
 
 /-!
-# The extraction-failure arm's κ, discharged in the oracle model
+# The extraction-failure arm's κ in the oracle model
 
 The capstone layer bounds the conservation reduction's extraction-failure arm by the named
-knowledge error κ. This module bounds that arm in the challenge-oracle model, at the
-reduction's own events: for any `qH`-query-bounded labeled algebraic ledger adversary, the
-probability that the output ledger is valid *and* the reduction lands in the arm is at most
-`(qH+1)/#F + (ε_DL + 1/#F) = (qH+2)/#F + ε_DL` (from `kappaEvent_measure_le`). As with
-the key-binding arm, the bound is joint with validity; the capstones' named κ ranges over an
+knowledge error κ. This module places that arm in the challenge-oracle model, at the
+reduction's own events: for any `qH`-query-bounded labeled algebraic ledger adversary, an
+extraction-failure sample lands in the knowledge-error event of the composite machine at an
+unchanged query count (`extractFail_mem_kappaEvent`). The knowledge-error layer splits that
+event into its bad-challenge fibre, counted at `(qH+1)/#F`, and its relation fibre, which the
+conservation experiment's combined finder covers under one discrete-log bound. As with the
+key-binding arm, everything is joint with validity; the capstones' named κ ranges over an
 abstract `PMF (ValidAnnotated …)`, and the experiment-to-`PMF` connection is the
 joint-experiment composition (#107).
 
@@ -402,128 +404,6 @@ theorem extractFail_mem_kappaEvent
       rw [hEval, hvk', hRB.2, hkey]
       rfl
     · rfl
-
-/-- **The extraction-failure arm's κ, discharged.** For any `qH`-query-bounded labeled
-algebraic ledger adversary in the challenge-oracle model, the probability that its output
-ledger is valid and the conservation reduction at prefix `i`, with the effective-representation
-extractor, lands in the extraction-failure arm is at most
-`(qH+1)/#F + (ε + 1/#F) = (qH+2)/#F + ε`. `halgLabel` and `halgOut` model the hypothesis
-that the adversary is algebraic: query-time labels and announced representations evaluate to
-the transactions' actual elements at their query points. The bound takes textbook-DL
-advantage at most `ε` for the relation finder replaying the composite. The failing
-transaction is recovered oracle-free (`balanceConservationOrBreak_extractFail`), so the
-composite is covered by the knowledge-error bound at an unchanged query count. Validity of
-the output ledger is a conjunct of the measured event, not something the composite decides:
-its meaning depends on the sampled primitives, which an oracle machine's result type cannot
-mention (as in `Ledger/KeyBindingArm.lean`). -/
-theorem balanceConservation_extractFailArm_measure_le {ι : Type u} (p : PMF ι)
-    {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
-      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (i : ℕ) {ε : ℝ≥0∞}
-    (hdl : ∀ (j : ι) (O : Q → ZMod r),
-      TextbookDLAdvantageLE gen
-        (relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig i (LA j)) O) ε) :
-    ((p.bind fun j =>
-        (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j))).toOuterMeasure
-        (setOf fun (x : ι × ((Q → ZMod r) × (Fin m → ZMod r))) =>
-          ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-              kv issuance maxActions
-              (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-            ∃ e, balanceConservationOrBreak (issuance := issuance)
-                (fun tx htx => (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                  |>.premissOrBreakFallible
-                    (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                    hval hr
-                    (kappaExtractor m gen r_idx queryOf P₀ i (LA x.1) x.2.1 x.2.2)
-                    tx htx) i
-              = .inr (.inr e))
-      ≤ ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε := by
-  refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
-  rw [PMF.toOuterMeasure_map_apply]
-  refine le_trans (le_trans (MeasureTheory.measure_mono ?hsub)
-    (kappaEvent_measure_le m gen r_idx
-      (kappaComposite m v_idx r_idx queryOf P₀ toSig i (LA j))
-      (fun s => kappaComposite_queryBound m v_idx r_idx queryOf P₀ toSig (hQ j _))
-      (hdl j))) (le_of_eq ?heq)
-  case heq =>
-    rw [add_comm ε, ← add_assoc, ENNReal.div_add_div_same]
-    norm_cast
-  rintro ⟨O, s⟩ ⟨hval, e, heq⟩
-  dsimp only at hval heq
-  exact extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-    (halgLabel j) (halgOut j) hr le_rfl hval heq
-
-/-- **The all-prefixes extraction-failure arm's κ, discharged with no factor of `k`.** As
-`balanceConservation_extractFailArm_measure_le`, over the event that the reduction lands in
-the extraction-failure arm at *some* prefix `i < k`. Every such prefix breaks at the
-ledger's first imbalanced transaction — the same transaction for every prefix containing
-it — so the one prefix-`k` composite covers them all and the bound is unchanged. -/
-theorem balanceConservationBefore_extractFailArm_measure_le {ι : Type u} (p : PMF ι)
-    {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
-      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halgLabel : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r) (q : Q)
-      (ℓ : QueryRep (ZMod r) m),
-      (LA j (scalarBasis gen s)).findLabel O q = some ℓ →
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        queryOf (toSig p.1.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1)
-            p.1.sighash = q →
-          (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) ℓ.commitment
-          ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-            = representationEval (scalarBasis gen s) ℓ.key)
-    (halgOut : ∀ (j : ι) (O : Q → ZMod r) (s : Fin m → ZMod r),
-      ∀ p ∈ (LA j (scalarBasis gen s)).run O,
-        (toSig p.1.bindingSig).R = representationEval (scalarBasis gen s) p.2.commitment
-        ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen s) p.1
-          = representationEval (scalarBasis gen s) p.2.key)
-    (hr : (maxActions + 1) * P₀.valueBound ≤ r) (k : ℕ) {ε : ℝ≥0∞}
-    (hdl : ∀ (j : ι) (O : Q → ZMod r),
-      TextbookDLAdvantageLE gen
-        (relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j)) O) ε) :
-    ((p.bind fun j =>
-        (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j))).toOuterMeasure
-        (setOf fun (x : ι × ((Q → ZMod r) × (Fin m → ZMod r))) =>
-          ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-              kv issuance maxActions
-              (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-            ∃ i, i < k ∧ ∃ e, balanceConservationOrBreak (issuance := issuance)
-                (fun tx htx => (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                  |>.premissOrBreakFallible
-                    (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig x.2.1 x.2.2)
-                    hval hr
-                    (kappaExtractor m gen r_idx queryOf P₀ k (LA x.1) x.2.1 x.2.2)
-                    tx htx) i
-              = .inr (.inr e))
-      ≤ ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) + ε := by
-  refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
-  rw [PMF.toOuterMeasure_map_apply]
-  refine le_trans (le_trans (MeasureTheory.measure_mono ?hsub)
-    (kappaEvent_measure_le m gen r_idx
-      (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
-      (fun s => kappaComposite_queryBound m v_idx r_idx queryOf P₀ toSig (hQ j _))
-      (hdl j))) (le_of_eq ?heq)
-  case heq =>
-    rw [add_comm ε, ← add_assoc, ENNReal.div_add_div_same]
-    norm_cast
-  rintro ⟨O, s⟩ ⟨hval, i, hik, e, heq⟩
-  dsimp only at hval heq
-  exact extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-    (halgLabel j) (halgOut j) hr (le_of_lt hik) hval heq
 
 end ArmBound
 
