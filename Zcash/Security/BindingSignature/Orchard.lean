@@ -46,6 +46,17 @@ theorem orchard_natAbs_lt {r : ℕ} (vs : List ℤ) (vBalance : ℤ)
 theorem orchardVSumBound_lt_pallasScalarOrder : orchardVSumBound < (pallasScalarOrder : ℤ) := by
   norm_num [orchardVSumBound, vSumBound, pallasScalarOrder]
 
+/-- The ledger model's no-overflow bound at the Orchard limits: under the dedicated consensus
+action caps —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16` (spec §7.1.2,
+<https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the bound applies to either
+Orchard-protocol pool— the ledger layer's coarser per-transaction bound `(n + 1) · 2^64`,
+with `valueBound = 2^64` covering the per-action net values and the value balance, fits the
+Pallas scalar order. -/
+theorem orchard_ledger_no_overflow {n : ℕ} (hn : n < 2^16) :
+    (n + 1) * 2^64 ≤ pallasScalarOrder :=
+  calc (n + 1) * 2^64 ≤ 2^16 * 2^64 := Nat.mul_le_mul_right _ hn
+    _ ≤ pallasScalarOrder := by norm_num [pallasScalarOrder]
+
 /-- **Orchard integer balance reduction (§4.14), as a computed relation.** A verifying Orchard
 bundle of `≤ 2^16 − 1` actions — each committing a net value `v ∈ [−2^64+1, 2^64−1]`, with
 signed-64-bit `vBalance` — that does not balance over ℤ (`∑ v_net − vBalance ≠ 0`) yields an

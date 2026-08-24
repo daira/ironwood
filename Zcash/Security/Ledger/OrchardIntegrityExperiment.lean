@@ -1,5 +1,6 @@
 import Zcash.Security.Ledger.IntegrityExperiment
 import Zcash.Security.Ledger.OrchardCapstone
+import Zcash.Security.BindingSignature.Orchard
 
 /-!
 # The Orchard integrity experiment: the non-negativity arms collapse to one Sinsemilla DLR
@@ -223,12 +224,11 @@ are left unspecified.
 Every remaining hypothesis is a resource parameter, a documented idealization, or justified
 by consensus rules. The query budget `qH` is the adversary's oracle resource, priced in the
 bound. Algebraicity at the binding points is the model restriction documented at
-`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^190` gives no-overflow against
-the Pallas scalar order, and consensus keeps it slack: a block is at most 2000000 bytes
-(§7.6, <https://zips.z.cash/protocol/protocol.pdf#blockheader>), and each Action description
-contributes 820 bytes to a transaction (§7.1,
-<https://zips.z.cash/protocol/protocol.pdf#txnencoding>), capping a transaction's Actions in
-the low thousands. The two advantages are named bounds for exhibited machines —the
+`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^16` is the dedicated consensus
+rule on the action count —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16`
+(§7.1.2, <https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the result applies to
+either Orchard-protocol pool— and `orchard_ledger_no_overflow` turns it into no-overflow
+against the Pallas scalar order. The two advantages are named bounds for exhibited machines —the
 Sinsemilla discrete-log relation for non-negativity, the combined finder's textbook discrete
 log for conservation— not hardness premisses. The idealizations:
 
@@ -255,7 +255,7 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment_deployed
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
       (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j))
-    (hmax : maxActions < 2 ^ 190) (k : ℕ) {ε_sinsemilladlr ε_dl : ℝ≥0∞}
+    (hmax : maxActions < 2^16) (k : ℕ) {ε_sinsemilladlr ε_dl : ℝ≥0∞}
     (hsin : (challengeExperiment 2 p).toOuterMeasure
       (sampledOrchardRelationEventUpTo spendAuthVerify (redPallasBindingVerify H_bind) issuance
         maxActions 2 pallasGen 0 1 orchardQueryOf id LA k) ≤ ε_sinsemilladlr)
@@ -271,12 +271,6 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment_deployed
       ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
   orchardBalanceIntegrityBefore_measure_le_experiment spendAuthVerify (redPallasBindingVerify H_bind)
     issuance maxActions 2 pallasGen 0 1 orchardQueryOf id LA p (by decide) hQ halg
-    (by
-      show (maxActions + 1) * 2 ^ 64 ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD
-      calc (maxActions + 1) * 2 ^ 64
-          ≤ 2 ^ 190 * 2 ^ 64 := Nat.mul_le_mul_right _ hmax
-        _ ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := by
-            norm_num [CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD])
-    k hsin hdl
+    (orchard_ledger_no_overflow hmax) k hsin hdl
 
 end Zcash.Security.Ledger.Bridge
