@@ -161,13 +161,13 @@ private theorem commitIvkHash_of_action_hash {ak nk : Fp} {bp : Point Fp}
 
 /-- The circuit's randomized-key public coordinates are the affine view of the
 concrete ledger randomization. -/
-theorem public_rk_eq_randomizePublic (verify bverify : PallasGroup → MSG → SIG → Prop)
+theorem public_rk_eq_randomizePublic (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hak : wit.akP.OnCurve)
     (h : ({ x := wit.rkX, y := wit.rkY } : Point Fp) =
       wit.alpha.2 • orchardBases.spendAuthG + wit.akP) :
     PallasGroup.toPoint
-      ((Pool.primitives verify bverify).randomizePublic wit.alpha.2
+      ((Pool.primitives spendAuthVerify bindingVerify).randomizePublic wit.alpha.2
         (PallasGroup.ofPoint wit.akP (.inl hak))) =
       ({ x := wit.rkX, y := wit.rkY } : Point Fp) := by
   change PallasGroup.toPoint
@@ -180,7 +180,7 @@ theorem public_rk_eq_randomizePublic (verify bverify : PallasGroup → MSG → S
 /-- The circuit's signed-magnitude value-commitment equation has the same
 affine public coordinates as the ledger's integer-valued commitment.  The
 64-bit bounds are precisely what make the field subtraction no-wrap. -/
-theorem public_cv_net_eq_valueCommit (verify bverify : PallasGroup → MSG → SIG → Prop)
+theorem public_cv_net_eq_valueCommit (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hvOld : wit.vOld.val < 2 ^ 64) (hvNew : wit.vNew.val < 2 ^ 64)
     (hmag : wit.magnitude.val < 2 ^ 64)
@@ -193,7 +193,7 @@ theorem public_cv_net_eq_valueCommit (verify bverify : PallasGroup → MSG → S
         -(wit.magnitude.val : Fq) • orchardBases.valueCommitV +
           wit.rcv.2 • orchardBases.valueCommitR)) :
     PallasGroup.toPoint
-      ((Pool.primitives verify bverify).valueCommit
+      ((Pool.primitives spendAuthVerify bindingVerify).valueCommit
         ((wit.vOld.val : ℤ) - (wit.vNew.val : ℤ)) wit.rcv.2) =
       ({ x := wit.cvX, y := wit.cvY } : Point Fp) := by
   change PallasGroup.toPoint
@@ -602,13 +602,13 @@ def NoteCommitNewSuccess (wit : ActionData) : Prop :=
 into the concrete ledger commitment.  Unlike the circuit public input, the
 ledger keeps the full commitment point; this lemma supplies that point together
 with the coordinate equation used for `cmx_new_eq`. -/
-theorem noteCommitNewSuccess_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+theorem noteCommitNewSuccess_to_ledger (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     {wit : ActionData}
     (hgd : wit.gdNew.OnCurve) (hpkd : wit.pkdNew.OnCurve)
     (h : NoteCommitNewSuccess wit) :
     ∃ (cmNewP : Point Fp) (hcmNewP : cmNewP.Valid),
       cmNewP.x = wit.cmx ∧
-      (Pool.primitives verify bverify).noteCommit wit.rcmNew.2
+      (Pool.primitives spendAuthVerify bindingVerify).noteCommit wit.rcmNew.2
         { gd := PallasGroup.ofPoint wit.gdNew (.inl hgd),
           pkd := PallasGroup.ofPoint wit.pkdNew (.inl hpkd),
           v := wit.vNew.val, ρ := wit.nfOld, ψ := wit.psiNew } =
@@ -782,12 +782,12 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
 Sinsemilla escapes or a fully satisfied concrete Orchard ledger action.  The ledger
 alternative additionally reports the spend/output enable gates as a side fact
 (`EnableFlagsSatisfied`), with their exact circuit semantics. -/
-theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → Prop)
+theorem actionSpec_to_ledger (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     (input : PublicInputs Fp) (wit : PrivateWitness)
     (h : ActionSpec input wit) :
     ActionBreak (combine input wit) ∨
       ∃ inst w, PublicProjection (combine input wit) inst ∧
-        ActionSatisfied (Pool.primitives verify bverify) Pool.keyBinding inst w ∧
+        ActionSatisfied (Pool.primitives spendAuthVerify bindingVerify) Pool.keyBinding inst w ∧
         CrossAddressSatisfied (combine input wit) w ∧
         EnableFlagsSatisfied (combine input wit) w := by
   let wit' := combine input wit
@@ -808,7 +808,7 @@ theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → P
     rcases commitIvkSuccess_to_ledger hgdOld hakP hpkdOld hivk with
       ⟨ivk, kw, hkb, hivne, hkwivk, hkwNk, hkwAk, hpkdLedger⟩
     have hkwNk' : kw.nk = wit'.nk := hkwNk
-    rcases noteCommitNewSuccess_to_ledger verify bverify hgdNew hpkdNew hnew with
+    rcases noteCommitNewSuccess_to_ledger spendAuthVerify bindingVerify hgdNew hpkdNew hnew with
       ⟨cmNewP, hcmNewP, hcmNewX, hcommitNew⟩
     have hcmOldEq' : wit'.cmOld =
         bold + wit'.rcmOld.2.val • Ecc.MulFixed.Certs.noteCommitR.point := by
@@ -835,9 +835,9 @@ theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → P
     let inst : ActionInstance PallasGroup Fp Fp :=
       { rt := wit'.anchor,
         nf_old := wit'.nfOld,
-        rk := (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
+        rk := (Pool.primitives spendAuthVerify bindingVerify).randomizePublic wit'.alpha.2
           (PallasGroup.ofPoint wit'.akP (.inl hakP)),
-        cv_net := (Pool.primitives verify bverify).valueCommit
+        cv_net := (Pool.primitives spendAuthVerify bindingVerify).valueCommit
           ((wit'.vOld.val : ℤ) - (wit'.vNew.val : ℤ)) wit'.rcv.2,
         cmx_new := wit'.cmx }
     let w : LedgerWitness :=
@@ -860,9 +860,9 @@ theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → P
         rcm_new := wit'.rcmNew.2 }
     refine Or.inr ⟨inst, w, ?_, ?_, ?_, ?_⟩
     · refine ⟨rfl, rfl, ?_, ?_, rfl⟩
-      · simpa [inst] using public_rk_eq_randomizePublic verify bverify hakP hrk
+      · simpa [inst] using public_rk_eq_randomizePublic spendAuthVerify bindingVerify hakP hrk
       · simpa [inst] using
-          public_cv_net_eq_valueCommit verify bverify hvOld hvNew hmag hvalue hcv
+          public_cv_net_eq_valueCommit spendAuthVerify bindingVerify hvOld hvNew hmag hvalue hcv
     · refine
         { commit_old := ?_,
           merkle_path := ?_,
@@ -899,9 +899,9 @@ theorem actionSpec_to_ledger (verify bverify : PallasGroup → MSG → SIG → P
           have hz := congrArg PallasGroup.toPoint hzero
           simpa [w] using hz
         exact Point.ne_zero_of_onCurve hgdOld hpzero
-      · change (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
+      · change (Pool.primitives spendAuthVerify bindingVerify).randomizePublic wit'.alpha.2
             (PallasGroup.ofPoint wit'.akP (.inl hakP)) =
-          (Pool.primitives verify bverify).randomizePublic wit'.alpha.2
+          (Pool.primitives spendAuthVerify bindingVerify).randomizePublic wit'.alpha.2
             (Pool.keyBinding.akP kw)
         rw [hkwAk]
       · simpa [w] using hcommitNew

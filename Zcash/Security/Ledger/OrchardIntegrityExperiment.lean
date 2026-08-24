@@ -39,7 +39,7 @@ open scoped ENNReal
 universe u
 
 variable {MSG SIG : Type*}
-  (verify bverify : PallasGroup → MSG → SIG → Prop)
+  (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
   (issuance : ℕ → ℕ) (maxActions : ℕ)
 variable {Q : Type u} [Fintype Q] [DecidableEq Q] [Inhabited Q]
 variable (m : ℕ) (gen : PallasGroup) (v_idx r_idx : Fin m)
@@ -54,8 +54,8 @@ primitives record, which the sampling does change, so the two break types are no
 equal; rebuilding field-by-field is what carries the break across.) -/
 def noteCommitBreakOfKappa (O : Q → Fq) (s : Fin m → Fq)
     (nb : NoteCommitBreak (kappaPrimitivesAt m gen v_idx r_idx queryOf
-      (primitives verify bverify) toSig O s)) :
-    NoteCommitBreak (primitives verify bverify) :=
+      (primitives spendAuthVerify bindingVerify) toSig O s)) :
+    NoteCommitBreak (primitives spendAuthVerify bindingVerify) :=
   ⟨nb.rcm₁, nb.n₁, nb.rcm₂, nb.n₂, nb.cm₁, nb.cm₂, nb.ne, nb.open₁, nb.open₂, nb.extract_eq,
     nb.v₁_lt, nb.v₂_lt⟩
 
@@ -67,13 +67,13 @@ reducer and lands in the same `OrchardBalanceRelation`. -/
 def kappaOrchardBalanceSubsetOrRelation (O : Q → Fq) (s : Fin m → Fq)
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
-        (primitives verify bverify) toSig O s) keyBinding issuance maxActions ledger) (i : ℕ) :
+        (primitives spendAuthVerify bindingVerify) toSig O s) keyBinding issuance maxActions ledger) (i : ℕ) :
     (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' OrchardBalanceRelation :=
   match balanceSubsetOrBreak hval i with
   | .inl hsub => .inl hsub
   | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
-  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak verify bverify
-      (noteCommitBreakOfKappa verify bverify m gen v_idx r_idx queryOf toSig O s nb)))
+  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify
+      (noteCommitBreakOfKappa spendAuthVerify bindingVerify m gen v_idx r_idx queryOf toSig O s nb)))
   | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
 
 omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
@@ -82,11 +82,11 @@ total reduction cannot return the containment when handed a break, so it returns
 theorem kappaOrchardBalanceSubsetOrRelation_inr_of_break (O : Q → Fq) (s : Fin m → Fq)
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
-        (primitives verify bverify) toSig O s) keyBinding issuance maxActions ledger) (i : ℕ)
+        (primitives spendAuthVerify bindingVerify) toSig O s) keyBinding issuance maxActions ledger) (i : ℕ)
     {b : BalanceBreak (kappaPrimitivesAt m gen v_idx r_idx queryOf
-        (primitives verify bverify) toSig O s) keyBinding}
+        (primitives spendAuthVerify bindingVerify) toSig O s) keyBinding}
     (hb : balanceSubsetOrBreak hval i = .inr b) :
-    ∃ rel, kappaOrchardBalanceSubsetOrRelation verify bverify issuance maxActions m gen v_idx r_idx
+    ∃ rel, kappaOrchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx
       queryOf toSig O s hval i = .inr rel := by
   unfold kappaOrchardBalanceSubsetOrRelation
   rw [hb]
@@ -95,7 +95,7 @@ theorem kappaOrchardBalanceSubsetOrRelation_inr_of_break (O : Q → Fq) (s : Fin
 variable {ι : Type u}
   (LA : ι → (Fin m → PallasGroup) → LabeledOracleComp Q Fq (fun _ => QueryRep Fq m)
     (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding MSG SIG
-      (primitives verify bverify).depth × QueryRep Fq m)))
+      (primitives spendAuthVerify bindingVerify).depth × QueryRep Fq m)))
 
 /-- **The sampled Orchard Sinsemilla-relation event.** The samples on which the output ledger is
 valid at the sampled primitives and its data computes a nontrivial discrete-log relation among the
@@ -106,9 +106,9 @@ def sampledOrchardRelationEventUpTo (k : ℕ) :
     Set (ι × ((Q → Fq) × (Fin m → Fq))) :=
   setOf fun x =>
     ∃ hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
-        (primitives verify bverify) toSig x.2.1 x.2.2) keyBinding issuance maxActions
+        (primitives spendAuthVerify bindingVerify) toSig x.2.1 x.2.2) keyBinding issuance maxActions
         (((LA x.1 (scalarBasis gen x.2.2)).run x.2.1).map Prod.fst),
-      ∃ i, i < k ∧ ∃ rel, kappaOrchardBalanceSubsetOrRelation verify bverify issuance maxActions
+      ∃ i, i < k ∧ ∃ rel, kappaOrchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions
         m gen v_idx r_idx queryOf toSig x.2.1 x.2.2 hval i = .inr rel
 
 omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
@@ -119,21 +119,21 @@ its deterministic Orchard reducer (`kappaOrchardBalanceSubsetOrRelation`). This 
 the abstract experiment's combined `ε_nonneg` by the single `ε_sinsemilladlr` at the Orchard
 instantiation. -/
 theorem sampledBalanceSubsetArms_subset_orchardRelation (k : ℕ) :
-    sampledLedgerEvent m gen v_idx r_idx queryOf (primitives verify bverify) toSig LA
+    sampledLedgerEvent m gen v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify) toSig LA
         (fun P => balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
             (maxActions := maxActions) k .merkle
           ∪ balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
             (maxActions := maxActions) k .noteCommit
           ∪ balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
             (maxActions := maxActions) k .keyBinding)
-      ⊆ sampledOrchardRelationEventUpTo verify bverify issuance maxActions m gen v_idx r_idx
+      ⊆ sampledOrchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx
           queryOf toSig LA k := by
   rintro x ⟨hval, harm⟩
   refine ⟨hval, ?_⟩
   obtain ⟨i, hik, b, hb⟩ : ∃ i, i < k ∧ ∃ b, balanceSubsetOrBreak hval i = .inr b := by
     rcases harm with (⟨i, hik, b, hb, -⟩ | ⟨i, hik, b, hb, -⟩) | ⟨i, hik, b, hb, -⟩ <;>
       exact ⟨i, hik, b, hb⟩
-  exact ⟨i, hik, kappaOrchardBalanceSubsetOrRelation_inr_of_break verify bverify issuance
+  exact ⟨i, hik, kappaOrchardBalanceSubsetOrRelation_inr_of_break spendAuthVerify bindingVerify issuance
     maxActions m gen v_idx r_idx queryOf toSig x.2.1 x.2.2 hval i hb⟩
 
 /-- **The Orchard integrity experiment.** Over the adversary's coins, the challenge table, and the
@@ -150,25 +150,25 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf
-      (primitives verify bverify) toSig (LA j))
-    (hr : (maxActions + 1) * (primitives verify bverify).valueBound
+      (primitives spendAuthVerify bindingVerify) toSig (LA j))
+    (hr : (maxActions + 1) * (primitives spendAuthVerify bindingVerify).valueBound
       ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD) (k : ℕ)
     {ε_sinsemilladlr ε_dl : ℝ≥0∞}
     (hsin : (challengeExperiment m p).toOuterMeasure
-      (sampledOrchardRelationEventUpTo verify bverify issuance maxActions m gen v_idx r_idx queryOf
+      (sampledOrchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx queryOf
         toSig LA k) ≤ ε_sinsemilladlr)
     (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
-      conservationRelFinder m v_idx r_idx queryOf (primitives verify bverify) toSig hne_idx k
+      conservationRelFinder m v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify) toSig hne_idx k
         (LA j) O b) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
-        (sampledLedgerEvent m gen v_idx r_idx queryOf (primitives verify bverify) toSig LA
+        (sampledLedgerEvent m gen v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify) toSig LA
           (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding) (issuance := issuance)
             (maxActions := maxActions) k))
       ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
-  balanceIntegrityBefore_measure_le_experiment m gen v_idx r_idx queryOf (primitives verify bverify)
+  balanceIntegrityBefore_measure_le_experiment m gen v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify)
     toSig p hne_idx hQ halg hr k
     (le_trans (MeasureTheory.measure_mono
-      (sampledBalanceSubsetArms_subset_orchardRelation verify bverify issuance maxActions m gen
+      (sampledBalanceSubsetArms_subset_orchardRelation spendAuthVerify bindingVerify issuance maxActions m gen
         v_idx r_idx queryOf toSig LA k)) hsin)
     hdl
 
@@ -239,11 +239,11 @@ log for conservation— not hardness premisses. The idealizations:
   carries the presented random bases to the deployed `𝒱^Orchard`, `ℛ^Orchard`;
 * byte encodings are elided, as at the RedDSA abstraction boundary;
 * nothing is assumed of the sighash algorithm or of the spend-authorization predicate
-  `verify`, which stays universally quantified — Balance does not need the sighash to
+  `spendAuthVerify`, which stays universally quantified — Balance does not need the sighash to
   commit to the transaction effects; Spendability and Spend authority do. -/
 theorem orchardBalanceIntegrityBefore_measure_le_experiment_deployed
     {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
-    (verify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
+    (spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
     (H_bind : PallasGroup → PallasGroup → MSG → Fq)
     (issuance : ℕ → ℕ) (maxActions : ℕ)
     {ι : Type} (p : PMF ι)
@@ -251,25 +251,25 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment_deployed
       (fun _ => QueryRep Fq 2)
       (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
         MSG (RedDSA.Sig Fq PallasGroup)
-        (primitives verify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
+        (primitives spendAuthVerify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
-      (primitives verify (redPallasBindingVerify H_bind)) id (LA j))
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j))
     (hmax : maxActions < 2 ^ 190) (k : ℕ) {ε_sinsemilladlr ε_dl : ℝ≥0∞}
     (hsin : (challengeExperiment 2 p).toOuterMeasure
-      (sampledOrchardRelationEventUpTo verify (redPallasBindingVerify H_bind) issuance
+      (sampledOrchardRelationEventUpTo spendAuthVerify (redPallasBindingVerify H_bind) issuance
         maxActions 2 pallasGen 0 1 orchardQueryOf id LA k) ≤ ε_sinsemilladlr)
     (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE pallasGen (fun b O =>
       conservationRelFinder 2 0 1 orchardQueryOf
-        (primitives verify (redPallasBindingVerify H_bind)) id
+        (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
         (by decide) k (LA j) O b) ε_dl) :
     (challengeExperiment 2 p).toOuterMeasure
         (sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
-          (primitives verify (redPallasBindingVerify H_bind)) id LA
+          (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id LA
           (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
             (issuance := issuance) (maxActions := maxActions) k))
       ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
-  orchardBalanceIntegrityBefore_measure_le_experiment verify (redPallasBindingVerify H_bind)
+  orchardBalanceIntegrityBefore_measure_le_experiment spendAuthVerify (redPallasBindingVerify H_bind)
     issuance maxActions 2 pallasGen 0 1 orchardQueryOf id LA p (by decide) hQ halg
     (by
       show (maxActions + 1) * 2 ^ 64 ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD

@@ -82,8 +82,8 @@ coordinate: the reduction unpacks them into their defined Sinsemilla chains and 
 scalars and applies the chain-collision reducer at the `NoteCommit` domain point and
 randomness base. -/
 def relationOfNoteCommitBreak {MSG SIG : Type*}
-    (verify bverify : PallasGroup → MSG → SIG → Prop)
-    (b : NoteCommitBreak (primitives (MSG := MSG) (SIG := SIG) verify bverify)) :
+    (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
+    (b : NoteCommitBreak (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify)) :
     NontrivialRelation (F := Fq) pallasS noteQpt noteCommitRpt :=
   relationOfChainPmEq (Q := noteQ) (Or.inl noteQ_onCurve) (W := noteCommitRpt)
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)

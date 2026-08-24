@@ -52,12 +52,12 @@ open Zcash.Security.Ledger.Model
 open scoped ENNReal
 
 variable {MSG SIG : Type*}
-  (verify bverify : PallasGroup → MSG → SIG → Prop)
+  (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
   (issuance : ℕ → ℕ) (maxActions : ℕ)
 
 /-- The Orchard instantiation's sample space. -/
 abbrev OrchardAnnotated :=
-  ValidAnnotated (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
+  ValidAnnotated (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify) keyBinding
     issuance maxActions
 
 /-- The three Orchard Balance-subset relation targets: the key-binding and
@@ -75,14 +75,14 @@ among the fixed Sinsemilla bases. Each Balance-subset break arm is routed throug
 Orchard reducer, so a break in any arm becomes a nontrivial relation among the fixed
 bases, with no random-oracle model. -/
 def orchardBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
-    (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
+    (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify) keyBinding
       issuance maxActions ledger) (i : ℕ) :
     (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i))
       ⊕' OrchardBalanceRelation :=
   match balanceSubsetOrBreak hval i with
   | .inl hsub => .inl hsub
   | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
-  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak verify bverify nb))
+  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify nb))
   | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
 
 /-! ## The Orchard Balance-subset probability bound -/
@@ -90,18 +90,18 @@ def orchardBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp En
 /-- The Orchard relation event: the samples on which the Orchard reduction computes a
 nontrivial discrete-log relation among the fixed Sinsemilla bases. -/
 def orchardRelationEvent (i : ℕ) :
-    Set (OrchardAnnotated verify bverify issuance maxActions) :=
+    Set (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions) :=
   {ω | ∃ r : OrchardBalanceRelation,
-    orchardBalanceSubsetOrRelation verify bverify issuance maxActions ω.2 i = .inr r}
+    orchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions ω.2 i = .inr r}
 
 /-- A Balance-subset-violating Orchard ledger lands in the relation event: the total
 reduction cannot return the containment on such a sample, so it returns a relation. -/
 theorem balanceSubsetViolation_subset_relation (i : ℕ) :
-    balanceSubsetViolation (P := primitives verify bverify) (kv := keyBinding)
+    balanceSubsetViolation (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding)
         (issuance := issuance) (maxActions := maxActions) i
-      ⊆ orchardRelationEvent verify bverify issuance maxActions i := by
+      ⊆ orchardRelationEvent spendAuthVerify bindingVerify issuance maxActions i := by
   intro ω hω
-  rcases h : orchardBalanceSubsetOrRelation verify bverify issuance maxActions ω.2 i
+  rcases h : orchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions ω.2 i
     with hle | r
   · exact absurd hle hω
   · exact ⟨r, h⟩
@@ -114,31 +114,31 @@ the fixed Sinsemilla bases. That single discrete-log-relation advantage
 `ε_sinsemilladlr` bounds the whole event, in place of the three named per-arm ε's of
 `balanceSubsetPerTx_measure_le`, with no random-oracle model. -/
 theorem orchardBalanceSubsetPerTx_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (i : ℕ)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (i : ℕ)
     {ε_sinsemilladlr : ℝ≥0∞}
     (hsin : A.toOuterMeasure
-      (orchardRelationEvent verify bverify issuance maxActions i) ≤ ε_sinsemilladlr) :
-    A.toOuterMeasure (balanceSubsetViolation (P := primitives verify bverify)
+      (orchardRelationEvent spendAuthVerify bindingVerify issuance maxActions i) ≤ ε_sinsemilladlr) :
+    A.toOuterMeasure (balanceSubsetViolation (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) i)
       ≤ ε_sinsemilladlr :=
   le_trans (MeasureTheory.measure_mono
-    (balanceSubsetViolation_subset_relation verify bverify issuance maxActions i)) hsin
+    (balanceSubsetViolation_subset_relation spendAuthVerify bindingVerify issuance maxActions i)) hsin
 
 /-- The all-prefixes Orchard relation event: at some step `i < k`, the reduction
 computes a nontrivial discrete-log relation. -/
 def orchardRelationEventUpTo (k : ℕ) :
-    Set (OrchardAnnotated verify bverify issuance maxActions) :=
-  {ω | ∃ i, i < k ∧ ω ∈ orchardRelationEvent verify bverify issuance maxActions i}
+    Set (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions) :=
+  {ω | ∃ i, i < k ∧ ω ∈ orchardRelationEvent spendAuthVerify bindingVerify issuance maxActions i}
 
 /-- A sample violating Balance-subset at some step lands in the all-prefixes relation
 event, at that same step. -/
 theorem balanceSubsetViolationUpTo_subset_relation (k : ℕ) :
-    balanceSubsetViolationUpTo (P := primitives verify bverify) (kv := keyBinding)
+    balanceSubsetViolationUpTo (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding)
         (issuance := issuance) (maxActions := maxActions) k
-      ⊆ orchardRelationEventUpTo verify bverify issuance maxActions k := by
+      ⊆ orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k := by
   rintro ω ⟨i, hik, hω⟩
   exact ⟨i, hik,
-    balanceSubsetViolation_subset_relation verify bverify issuance maxActions i hω⟩
+    balanceSubsetViolation_subset_relation spendAuthVerify bindingVerify issuance maxActions i hω⟩
 
 /-- **The Orchard Balance-subset bound at every prefix, from one bound on the relation
 event.** One `ε_sinsemilladlr`, hypothesized on the shared all-prefixes relation event,
@@ -146,15 +146,15 @@ bounds the Balance-subset violation at every step `i < k`, where the abstract bo
 three ε's per arm family: every step's break lands in the one relation event, a
 nontrivial relation among the same fixed bases. -/
 theorem orchardBalanceSubset_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr : ℝ≥0∞}
     (hsin : A.toOuterMeasure
-      (orchardRelationEventUpTo verify bverify issuance maxActions k) ≤ ε_sinsemilladlr) :
-    A.toOuterMeasure (balanceSubsetViolationUpTo (P := primitives verify bverify)
+      (orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k) ≤ ε_sinsemilladlr) :
+    A.toOuterMeasure (balanceSubsetViolationUpTo (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k)
       ≤ ε_sinsemilladlr :=
   le_trans (MeasureTheory.measure_mono
-    (balanceSubsetViolationUpTo_subset_relation verify bverify issuance maxActions k)) hsin
+    (balanceSubsetViolationUpTo_subset_relation spendAuthVerify bindingVerify issuance maxActions k)) hsin
 
 /-! ## The Orchard shielded pool is non-negative -/
 
@@ -163,11 +163,11 @@ theorem orchardBalanceSubset_measure_le
 pool, so a negative pool refutes the containment and the reduction returns a
 relation. The one step/prefix crossing at the Orchard instantiation. -/
 theorem shieldedBalanceNonNegativeViolation_succ_subset_relation (i : ℕ) :
-    shieldedBalanceNonNegativeViolation (P := primitives verify bverify)
+    shieldedBalanceNonNegativeViolation (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) (i + 1)
-      ⊆ orchardRelationEvent verify bverify issuance maxActions i := by
+      ⊆ orchardRelationEvent spendAuthVerify bindingVerify issuance maxActions i := by
   intro ω hω
-  exact balanceSubsetViolation_subset_relation verify bverify issuance maxActions i
+  exact balanceSubsetViolation_subset_relation spendAuthVerify bindingVerify issuance maxActions i
     (fun hsub => hω (shieldedPoolBalance_nonneg ω.1 i hsub))
 
 /-- **The Orchard shielded pool is non-negative, probabilistically.** For any
@@ -176,16 +176,16 @@ negative after the first `i + 1` transactions is at most the single
 discrete-log-relation advantage `ε_sinsemilladlr`: no value is spent that was never
 created. -/
 theorem orchardShieldedBalanceNonNegative_succ_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (i : ℕ)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (i : ℕ)
     {ε_sinsemilladlr : ℝ≥0∞}
     (hsin : A.toOuterMeasure
-      (orchardRelationEvent verify bverify issuance maxActions i) ≤ ε_sinsemilladlr) :
+      (orchardRelationEvent spendAuthVerify bindingVerify issuance maxActions i) ≤ ε_sinsemilladlr) :
     A.toOuterMeasure (shieldedBalanceNonNegativeViolation
-        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) (i + 1))
       ≤ ε_sinsemilladlr :=
   le_trans (MeasureTheory.measure_mono
-    (shieldedBalanceNonNegativeViolation_succ_subset_relation verify bverify issuance
+    (shieldedBalanceNonNegativeViolation_succ_subset_relation spendAuthVerify bindingVerify issuance
       maxActions i)) hsin
 
 /-! ## Full Orchard Balance integrity -/
@@ -199,20 +199,20 @@ value is spent that was never created, except with the discrete-log-relation
 advantage. `ε_bindsig` is a named hypothesis on the conservation event; its intended
 binding-signature discharge is tracked in #107. -/
 theorem orchardBalanceIntegrityPerTx_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (i : ℕ)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (i : ℕ)
     {ε_nonneg ε_bindsig : ℝ≥0∞}
     (hnn : A.toOuterMeasure (shieldedBalanceNonNegativeViolation
-        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) i) ≤ ε_nonneg)
     (hbind : A.toOuterMeasure (balanceConservationViolation
-        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) i) ≤ ε_bindsig) :
-    A.toOuterMeasure (balanceIntegrityPerTxViolation (P := primitives verify bverify)
+    A.toOuterMeasure (balanceIntegrityPerTxViolation (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) i)
       ≤ ε_nonneg + ε_bindsig :=
   le_trans
     (toOuterMeasure_le_add₂ A
-      (balanceIntegrityPerTxViolation_subset (P := primitives verify bverify)
+      (balanceIntegrityPerTxViolation_subset (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) i))
     (add_le_add hnn hbind)
 
@@ -223,10 +223,10 @@ conservation violation lands at its own prefix. One bound `k` serves the mixed
 step-indexed (`UpTo`) and prefix-indexed (`Before`) right-hand side: the crossing
 only produces steps `j` with `j + 1 < k`, so `j < k`. -/
 theorem balanceIntegrityViolationBefore_subset_relation (k : ℕ) :
-    balanceIntegrityViolationBefore (P := primitives verify bverify) (kv := keyBinding)
+    balanceIntegrityViolationBefore (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding)
         (issuance := issuance) (maxActions := maxActions) k
-      ⊆ orchardRelationEventUpTo verify bverify issuance maxActions k
-        ∪ balanceConservationViolationBefore (P := primitives verify bverify)
+      ⊆ orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k
+        ∪ balanceConservationViolationBefore (P := primitives spendAuthVerify bindingVerify)
           (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k := by
   rintro ω ⟨i, hik, hω⟩
   rcases not_and_or.mp hω with h | h
@@ -234,7 +234,7 @@ theorem balanceIntegrityViolationBefore_subset_relation (k : ℕ) :
     | zero => exact absurd (shieldedPoolBalance_zero ω.1).symm.le h
     | succ j =>
         exact Or.inl ⟨j, Nat.lt_of_succ_lt hik,
-          shieldedBalanceNonNegativeViolation_succ_subset_relation verify bverify
+          shieldedBalanceNonNegativeViolation_succ_subset_relation spendAuthVerify bindingVerify
             issuance maxActions j h⟩
   · rcases not_and_or.mp h with h' | h'
     · exact absurd (ω.2.transparent_nonneg i) h'
@@ -251,19 +251,19 @@ Sinsemilla bases, so a break at any step lands in the one event
 conservation side collapses the same way onto the one all-prefixes conservation event,
 whose named bound is `ε_bindsig`. -/
 theorem orchardBalanceIntegrity_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions)) (k : ℕ)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (k : ℕ)
     {ε_sinsemilladlr ε_bindsig : ℝ≥0∞}
     (hsin : A.toOuterMeasure
-      (orchardRelationEventUpTo verify bverify issuance maxActions k) ≤ ε_sinsemilladlr)
+      (orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k) ≤ ε_sinsemilladlr)
     (hbind : A.toOuterMeasure (balanceConservationViolationBefore
-        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) k) ≤ ε_bindsig) :
-    A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives verify bverify)
+    A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k)
       ≤ ε_sinsemilladlr + ε_bindsig :=
   le_trans
     (toOuterMeasure_le_add₂ A
-      (balanceIntegrityViolationBefore_subset_relation verify bverify issuance maxActions k))
+      (balanceIntegrityViolationBefore_subset_relation spendAuthVerify bindingVerify issuance maxActions k))
     (add_le_add hsin hbind)
 
 /-! ## The Orchard Spend Authority key-binding arm -/
@@ -286,14 +286,14 @@ to its nontrivial relation at the `CommitIvk` bases by
 `relationOfSpendAuthorityKBBreak`. -/
 def orchardSpendAuthorityOrRelation
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
-    (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) verify bverify) keyBinding
+    (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify) keyBinding
       issuance maxActions ledger)
     {tx} (htx : tx ∈ ledger) {a} (ha : a ∈ tx.actions)
     {wV : KeyBinding.Pool.Witness Fq PallasGroup Fp} (hKB : keyBinding.KB wV)
     (hrecv : a.w.note_old.pkd
-      = (primitives verify bverify).emb (keyBinding.ivk wV) • a.w.note_old.gd)
+      = (primitives spendAuthVerify bindingVerify).emb (keyBinding.ivk wV) • a.w.note_old.gd)
     {Signed : MSG → Prop} (hfresh : ¬ Signed tx.sighash) :
-    SpendAuthForgery (primitives verify bverify) (keyBinding.akP wV) Signed
+    SpendAuthForgery (primitives spendAuthVerify bindingVerify) (keyBinding.akP wV) Signed
       ⊕' NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
   match spendAuthorityOrBreak hval htx ha hKB hrecv hfresh with
   | .inl f => .inl f
@@ -308,12 +308,12 @@ this event to an adversary experiment and recovers the Action from the adversary
 announced indices. -/
 def orchardSpendAuthorityRelationEvent (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp)
     (hKB : keyBinding.KB wV) (Signed : MSG → Prop) :
-    Set (OrchardAnnotated verify bverify issuance maxActions) :=
+    Set (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions) :=
   {ω | ∃ tx, ∃ htx : tx ∈ ω.1, ∃ a, ∃ ha : a ∈ tx.actions,
     ∃ hrecv : a.w.note_old.pkd
-      = (primitives verify bverify).emb (keyBinding.ivk wV) • a.w.note_old.gd,
+      = (primitives spendAuthVerify bindingVerify).emb (keyBinding.ivk wV) • a.w.note_old.gd,
     ∃ hfresh : ¬ Signed tx.sighash, ∃ r,
-    orchardSpendAuthorityOrRelation verify bverify issuance maxActions ω.2 htx ha hKB
+    orchardSpendAuthorityOrRelation spendAuthVerify bindingVerify issuance maxActions ω.2 htx ha hKB
       hrecv hfresh = .inr r}
 
 /-- A break-arm sample lands in the relation event: on it, the reduction's key-binding
@@ -321,8 +321,8 @@ break converts to a relation, so the composed reduction returns one. -/
 theorem spendAuthorityBreakEvent_subset_relation
     (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp) (hKB : keyBinding.KB wV)
     (Signed : MSG → Prop) :
-    spendAuthorityBreakEvent (P := primitives verify bverify) wV hKB Signed
-      ⊆ orchardSpendAuthorityRelationEvent verify bverify issuance maxActions wV hKB
+    spendAuthorityBreakEvent (P := primitives spendAuthVerify bindingVerify) wV hKB Signed
+      ⊆ orchardSpendAuthorityRelationEvent spendAuthVerify bindingVerify issuance maxActions wV hKB
           Signed := by
   rintro ω ⟨tx, htx, a, ha, hrecv, hfresh, b, hb⟩
   refine ⟨tx, htx, a, ha, hrecv, hfresh, relationOfSpendAuthorityKBBreak b, ?_⟩
@@ -337,20 +337,20 @@ hypothesis is named on the relation event — every break-arm sample computes a 
 (`spendAuthorityBreakEvent_subset_relation`) — with no oracle model. The forgery arm's
 ε is RedDSA ±-randomized unforgeability, a named hypothesis. -/
 theorem orchardSpendAuthority_measure_le
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
     (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp) (hKB : keyBinding.KB wV)
     (Signed : MSG → Prop) {εf ε_sinsemilladlr : ℝ≥0∞}
     (hf : A.toOuterMeasure
-      (spendAuthorityForgeryEvent (P := primitives verify bverify) wV hKB Signed) ≤ εf)
+      (spendAuthorityForgeryEvent (P := primitives spendAuthVerify bindingVerify) wV hKB Signed) ≤ εf)
     (hsin : A.toOuterMeasure
-      (orchardSpendAuthorityRelationEvent verify bverify issuance maxActions wV hKB
+      (orchardSpendAuthorityRelationEvent spendAuthVerify bindingVerify issuance maxActions wV hKB
         Signed) ≤ ε_sinsemilladlr) :
     A.toOuterMeasure
-      (spendAuthorityViolation (P := primitives verify bverify) wV Signed)
+      (spendAuthorityViolation (P := primitives spendAuthVerify bindingVerify) wV Signed)
       ≤ εf + ε_sinsemilladlr :=
   spendAuthority_measure_le A wV hKB Signed hf
     (le_trans (MeasureTheory.measure_mono
-      (spendAuthorityBreakEvent_subset_relation verify bverify issuance maxActions wV
+      (spendAuthorityBreakEvent_subset_relation spendAuthVerify bindingVerify issuance maxActions wV
         hKB Signed)) hsin)
 
 /-! ## The Orchard conservation arm in extractor-plus-knowledge-error form -/
@@ -363,16 +363,16 @@ plus the knowledge error, with no factor of `k`. The no-overflow premiss bounds 
 net value against the Pallas scalar order `r_ℙ`. Nothing is assumed of the extractor:
 its failures are exhibited on the extraction-failure arm. -/
 theorem orchardBalanceConservationBefore_measure_le_kerr
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
-    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) verify bverify))
-    (B : BindingSigShape (primitives verify bverify) S)
-    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) verify
-        bverify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
+    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
+    (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
+    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify
+        bindingVerify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
     (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
     (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
     A.toOuterMeasure (balanceConservationViolationBefore
-        (P := primitives verify bverify) (kv := keyBinding) (issuance := issuance)
+        (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) k)
       ≤ εdlr + κ :=
   balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ
@@ -384,24 +384,24 @@ the non-negativity side, and the conservation side is covered by the `(Vbase, Rb
 discrete-log-relation advantage plus the extractor's knowledge error, in place of
 `orchardBalanceIntegrity_measure_le`'s named `ε_bindsig`. -/
 theorem orchardBalanceIntegrity_measure_le_kerr
-    (A : PMF (OrchardAnnotated verify bverify issuance maxActions))
-    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) verify bverify))
-    (B : BindingSigShape (primitives verify bverify) S)
-    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) verify
-        bverify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
+    (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
+    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
+    (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
+    (hr : (maxActions + 1) * (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify
+        bindingVerify).valueBound ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
     (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ)
     {ε_sinsemilladlr εdlr κ : ℝ≥0∞}
     (hsin : A.toOuterMeasure
-      (orchardRelationEventUpTo verify bverify issuance maxActions k) ≤ ε_sinsemilladlr)
+      (orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k) ≤ ε_sinsemilladlr)
     (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
     (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
-    A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives verify bverify)
+    A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k)
       ≤ ε_sinsemilladlr + εdlr + κ := by
   rw [add_assoc]
   exact le_trans
     (toOuterMeasure_le_add₂ A
-      (balanceIntegrityViolationBefore_subset_relation verify bverify issuance
+      (balanceIntegrityViolationBefore_subset_relation spendAuthVerify bindingVerify issuance
         maxActions k))
     (add_le_add hsin (balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ))
 
