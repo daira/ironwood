@@ -121,6 +121,22 @@ flowchart TD
 <span style="color:#57606a"> ■ </span> assumption or heuristic model; terminal by design<br/>
 </p>
 
+## What the Balance capstones assume
+
+The Balance capstones are stated for a *Knowledge-Soundness-idealized* adversary
+([`IdealizedKSBalanceAdversary`](https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/OrchardIntegrityExperiment.lean)):
+one that outputs a witness-annotated ledger, every Action carrying the witness for the
+Action statement. The annotation is where knowledge soundness of the Action circuit enters:
+nothing yet connects an accepting Halo 2 proof to those witnesses, so the `idealizedks` in
+the capstones' names marks results that are complete over this idealized ledger model but
+not yet composed with the circuit layer. That composition is the dashed red edge above
+([#147](https://github.com/zcash/ironwood/issues/147)); until it lands, the Balance
+integrity node stays amber even though every ledger-side arm is machine-checked. This is an
+incompleteness of the proof, not an accepted modelling trade-off. The capstones' accepted
+trade-offs —the binding challenge hash as a random oracle, the programmed value and
+binding bases carried to the deployed ones by the reference-string heuristic, elided byte
+encodings— are documented at `IdealizedKSBalanceAdversary.violationEvent`.
+
 This picture is a deliberate approximation, and is likely to change as the formalization
 proceeds. The RedDSA node is a named hypothesis rather than a terminal assumption: its
 discharge edge names the reduction for security of signatures with re-randomizable keys
@@ -146,10 +162,12 @@ assumption it rests on — see
 [Security Models](security-models.md#the-algebraic-adversary-restriction). The
 random-oracle node remains a terminal because some error terms genuinely bottom out
 there: they are counting arguments over the oracle table, with no computational
-assumption. The games are the top-level capstones. The ledger model requires the adversary to
-supply, along with any accepting proof, a **witness or replay evidence** for the Action
-statement (`ActionSatisfied`) — in the replay case the ledger oracle can produce the
-previously supplied witness. Each component argument consumes the statement's satisfaction
+assumption. The games are the top-level capstones.
+
+As stated above, the KS-idealized ledger model requires the adversary to supply, along
+with any accepting proof, a **witness or replay evidence** for the Action statement
+(`ActionSatisfied`) — in the replay case the ledger oracle can produce the previously
+supplied witness. Each component argument consumes the statement's satisfaction
 *on that witness*. Knowledge soundness is what is *intended* to justify that modelling:
 whenever the ledger layer needs a witness, the extractor would compute one —or compute
 break data— from the accepting proof. That hand-off is not yet formalized in any form:
