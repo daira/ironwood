@@ -39,8 +39,9 @@ extractor-plus-knowledge-error form replaces it with named bounds further down t
 reduction: with the binding-signature primitives pinned to a RedDSA shape,
 `orchardBalanceConservationBefore_measure_le_kerr` and
 `orchardBalanceIntegrity_measure_le_kerr` bound the same events by `εdlr + κ`, a
-`(Vbase, Rbase)` discrete-log-relation advantage plus the extractor's knowledge error
-(#107 tracks the remaining glue).
+`(Vbase, Rbase)` discrete-log-relation advantage plus the extractor's knowledge error;
+the conservation experiment discharges both in the challenge-oracle model, through one
+combined finder.
 -/
 
 namespace Zcash.Security.Ledger.Bridge
@@ -196,8 +197,8 @@ minted issuance — except with probability at most `ε_nonneg + ε_bindsig`. Di
 `ε_nonneg` at successor prefixes with
 `orchardShieldedBalanceNonNegative_succ_measure_le`, giving `ε_sinsemilladlr`: no
 value is spent that was never created, except with the discrete-log-relation
-advantage. `ε_bindsig` is a named hypothesis on the conservation event; its intended
-binding-signature discharge is tracked in #107. -/
+advantage. `ε_bindsig` is a named hypothesis on the conservation event; its binding-signature
+discharge is the conservation experiment's, in the challenge-oracle model. -/
 theorem orchardBalanceIntegrityPerTx_measure_le
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions)) (i : ℕ)
     {ε_nonneg ε_bindsig : ℝ≥0∞}

@@ -32,11 +32,11 @@ relation with `NontrivialRelation.ofBundleIntImbalance`, with the extractor's fa
 data. Its no-overflow bound comes from the statement's value ranges, validity's action count and
 `vBalance` range, and one numeric hypothesis in the `vSum` shape, `maxActions · (valueBound − 1) +
 vBalanceBound < r` (deployed: the Orchard `vSumBound`, far below `r ≈ 2^254`). A *total* extraction
-hypothesis — every verifying `bvk` comes with its scalar — would carry no computational content: in
-a cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
+hypothesis —every verifying `bvk` comes with its scalar— would carry no computational content: in a
+cyclic group every `bvk` is some multiple of `Rbase`, so the total form holds for a
 choose-the-witness extractor that no one can run. That is why the extractor is a bare function and
-its failures are events with a named probability `κ`, discharged in `RedDSA/KnowledgeError` (#107
-tracks the surrounding glue).
+its failures are events with a named probability `κ`, discharged in `RedDSA/KnowledgeError` and
+consumed by the conservation experiment through its combined finder.
 -/
 
 namespace Zcash.Security.Ledger.Model

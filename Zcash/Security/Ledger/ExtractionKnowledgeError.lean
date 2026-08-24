@@ -14,11 +14,11 @@ knowledge error κ. This module places that arm in the challenge-oracle model, a
 reduction's own events: for any `qH`-query-bounded labeled algebraic ledger adversary, an
 extraction-failure sample lands in the knowledge-error event of the composite machine at an
 unchanged query count (`extractFail_mem_kappaEvent`). The knowledge-error layer splits that
-event into its bad-challenge fibre, counted at `(qH+1)/#F`, and its relation fibre, which the
-conservation experiment's combined finder covers under one discrete-log bound. As with the
-key-binding arm, everything is joint with validity; the capstones' named κ ranges over an
-abstract `PMF (ValidAnnotated …)`, and the experiment-to-`PMF` connection is the
-joint-experiment composition (#107).
+event into two fibres. The bad-challenge fibre is counted at `(qH+1)/#F`. The relation fibre
+is covered by the conservation experiment's combined finder, under one discrete-log bound. As
+with the key-binding arm, everything is joint with validity. The capstones' named κ ranges
+over an abstract `PMF (ValidAnnotated …)`; the conservation experiment is the
+joint-experiment composition, and bounds the challenge-oracle measure directly.
 
 The sample is a challenge table `O` and the logs `s` of the `m` presented bases. The value
 commitment and the binding verification are instantiated at sampled slots, as a record
@@ -376,7 +376,8 @@ theorem extractFail_mem_kappaEvent
     | some ℓ => simpa using halgLabel O s _ ℓ hfound (tx, rep) hmem rfl
     | none => simpa using halgOut O s (tx, rep) hmem
   have hEval : kappaExtractor m gen r_idx queryOf P₀ k LA O s e.vk e.m e.σ
-      = (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) O s).key r_idx := by
+      = (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) O s).key
+          r_idx := by
     rw [hvk', hm, hσ', heff]
     unfold kappaExtractor
     cases (LA (scalarBasis gen s)).findLabel O
