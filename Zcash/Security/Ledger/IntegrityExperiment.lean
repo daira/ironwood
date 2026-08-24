@@ -16,7 +16,7 @@ logs of the `m` presented bases.
 The reduction layer is what lets the two sides share one sample space. The conservation side
 runs on the sampled value and binding bases (`kappaPrimitivesAt`) and is discharged wholesale by
 the conservation experiment: one combined coin-consuming finder covering both of its arms'
-relation slices, at `ε_dl + (qH+2)/#F`. The non-negativity side's three arms (merkle,
+relation slices, at `ε_dl + (qH+2)/#F`. The non-negativity side's three arms (Merkle,
 note-commitment, key-binding) are deterministic reductions to breaks among primitives that
 `kappaPrimitivesAt` leaves fixed, so they do not add a sample-space dimension: the experiment
 takes their union as one named bound `ε_nonneg` over this same space. At the Orchard instantiation
@@ -60,7 +60,7 @@ variable {issuance : ℕ → ℕ} {maxActions : ℕ}
 omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
 /-- **The challenge-experiment integrity containment.** The samples on which the output ledger
 is valid and violates balance integrity are contained in the lift of the union of the three
-non-negativity arms — merkle, note-commitment, key-binding — together with the lifted
+non-negativity arms —Merkle, note-commitment, key-binding— together with the lifted
 conservation violation. This is the capstone layer's per-primitives
 `balanceIntegrityViolationBefore_subset_conservation` lifted through the `sampledLedgerEvent`
 join-homomorphism (`sampledLedgerEvent_mono` then `sampledLedgerEvent_union`). -/

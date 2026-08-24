@@ -12,16 +12,17 @@ probability that the output ledger is valid *and* violates conservation (or the 
 prefix `i < k` is at most `ε_dl + (qH+2)/#F`.
 
 The composition is at the reduction layer. Both arms' finders return relations over the same
-presented basis, so one combined machine (`conservationRelFinder`) replays the adversary and
-returns whichever relation its sample yields: the relation arm's (`valueRelFinder`) when it
-fires, and the extraction-failure arm's (`relFinder`, on the composite knowledge-error
-adversary) otherwise. Every violation sample lands in the combined machine's relation event
-or in the knowledge-error bad-challenge fibre (`conservationRelOrBadChallenge`), so a single
-textbook discrete-log bound for the combined machine covers both relation slices at once,
-and the two arms' programmed-basis losses merge into the one `1/#F` inside `(qH+2)/#F`.
-The discrete-log hypothesis is a single bound for the coin-consuming combined finder
-(`TextbookDLWithCoinsAdvantageLE` at `ρ` := the challenge table), quantified only over the
-adversary's coins: no supremum over challenge tables remains anywhere in the experiment.
+presented basis. One combined machine (`conservationRelFinder`) therefore replays the adversary
+and returns whichever relation its sample yields: the relation arm's (`valueRelFinder`) when
+that arm fires, and otherwise the extraction-failure arm's (`relFinder`, run on the composite
+knowledge-error adversary). Every violation sample lands in the combined machine's relation
+event or in the knowledge-error bad-challenge fibre (`conservationRelOrBadChallenge`). One
+textbook discrete-log bound for the one machine therefore covers both arms' relation slices,
+and their two programmed-basis losses merge into the single `1/#F` inside `(qH+2)/#F`. The
+discrete-log hypothesis is stated for the coin-consuming form of the finder
+(`TextbookDLWithCoinsAdvantageLE`, with the challenge table as the coins). It is quantified
+only over the adversary's coins; no supremum over challenge tables remains anywhere in the
+experiment.
 -/
 
 namespace Zcash.Security.Ledger.Model

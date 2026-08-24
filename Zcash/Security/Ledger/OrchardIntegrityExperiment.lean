@@ -7,20 +7,22 @@ import Zcash.Security.BindingSignature.Orchard
 
 The abstract integrity experiment (`balanceIntegrityBefore_measure_le_experiment`) bounds a
 balance-integrity violation by `ε_nonneg + conservation` over the challenge-oracle sample space,
-taking the union of the three Balance-subset arms (merkle, note-commitment, key-binding) as one
+taking the union of the three Balance-subset arms (Merkle, note-commitment, key-binding) as one
 named bound `ε_nonneg`. This module discharges `ε_nonneg` at the Orchard instantiation: all three
 arms collapse onto the single advantage of computing a nontrivial discrete-log relation among the
 fixed Sinsemilla bases, exactly as `orchardBalanceIntegrity_measure_le` does at the deployed
 capstone layer, but now over the challenge experiment's sample space.
 
-The enabler is that `kappaPrimitivesAt` is a record update of the deployed primitives touching only
-`valueCommit` and `bindingVerify`, and the three non-negativity arms read only the note-commitment,
-key-binding, and Merkle structure — which the sampling leaves fixed. So at the sampled primitives a
-Balance-subset break is the same data as at the deployed primitives, and the Orchard reducers
-(`relationOfKeyBindingBreak`, `relationOfNoteCommitBreak`, `relationOfMerkleCollision`) apply
-unchanged. The reductions are deterministic and need no value/binding-side hypotheses, so this
-discharge is independent of the conservation side, which the abstract experiment still handles
-through its combined coin-consuming finder.
+This is a programmed-basis reduction (see "what a reduction in these models says",
+<https://zcash.github.io/ironwood/formal-verification/security-models.html#what-a-reduction-in-these-models-says>):
+the sampling programs only the value and binding bases — `kappaPrimitivesAt` is a record update of
+the deployed primitives touching `valueCommit` and `bindingVerify` alone. The three non-negativity
+arms read only the note-commitment, key-binding, and Merkle structure, which the programming leaves
+fixed. A Balance-subset break at the sampled primitives is therefore the same data as at the
+deployed primitives, and the deterministic Orchard reducers (`relationOfKeyBindingBreak`,
+`relationOfNoteCommitBreak`, `relationOfMerkleCollision`) apply unchanged. This discharge needs no
+value/binding-side hypotheses, so it is independent of the conservation side, which the abstract
+experiment handles through its combined coin-consuming finder.
 -/
 
 -- The Orchard reducers carry Sinsemilla chunk exponents beyond the default threshold, as in
@@ -114,7 +116,7 @@ def sampledOrchardRelationEventUpTo (k : ℕ) :
 
 omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
 /-- **The three sampled non-negativity arms collapse onto the Sinsemilla-relation event.** Every
-sample on which the reduction lands in the merkle, note-commitment, or key-binding arm computes a
+sample on which the reduction lands in the Merkle, note-commitment, or key-binding arm computes a
 nontrivial discrete-log relation among the fixed Sinsemilla bases: the arm's break is routed through
 its deterministic Orchard reducer (`kappaOrchardBalanceSubsetOrRelation`). This is what discharges
 the abstract experiment's combined `ε_nonneg` by the single `ε_sinsemilladlr` at the Orchard
