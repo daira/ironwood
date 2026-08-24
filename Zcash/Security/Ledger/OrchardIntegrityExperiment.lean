@@ -224,16 +224,19 @@ themselves, and binding verification as actual RedPallas at ℛ^Orchard
 the challenge hash `H_bind`, the sighash algorithm, and the spend-authorization predicate
 are left unspecified.
 
-Every remaining hypothesis is a resource parameter, a documented idealization, or justified
-by consensus rules. The query budget `qH` is the adversary's oracle resource, priced in the
-bound. Algebraicity at the binding points is the model restriction documented at
-`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^16` is the dedicated consensus
-rule on the action count —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16`
+Every remaining hypothesis is a resource parameter, a documented idealization, or justified by
+consensus rules. The query budget `qH` is the adversary's oracle resource, priced in the bound.
+Algebraicity at the binding points is the model restriction documented at
+`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^16` is the dedicated consensus rule
+on the action count —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16`
 (§7.1.2, <https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the result applies to
 either Orchard-protocol pool— and `orchard_ledger_no_overflow` turns it into no-overflow
-against the Pallas scalar order. The two advantages are named bounds for exhibited machines —the
-Sinsemilla discrete-log relation for non-negativity, the combined finder's textbook discrete
-log for conservation— not hardness premisses. The idealizations:
+against the Pallas scalar order. The two advantages are named bounds for exhibited machines,
+not hardness premisses: the conservation side's is the combined finder's textbook discrete log;
+the non-negativity side's is the discrete-log-relation advantage among the fixed Sinsemilla
+bases, one tight programmed-basis step (Jaeger–Tessaro) above textbook discrete log — a step
+this experiment does not take, since it programs only the value and binding bases.
+The idealizations:
 
 * the experiment models the RedPallas binding challenge hash as a random oracle: the sampled
   binding verification is the Schnorr equation with its challenge read off the uniform
