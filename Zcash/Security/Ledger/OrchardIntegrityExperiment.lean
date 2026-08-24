@@ -3,7 +3,9 @@ import Zcash.Security.Ledger.OrchardCapstone
 import Zcash.Security.BindingSignature.Orchard
 
 /-!
-# The Orchard integrity experiment: the non-negativity arms collapse to one Sinsemilla DLR
+# The Orchard integrity experiment with idealized knowledge soundness
+
+The non-negativity arms collapse to one Sinsemilla DLR.
 
 The abstract integrity experiment (`balanceIntegrityBefore_measure_le_experiment`) bounds a
 balance-integrity violation by `ε_nonneg + conservation` over the challenge-oracle sample space,
@@ -139,17 +141,18 @@ theorem sampledBalanceSubsetArms_subset_orchardRelation (k : ℕ) :
   exact ⟨i, hik, kappaOrchardBalanceSubsetOrRelation_inr_of_break spendAuthVerify bindingVerify issuance
     maxActions m gen v_idx r_idx queryOf toSig x.2.1 x.2.2 hval i hb⟩
 
-/-- **The Orchard integrity experiment.** Over the adversary's coins, the challenge table, and the
-basis logs, the probability that the output Orchard ledger is valid and violates balance integrity
-at some prefix `i < k` is at most `ε_sinsemilladlr + (ε_dl + (qH+2)/#F)`. This is the abstract
-integrity experiment with the non-negativity side discharged at the Orchard instantiation: the
-three Balance-subset arms collapse onto the single advantage `ε_sinsemilladlr` of computing a
+/-- **The Orchard integrity experiment for a KS-idealized adversary.** Over the idealized
+adversary's coins, the challenge table, and the basis logs, the probability that the output
+Orchard ledger is valid and violates balance integrity at some prefix `i < k` is at most
+`ε_sinsemilladlr + (ε_dl + (qH+2)/#F)`. This is the abstract integrity experiment for an
+idealized adversary with the non-negativity side discharged at the Orchard instantiation:
+the three Balance-subset arms collapse onto the single advantage `ε_sinsemilladlr` of computing a
 nontrivial Sinsemilla discrete-log relation (`sampledBalanceSubsetArms_subset_orchardRelation`),
 replacing the abstract `ε_nonneg` with one term and no factor of three. The conservation side is
 the abstract experiment's combined coin-consuming finder, so the whole bound carries one
 discrete-log advantage per side: `ε_sinsemilladlr` among the fixed Sinsemilla bases, `ε_dl` at the
 sampled value-commitment bases. -/
-theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
+theorem orchardBalanceIntegrityBefore_measure_le_experiment_idealizedks (p : PMF ι)
     (hne_idx : v_idx ≠ r_idx)
     {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf
@@ -215,138 +218,189 @@ def pallasGen : PallasGroup := ⟨CompElliptic.Curves.Pasta.Pallas.Gpt⟩
 hardness claim rather than the degenerate zero-base game. -/
 theorem pallasGen_ne_zero : pallasGen ≠ 0 := by decide
 
-/-- **The Orchard integrity experiment at the deployed parameters.** The experiment's
-apparatus is pinned at its deployed choices: two presented bases standing for the
-value-commitment pair (slots `0` and `1`), the standard Pallas generator as the discrete-log
-base, the challenge query as the literal `(R, bvk, sighash)` triple, signatures decoded as
-themselves, and binding verification as actual RedPallas at ℛ^Orchard
-(`redPallasBindingVerify`) — Balance uses its extractability, not its unforgeability. Only
-the challenge hash `H_bind`, the sighash algorithm, and the spend-authorization predicate
-are left unspecified.
+/-- **The deployed KS-idealized balance adversary model, as a type.** This models the
+adversary class of the deployed KS-idealized Balance experiments.
 
-Every remaining hypothesis is a resource parameter, a documented idealization, or justified by
-consensus rules. The query budget `qH` is the adversary's oracle resource, priced in the bound.
-Algebraicity at the binding points is the model restriction documented at
-`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^16` is the dedicated consensus rule
-on the action count —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16`
-(§7.1.2, <https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the result applies to
-either Orchard-protocol pool— and `orchard_ledger_no_overflow` turns it into no-overflow
-against the Pallas scalar order. The two advantages are named bounds for exhibited machines,
-not hardness premisses: the conservation side's is the combined finder's textbook discrete log;
-the non-negativity side's is the discrete-log-relation advantage among the fixed Sinsemilla
-bases, one tight programmed-basis step (Jaeger–Tessaro) above textbook discrete log — a step
-this experiment does not take, since it programs only the value and binding bases.
-The idealizations:
+* `LA`: per coin, a labeled challenge-oracle machine from the presented bases to a
+  **witness-annotated** ledger — every Action carries the witness for the Action statement,
+  and each transaction its announced binding representation. The annotation is a stated
+  **gap in the proof, not a modelling trade-off**: the composition with Halo 2
+  knowledge soundness —extracting these witnesses from accepting proofs— is unproved
+  (tracked in #147).
+* `queryBound`: at most `qH` challenge-oracle queries — the random-oracle resource, priced
+  in the bounds.
+* `algebraic`: algebraic at the two binding-signature points (`AlgebraicAtBindingPoints`).
 
-* the experiment models the RedPallas binding challenge hash as a random oracle: the sampled
-  binding verification is the Schnorr equation with its challenge read off the uniform
-  table, in place of `H_bind`;
-* validity is at the sampled value and binding bases, and the reference-string heuristic
-  carries the presented random bases to the deployed `𝒱^Orchard`, `ℛ^Orchard`;
-* byte encodings are elided, as at the RedDSA abstraction boundary;
-* the sighash type is finite (`[Fintype MSG]`): the challenge table is a finite object, so
-  the query type — and with it the sighash type — carries a `Fintype` instance;
-* nothing is assumed of the sighash algorithm or of the spend-authorization predicate
-  `spendAuthVerify`, which stays universally quantified — Balance does not need the sighash to
-  commit to the transaction effects; Spendability and Spend authority do. -/
-theorem orchardBalanceIntegrity_measure_le_deployed
-    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+The sighash type `MSG` is opaque but finite — the challenge table is a finite object. The
+spend-authorization predicate is arbitrary: Balance relies on no property of it, and in
+particular does not need the sighash to commit to the transaction effects (Spendability and
+Spend authority do). `H_bind` names the deployed binding challenge hash; the experiment
+idealizes it as a random oracle (`IdealizedKSBalanceAdversary.violationEvent`). -/
+structure IdealizedKSBalanceAdversary (MSG : Type) [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
     (spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
-    (H_bind : PallasGroup → PallasGroup → MSG → Fq)
-    (issuance : ℕ → ℕ) (maxActions : ℕ)
-    {ι : Type} (p : PMF ι)
-    (LA : ι → (Fin 2 → PallasGroup) → LabeledOracleComp (OrchardQuery MSG) Fq
-      (fun _ => QueryRep Fq 2)
-      (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
-        MSG (RedDSA.Sig Fq PallasGroup)
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
-      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j))
-    (hmax : maxActions < 2^16) (k : ℕ) {ε_sinsemilladlr ε_dl : ℝ≥0∞}
-    (hsin : (challengeExperiment 2 p).toOuterMeasure
-      (sampledOrchardRelationEventUpTo spendAuthVerify (redPallasBindingVerify H_bind) issuance
-        maxActions 2 pallasGen 0 1 orchardQueryOf id LA k) ≤ ε_sinsemilladlr)
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE pallasGen (fun b O =>
-      conservationRelFinder 2 0 1 orchardQueryOf
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
-        (by decide) k (LA j) O b) ε_dl) :
-    (challengeExperiment 2 p).toOuterMeasure
-        (sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
-          (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id LA
-          (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
-            (issuance := issuance) (maxActions := maxActions) k))
-      ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
-  orchardBalanceIntegrityBefore_measure_le_experiment spendAuthVerify (redPallasBindingVerify H_bind)
-    issuance maxActions 2 pallasGen 0 1 orchardQueryOf id LA p (by decide) hQ halg
-    (orchard_ledger_no_overflow hmax) k hsin hdl
+    (H_bind : PallasGroup → PallasGroup → MSG → Fq) : Type 1 where
+  /-- The adversary's coin space. -/
+  ι : Type
+  /-- The coin distribution. -/
+  coins : PMF ι
+  /-- Per coin, the labeled challenge-oracle machine producing the witness-annotated
+  ledger. -/
+  LA : ι → (Fin 2 → PallasGroup) → LabeledOracleComp (OrchardQuery MSG) Fq
+    (fun _ => QueryRep Fq 2)
+    (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
+      MSG (RedDSA.Sig Fq PallasGroup)
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2))
+  /-- The challenge-oracle query budget. -/
+  qH : ℕ
+  /-- Every run stays within the budget. -/
+  queryBound : ∀ j b, (LA j b).QueryBound qH
+  /-- Algebraic at the binding-signature points. -/
+  algebraic : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
+    (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j)
 
-/-- **The conservation experiment at the deployed parameters.** Over the adversary's coins,
-the challenge table, and the basis logs, a valid output Orchard ledger violates balance
-conservation at some prefix `i < k` only with the combined finder's discrete-log advantage,
-above the bad-challenge counting. The apparatus, hypothesis classification, and idealizations
-are the deployed integrity experiment's
-(`orchardBalanceIntegrity_measure_le_deployed`). -/
-theorem orchardBalanceConservation_measure_le_deployed
-    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
-    (spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
-    (H_bind : PallasGroup → PallasGroup → MSG → Fq)
+namespace IdealizedKSBalanceAdversary
+
+variable {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+  {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
+  {H_bind : PallasGroup → PallasGroup → MSG → Fq}
+
+/-- The deployed KS-idealized experiment's distribution: the adversary's coins, a uniform
+challenge table, and uniform logs of the two presented bases. -/
+noncomputable def experiment (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind) :
+    PMF (A.ι × ((OrchardQuery MSG → Fq) × (Fin 2 → Fq))) :=
+  challengeExperiment 2 A.coins
+
+/-- **The deployed KS-idealized violation event.** The samples on which the adversary's
+output ledger is valid at the sampled primitives and lands in the per-primitives event `E`.
+
+The experiment's idealizations live here. One of them must be called out as a **critical gap**
+in the current development:
+
+* validity's `satisfied` conjunct idealizes knowledge soundness of the Action circuit, by
+  reading the witness annotations that the adversary is required to provide.
+
+That is, the capstones using this event definition are not yet connected up to the Action
+circuit proof at all. This stands in for the not-yet-formalized knowledge-soundness
+composition, tracked as #147.
+
+The remaining idealizations are accepted as modelling trade-offs:
+
+* the uniform challenge table is `H_bind` — the RedPallas binding challenge hash — modelled
+  as a random oracle;
+* validity is at the sampled value and binding bases (`kappaPrimitivesAt`): the presented
+  bases are random multiples of `pallasGen`, and the reference-string heuristic carries them
+  to the deployed `𝒱^Orchard`, `ℛ^Orchard`;
+* byte encodings are elided, as at the RedDSA abstraction boundary. -/
+def violationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
     (issuance : ℕ → ℕ) (maxActions : ℕ)
-    {ι : Type} (p : PMF ι)
-    (LA : ι → (Fin 2 → PallasGroup) → LabeledOracleComp (OrchardQuery MSG) Fq
-      (fun _ => QueryRep Fq 2)
-      (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
-        MSG (RedDSA.Sig Fq PallasGroup)
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
-      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j))
-    (hmax : maxActions < 2^16) (k : ℕ) {ε_dl : ℝ≥0∞}
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE pallasGen (fun b O =>
-      conservationRelFinder 2 0 1 orchardQueryOf
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
-        (by decide) k (LA j) O b) ε_dl) :
-    (challengeExperiment 2 p).toOuterMeasure
-        (sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
-          (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id LA
-          (fun P => balanceConservationViolationBefore (P := P) (kv := keyBinding)
-            (issuance := issuance) (maxActions := maxActions) k))
-      ≤ ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq :=
+    (E : ∀ P : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG
+        (RedDSA.Sig Fq PallasGroup),
+      Set (ValidAnnotated P keyBinding issuance maxActions)) :
+    Set (A.ι × ((OrchardQuery MSG → Fq) × (Fin 2 → Fq))) :=
+  sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
+    (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id A.LA E
+
+/-- The sampled Sinsemilla-relation event the non-negativity advantage is named on: the
+deterministic reducer computes a nontrivial relation among the fixed Sinsemilla bases at
+some prefix `i < k`. -/
+def sinsemillaRelationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (k : ℕ) :
+    Set (A.ι × ((OrchardQuery MSG → Fq) × (Fin 2 → Fq))) :=
+  sampledOrchardRelationEventUpTo spendAuthVerify (redPallasBindingVerify H_bind) issuance
+    maxActions 2 pallasGen 0 1 orchardQueryOf id A.LA k
+
+/-- The combined conservation finder the discrete-log advantage is stated for: replay coin
+`j`'s machine once and return whichever arm's relation the sample yields. -/
+def conservationFinder (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind) (k : ℕ)
+    (j : A.ι) (b : Fin 2 → PallasGroup) (O : OrchardQuery MSG → Fq) :
+    Option (AlgebraicRelationWitness (F := Fq) b) :=
+  conservationRelFinder 2 0 1 orchardQueryOf
+    (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (by decide) k (A.LA j) O b
+
+end IdealizedKSBalanceAdversary
+
+/-- **Balance integrity against a KS-idealized adversary for deployed Orchard.**
+For every idealized balance adversary against the deployed Orchard protocol — a valid
+output ledger violates balance integrity at some prefix `i < k` with probability at most
+`ε_sinsemilladlr + (ε_dl + (qH+2)/#F)`.
+
+The experiment's idealizations are described at `IdealizedKSBalanceAdversary.violationEvent`;
+critically, they include idealizing knowledge soundness for the Action circuit verifier.
+Connecting this up to the Action-circuit knowledge-soundness proof is tracked as #147.
+
+The action cap `maxActions < 2^16` is the dedicated consensus rule on the action count —
+`nActionsOrchard` and `nActionsIronwood` are each less than `2^16` (§7.1.2,
+<https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the result applies to either
+Orchard-protocol pool. This is turned into no-overflow by `orchard_ledger_no_overflow`.
+
+The two advantages are named bounds for exhibited machines, not hardness premisses. The
+conservation side's is the combined finder's textbook discrete log. The non-negativity
+side's is the discrete-log-relation advantage among the fixed Sinsemilla bases — one
+tight programmed-basis step (Jaeger–Tessaro) above textbook discrete log, but this
+experiment does not take that step; it programs only the value and binding bases. -/
+theorem orchardBalanceIntegrity_measure_le_idealizedks
+    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+    {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
+    {H_bind : PallasGroup → PallasGroup → MSG → Fq}
+    (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (hmax : maxActions < 2^16) (k : ℕ)
+    {ε_sinsemilladlr ε_dl : ℝ≥0∞}
+    (hsin : A.experiment.toOuterMeasure (A.sinsemillaRelationEvent issuance maxActions k)
+      ≤ ε_sinsemilladlr)
+    (hdl : ∀ j : A.ι, TextbookDLWithCoinsAdvantageLE pallasGen (A.conservationFinder k j)
+      ε_dl) :
+    A.experiment.toOuterMeasure (A.violationEvent issuance maxActions
+        (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
+          (issuance := issuance) (maxActions := maxActions) k))
+      ≤ ε_sinsemilladlr + (ε_dl + ((A.qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
+  orchardBalanceIntegrityBefore_measure_le_experiment_idealizedks spendAuthVerify
+    (redPallasBindingVerify H_bind) issuance maxActions 2 pallasGen 0 1 orchardQueryOf id
+    A.LA A.coins (by decide) A.queryBound A.algebraic (orchard_ledger_no_overflow hmax) k
+    hsin hdl
+
+/-- **Balance conservation against a KS-idealized adversary for deployed Orchard.**
+As for the idealized integrity endpoint (`orchardBalanceIntegrity_measure_le_idealizedks`),
+covering the conservation violation alone: the bound is the conservation side's
+`ε_dl + (qH+2)/#F`. The model and idealizations are `IdealizedKSBalanceAdversary` and its
+`violationEvent`. -/
+theorem orchardBalanceConservation_measure_le_idealizedks
+    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+    {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
+    {H_bind : PallasGroup → PallasGroup → MSG → Fq}
+    (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (hmax : maxActions < 2^16) (k : ℕ)
+    {ε_dl : ℝ≥0∞}
+    (hdl : ∀ j : A.ι, TextbookDLWithCoinsAdvantageLE pallasGen (A.conservationFinder k j)
+      ε_dl) :
+    A.experiment.toOuterMeasure (A.violationEvent issuance maxActions
+        (fun P => balanceConservationViolationBefore (P := P) (kv := keyBinding)
+          (issuance := issuance) (maxActions := maxActions) k))
+      ≤ ε_dl + ((A.qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq :=
   balanceConservationBefore_measure_le_experiment 2 pallasGen 0 1 orchardQueryOf
     (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
     (kv := keyBinding) (issuance := issuance) (maxActions := maxActions)
-    p (by decide) hQ halg (orchard_ledger_no_overflow hmax) k hdl
+    A.coins (by decide) A.queryBound A.algebraic (orchard_ledger_no_overflow hmax) k hdl
 
-/-- **The cap experiment at the deployed parameters.** As the deployed conservation
-experiment, for the shielded pool exceeding the minted issuance at some prefix `i < k`. -/
-theorem orchardShieldedBalanceCap_measure_le_deployed
+/-- **Shielded balance cap against a KS-idealized adversary for deployed Orchard.**
+As the idealized conservation endpoint, for the shielded pool exceeding the minted issuance
+at some prefix `i < k`. The model and idealizations are `IdealizedKSBalanceAdversary` and its
+`violationEvent`. -/
+theorem orchardShieldedBalanceCap_measure_le_idealizedks
     {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
-    (spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
-    (H_bind : PallasGroup → PallasGroup → MSG → Fq)
-    (issuance : ℕ → ℕ) (maxActions : ℕ)
-    {ι : Type} (p : PMF ι)
-    (LA : ι → (Fin 2 → PallasGroup) → LabeledOracleComp (OrchardQuery MSG) Fq
-      (fun _ => QueryRep Fq 2)
-      (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
-        MSG (RedDSA.Sig Fq PallasGroup)
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
-    (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
-      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id (LA j))
-    (hmax : maxActions < 2^16) (k : ℕ) {ε_dl : ℝ≥0∞}
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE pallasGen (fun b O =>
-      conservationRelFinder 2 0 1 orchardQueryOf
-        (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
-        (by decide) k (LA j) O b) ε_dl) :
-    (challengeExperiment 2 p).toOuterMeasure
-        (sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
-          (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id LA
-          (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := keyBinding)
-            (issuance := issuance) (maxActions := maxActions) k))
-      ≤ ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq :=
+    {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
+    {H_bind : PallasGroup → PallasGroup → MSG → Fq}
+    (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (hmax : maxActions < 2^16) (k : ℕ)
+    {ε_dl : ℝ≥0∞}
+    (hdl : ∀ j : A.ι, TextbookDLWithCoinsAdvantageLE pallasGen (A.conservationFinder k j)
+      ε_dl) :
+    A.experiment.toOuterMeasure (A.violationEvent issuance maxActions
+        (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := keyBinding)
+          (issuance := issuance) (maxActions := maxActions) k))
+      ≤ ε_dl + ((A.qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq :=
   shieldedBalanceCapBefore_measure_le_experiment 2 pallasGen 0 1 orchardQueryOf
     (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
     (kv := keyBinding) (issuance := issuance) (maxActions := maxActions)
-    p (by decide) hQ halg (orchard_ledger_no_overflow hmax) k hdl
+    A.coins (by decide) A.queryBound A.algebraic (orchard_ledger_no_overflow hmax) k hdl
 
 end Zcash.Security.Ledger.Bridge
