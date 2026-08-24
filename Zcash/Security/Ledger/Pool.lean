@@ -10,6 +10,7 @@ import Zcash.Circuits.NoteCommit.MainTheorems
 import Zcash.Security.Concrete.PallasGroup
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.KeyBinding.Pool
+import Zcash.Security.RedDSA.Basic
 
 /-!
 # The deployed pool's concrete ledger primitives
@@ -153,6 +154,20 @@ def valueCommit (z : ℤ) (r : Fq) : PallasGroup :=
       (Or.inl Ecc.MulFixed.Certs.valueCommitV.onCurve)
     + r • PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitR.point
       (Or.inl Ecc.MulFixed.Certs.valueCommitR.onCurve)
+
+/-- The deployed binding base ℛ^Orchard —the value-commitment randomness base— as a group
+element. -/
+def bindingBase : PallasGroup :=
+  PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitR.point
+    (Or.inl Ecc.MulFixed.Certs.valueCommitR.onCurve)
+
+/-- Deployed RedPallas binding verification with challenge hash `H`: RedDSA's Schnorr
+equation at ℛ^Orchard (`bindingBase`), byte encodings elided. Balance uses its
+extractability —the binding signature as a signature of knowledge of `bsk`— not its
+unforgeability. -/
+def redPallasBindingVerify {MSG : Type*} (H : PallasGroup → PallasGroup → MSG → Fq) :
+    PallasGroup → MSG → Zcash.Security.RedDSA.Sig Fq PallasGroup → Prop :=
+  (Zcash.Security.RedDSA.Scheme.mk bindingBase H).Verify
 
 theorem toPoint_valueCommit (z : ℤ) (r : Fq) :
     PallasGroup.toPoint (valueCommit z r) =

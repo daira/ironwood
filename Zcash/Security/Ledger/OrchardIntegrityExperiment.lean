@@ -173,3 +173,110 @@ theorem orchardBalanceIntegrityBefore_measure_le_experiment (p : PMF ι)
     hdl
 
 end Zcash.Security.Ledger.Bridge
+
+namespace Zcash.Security.Ledger.Bridge
+
+open Zcash.Circuits
+open Zcash.Common Zcash.Security.BindingSignature Zcash.Security.RedDSA
+open Zcash.Common.LabeledOracleComp
+open Zcash.Security.Concrete
+open Zcash.Security.Ledger.Pool
+open Zcash.Security.Ledger.Model
+open scoped ENNReal
+
+universe v
+
+/-- The deployed challenge-query type: the literal triple the challenge hash consumes — the
+signature's nonce `R`, the binding verification key `bvk`, and the sighash. Finite because
+the Pallas group's affine representation is a computable finite enumeration. -/
+abbrev OrchardQuery (MSG : Type v) : Type v := PallasGroup × PallasGroup × MSG
+
+/-- The deployed challenge-query encoding: the identity triple. `queryOf`'s intended
+injectivity (collisions only shrink the covered adversary class) is discharged here with no
+collisions at all (`orchardQueryOf_injective`). -/
+def orchardQueryOf {MSG : Type v} (R bvk : PallasGroup) (msg : MSG) : OrchardQuery MSG :=
+  (R, bvk, msg)
+
+/-- The identity triple is injective, so distinct binding-signature points query distinct
+challenges. -/
+theorem orchardQueryOf_injective {MSG : Type v} {R R' bvk bvk' : PallasGroup} {m m' : MSG}
+    (h : orchardQueryOf R bvk m = orchardQueryOf R' bvk' m') :
+    R = R' ∧ bvk = bvk' ∧ m = m' := by
+  simpa [orchardQueryOf, Prod.ext_iff] using h
+
+/-- The deployed discrete-log base: the standard Pallas generator. -/
+def pallasGen : PallasGroup := ⟨CompElliptic.Curves.Pasta.Pallas.Gpt⟩
+
+/-- The deployed discrete-log base is not the identity, so the textbook game at it is a
+hardness claim rather than the degenerate zero-base game. -/
+theorem pallasGen_ne_zero : pallasGen ≠ 0 := by decide
+
+/-- **The Orchard integrity experiment at the deployed parameters.** The experiment's
+apparatus is pinned at its deployed choices: two presented bases standing for the
+value-commitment pair (slots `0` and `1`), the standard Pallas generator as the discrete-log
+base, the challenge query as the literal `(R, bvk, sighash)` triple, signatures decoded as
+themselves, and binding verification as actual RedPallas at ℛ^Orchard
+(`redPallasBindingVerify`) — Balance uses its extractability, not its unforgeability. Only
+the challenge hash `H_bind`, the sighash algorithm, and the spend-authorization predicate
+are left unspecified.
+
+Every remaining hypothesis is a resource parameter, a documented idealization, or justified
+by consensus rules. The query budget `qH` is the adversary's oracle resource, priced in the
+bound. Algebraicity at the binding points is the model restriction documented at
+`AlgebraicAtBindingPoints`. The action cap `maxActions < 2^190` gives no-overflow against
+the Pallas scalar order, and consensus keeps it slack: a block is at most 2000000 bytes
+(§7.6, <https://zips.z.cash/protocol/protocol.pdf#blockheader>), and each Action description
+contributes 820 bytes to a transaction (§7.1,
+<https://zips.z.cash/protocol/protocol.pdf#txnencoding>), capping a transaction's Actions in
+the low thousands. The two advantages are named bounds for exhibited machines —the
+Sinsemilla discrete-log relation for non-negativity, the combined finder's textbook discrete
+log for conservation— not hardness premisses. The idealizations:
+
+* the experiment models the RedPallas binding challenge hash as a random oracle: the sampled
+  binding verification is the Schnorr equation with its challenge read off the uniform
+  table, in place of `H_bind`;
+* validity is at the sampled value and binding bases, and the reference-string heuristic
+  carries the presented random bases to the deployed `𝒱^Orchard`, `ℛ^Orchard`;
+* byte encodings are elided, as at the RedDSA abstraction boundary;
+* nothing is assumed of the sighash algorithm or of the spend-authorization predicate
+  `verify`, which stays universally quantified — Balance does not need the sighash to
+  commit to the transaction effects; Spendability and Spend authority do. -/
+theorem orchardBalanceIntegrityBefore_measure_le_experiment_deployed
+    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+    (verify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop)
+    (H_bind : PallasGroup → PallasGroup → MSG → Fq)
+    (issuance : ℕ → ℕ) (maxActions : ℕ)
+    {ι : Type} (p : PMF ι)
+    (LA : ι → (Fin 2 → PallasGroup) → LabeledOracleComp (OrchardQuery MSG) Fq
+      (fun _ => QueryRep Fq 2)
+      (List (Tx (KeyBinding.Pool.Witness Fq PallasGroup Fp) Fq PallasGroup Fp Fp Fp Encoding
+        MSG (RedDSA.Sig Fq PallasGroup)
+        (primitives verify (redPallasBindingVerify H_bind)).depth × QueryRep Fq 2)))
+    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
+    (halg : ∀ j : ι, AlgebraicAtBindingPoints 2 pallasGen 0 1 orchardQueryOf
+      (primitives verify (redPallasBindingVerify H_bind)) id (LA j))
+    (hmax : maxActions < 2 ^ 190) (k : ℕ) {ε_sinsemilladlr ε_dl : ℝ≥0∞}
+    (hsin : (challengeExperiment 2 p).toOuterMeasure
+      (sampledOrchardRelationEventUpTo verify (redPallasBindingVerify H_bind) issuance
+        maxActions 2 pallasGen 0 1 orchardQueryOf id LA k) ≤ ε_sinsemilladlr)
+    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE pallasGen (fun b O =>
+      conservationRelFinder 2 0 1 orchardQueryOf
+        (primitives verify (redPallasBindingVerify H_bind)) id
+        (by decide) k (LA j) O b) ε_dl) :
+    (challengeExperiment 2 p).toOuterMeasure
+        (sampledLedgerEvent 2 pallasGen 0 1 orchardQueryOf
+          (primitives verify (redPallasBindingVerify H_bind)) id LA
+          (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
+            (issuance := issuance) (maxActions := maxActions) k))
+      ≤ ε_sinsemilladlr + (ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
+  orchardBalanceIntegrityBefore_measure_le_experiment verify (redPallasBindingVerify H_bind)
+    issuance maxActions 2 pallasGen 0 1 orchardQueryOf id LA p (by decide) hQ halg
+    (by
+      show (maxActions + 1) * 2 ^ 64 ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD
+      calc (maxActions + 1) * 2 ^ 64
+          ≤ 2 ^ 190 * 2 ^ 64 := Nat.mul_le_mul_right _ hmax
+        _ ≤ CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD := by
+            norm_num [CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD])
+    k hsin hdl
+
+end Zcash.Security.Ledger.Bridge

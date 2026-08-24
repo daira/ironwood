@@ -815,7 +815,11 @@ non-negativity arms collapse onto the single Sinsemilla discrete-log-relation ad
 `kappaOrchardBalanceSubsetOrRelation` routes each arm's break at the sampled primitives —
 the deployed Orchard note-commitment, key-binding, and Merkle structure, which the sampling
 leaves fixed — so a valid output Orchard ledger violates balance integrity at some prefix
-only with that advantage plus the conservation experiment's bound. -/
+only with that advantage plus the conservation experiment's bound. The deployed form pins
+the experiment's apparatus — two presented bases, the standard Pallas generator as the
+discrete-log base (`pallasGen`, not the identity), and the challenge query as the literal
+signature triple (`orchardQueryOf`, injective by construction) — leaving the adversary, an
+action cap giving no-overflow, and one named advantage per side. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -827,6 +831,19 @@ assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelati
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
 assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrityBefore_measure_le_experiment +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_computable Zcash.Security.Ledger.Bridge.orchardQueryOf +choice
+assert_computable Zcash.Security.Ledger.Bridge.pallasGen +choice
+assert_axioms Zcash.Security.Ledger.Bridge.orchardQueryOf_injective
+assert_axioms Zcash.Security.Ledger.Bridge.pallasGen_ne_zero
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrityBefore_measure_le_experiment_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
