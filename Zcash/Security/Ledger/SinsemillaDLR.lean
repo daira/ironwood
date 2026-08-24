@@ -482,6 +482,24 @@ theorem classifyRelation_site {wit : ActionData} {dlb : ActionDLBreak}
   · exact absurd h (by simp)
   · next abr heq => exact ⟨abr, heq, by injection h with h'; rw [← h']⟩
 
+/-- **The computable Action-to-ledger bridge.**  Run the classifier on the combined
+circuit witness: an escape reduces onward to its computed discrete-log relation, and
+otherwise the refined ledger action — instance, witness, and the satisfaction
+proofs — is returned as data (`ActionLedgerSuccess.ofSpec`). -/
+def actionSpecToLedgerData {MSG SIG : Type*}
+    (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
+    (input : PublicInputs Fp) (wit : PrivateWitness)
+    (h : ActionSpec input wit) :
+    ActionLedgerSuccess spendAuthVerify bindingVerify (combine input wit) ⊕'
+      ActionDLBreak :=
+  match hcl : classifyRelation (combine input wit) with
+  | some dlb => .inr dlb
+  | none => .inl (ActionLedgerSuccess.ofSpec spendAuthVerify bindingVerify input wit h
+      (Option.not_isSome_iff_eq_none.mp fun hs => by
+        have hrel := (classifyRelation_isSome_iff (combine input wit)).mpr hs
+        rw [hcl] at hrel
+        simp at hrel))
+
 /-! ## The chain-collision reducer
 
 Shared by every arm whose break compares two blinded Sinsemilla outputs: the

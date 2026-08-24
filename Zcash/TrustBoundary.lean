@@ -1827,19 +1827,21 @@ assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native(
 
 /-! ## The circuit → ledger bridge — exported refinement theorems
 
-The refinement from the Action circuit's postcondition to the games-facing ledger statement
-(`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
-break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
-query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
-of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
-consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus only
+The refinement from the Action circuit's postcondition to the games-facing ledger statement,
+together with the two correctness directions of the break classifier `classifyAction`: an
+escape it returns is a break of the witness's own hash query, and a `none` return — no escape
+at any of the four sites — means every Sinsemilla query of the witness is defined.
+`actionBreak_iff_classify_isSome` packages both directions as the consumer-boundary
+equivalence. Same budget as the circuit layer above: standard tier plus only
 CompElliptic's Pallas point-count witness.
 
-`actionSpec_to_ledger` is the bridge's whole consumer surface: composition with circuit
-satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume
-is actually produced. -/
+`actionSpecToLedgerData` is the bridge's whole consumer surface, and it returns data: the
+refined ledger action (`ActionLedgerSuccess`, carrying the instance and witness) or the
+computed discrete-log relation of the first Sinsemilla escape (`ActionDLBreak`). Composition
+with circuit satisfaction lives on the Circuits side, where the `Constraints` predicate it
+would consume is actually produced. -/
 
-assert_axioms Zcash.Security.Ledger.Bridge.actionSpec_to_ledger +native(
+assert_axioms Zcash.Security.Ledger.Bridge.actionSpecToLedgerData +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
