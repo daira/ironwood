@@ -818,7 +818,8 @@ only with that advantage plus the conservation experiment's bound. The deployed 
 the experiment's apparatus — two presented bases, the standard Pallas generator as the
 discrete-log base (`pallasGen`, not the identity), and the challenge query as the literal
 signature triple (`orchardQueryOf`, injective by construction) — leaving the adversary, an
-action cap giving no-overflow, and one named advantage per side. -/
+action cap giving no-overflow, and one named advantage per side. The conservation and cap
+experiments are pinned at the same deployed choices. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -842,7 +843,25 @@ assert_computable Zcash.Security.Ledger.Bridge.orchardQueryOf +choice
 assert_computable Zcash.Security.Ledger.Bridge.pallasGen +choice
 assert_axioms Zcash.Security.Ledger.Bridge.orchardQueryOf_injective
 assert_axioms Zcash.Security.Ledger.Bridge.pallasGen_ne_zero
-assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrityBefore_measure_le_experiment_deployed +native(
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_deployed +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservation_measure_le_deployed +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
   Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
