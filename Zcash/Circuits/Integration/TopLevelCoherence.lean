@@ -1,5 +1,4 @@
 import Clean.Halo2.TopLevel
-import Clean.Halo2.Keygen.FloorPlanner
 import Zcash.Circuits.Integration.OperationGates
 import Zcash.Circuits.Integration.OperationLookups
 
