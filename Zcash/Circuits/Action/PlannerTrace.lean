@@ -1348,25 +1348,6 @@ private theorem plannerKey8Trace_endpoint
   split <;> split <;>
     (simp_all [V1.PlannedSummaryBlock.endpointFrom]; try omega)
 
-macro "action_trace_step" : tactic =>
-  `(tactic|
-    (unfold V1.PlannedSummaryBlock.TraceLawfulAfter
-     refine ⟨by first | omega | norm_num,
-       by simp [RegionShapeSummary.WellFormed, plannerShape,
-         planner4Narrow, planner4Wide],
-       by simp [plannerShape, planner4Narrow, planner4Wide], ?_, ?_, ?_⟩
-     · simp [V1.PlannedSummaryBlock.FitsAfterAt, plannerShape,
-         planner4Narrow, planner4Wide,
-         RowIntervalsDisjoint] <;> omega
-     · intro candidate hfits
-       simp [V1.PlannedSummaryBlock.FitsAfterAt, plannerShape,
-         planner4Narrow, planner4Wide,
-         RowIntervalsDisjoint] at hfits
-       try norm_num at hfits ⊢
-       try omega
-     simp only [List.nil_append, List.cons_append, List.append_nil,
-       List.append_assoc]))
-
 private theorem plannerKey8Trace_traceLawful
     {before after : ℕ} (hcount : before + after = 8) :
     V1.PlannedSummaryBlock.TraceLawfulAfter
@@ -1381,8 +1362,8 @@ private theorem plannerKey8Trace_traceLawful
     simp only [Nat.zero_mul, Nat.ne_of_gt hafter,
       if_false, if_true, List.nil_append,
       List.cons_append, List.take]
-    action_trace_step
-    action_trace_step
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
     trivial
   ·
     unfold actionPlannerTrace plannerKey8Trace V1.PlannedSummaryBlock.run
@@ -1390,8 +1371,8 @@ private theorem plannerKey8Trace_traceLawful
       planner8Short
     simp only [Nat.ne_of_gt hbefore, if_false, if_true, List.nil_append,
       List.append_nil, List.cons_append, List.take]
-    action_trace_step
-    action_trace_step
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
     trivial
   ·
     unfold actionPlannerTrace plannerKey8Trace V1.PlannedSummaryBlock.run
@@ -1399,9 +1380,9 @@ private theorem plannerKey8Trace_traceLawful
       planner8Short
     simp only [Nat.ne_of_gt hbefore, Nat.ne_of_gt hafter, if_false,
       List.nil_append, List.cons_append, List.take]
-    action_trace_step
-    action_trace_step
-    action_trace_step
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
     trivial
 
 private def plannerKey8CanonicalTrace : List V1.PlannedSummaryBlock :=
@@ -1644,11 +1625,11 @@ private theorem actionPlannerTrace_chunk1 :
       (actionPlannerTrace.take 0)
       ((actionPlannerTrace.drop 0).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk2 :
@@ -1656,11 +1637,11 @@ private theorem actionPlannerTrace_chunk2 :
       (actionPlannerTrace.take 5)
       ((actionPlannerTrace.drop 5).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk3 :
@@ -1668,11 +1649,11 @@ private theorem actionPlannerTrace_chunk3 :
       (actionPlannerTrace.take 10)
       ((actionPlannerTrace.drop 10).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk4 :
@@ -1680,11 +1661,11 @@ private theorem actionPlannerTrace_chunk4 :
       (actionPlannerTrace.take 15)
       ((actionPlannerTrace.drop 15).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk5 :
@@ -1692,11 +1673,11 @@ private theorem actionPlannerTrace_chunk5 :
       (actionPlannerTrace.take 20)
       ((actionPlannerTrace.drop 20).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk6 :
@@ -1704,11 +1685,11 @@ private theorem actionPlannerTrace_chunk6 :
       (actionPlannerTrace.take 25)
       ((actionPlannerTrace.drop 25).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk7 :
@@ -1716,11 +1697,11 @@ private theorem actionPlannerTrace_chunk7 :
       (actionPlannerTrace.take 30)
       ((actionPlannerTrace.drop 30).take 5) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem actionPlannerTrace_chunk8 :
@@ -1728,12 +1709,12 @@ private theorem actionPlannerTrace_chunk8 :
       (actionPlannerTrace.take 35)
       ((actionPlannerTrace.drop 35).take 6) := by
   unfold actionPlannerTrace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 theorem actionPlannerTrace_traceLawful :
@@ -1773,10 +1754,10 @@ private theorem plannerKey4TraceLawful_narrowWideNarrowWide :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.narrowWideNarrowWide.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem plannerKey4TraceLawful_narrowWideWideNarrow :
@@ -1784,9 +1765,9 @@ private theorem plannerKey4TraceLawful_narrowWideWideNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.narrowWideWideNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem plannerKey4TraceLawful_wideNarrowNarrowWide :
@@ -1794,9 +1775,9 @@ private theorem plannerKey4TraceLawful_wideNarrowNarrowWide :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideNarrowNarrowWide.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem plannerKey4TraceLawful_wideNarrowWideNarrow :
@@ -1804,10 +1785,10 @@ private theorem plannerKey4TraceLawful_wideNarrowWideNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideNarrowWideNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  action_trace_step
-  action_trace_step
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem plannerKey4TraceLawful_wideWideNarrowNarrow :
@@ -1815,8 +1796,8 @@ private theorem plannerKey4TraceLawful_wideWideNarrowNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideWideNarrowNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  action_trace_step
-  action_trace_step
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+  planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
 private theorem PlannerKey4Order.traceLawful
@@ -1825,8 +1806,8 @@ private theorem PlannerKey4Order.traceLawful
       (actionPlannerTrace.take 26) order.trace := by
   cases order
   · unfold actionPlannerTrace trace
-    action_trace_step
-    action_trace_step
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
+    planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
     trivial
   · exact plannerKey4TraceLawful_narrowWideNarrowWide
   · exact plannerKey4TraceLawful_narrowWideWideNarrow
