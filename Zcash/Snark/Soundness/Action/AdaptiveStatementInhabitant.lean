@@ -121,11 +121,14 @@ def canonicalActionFixedRepresentation (column : Fin actionCircuit.fixedColumnCo
               (instanceCoefficients (2 ^ (AdaptiveActionStatementShape pp).k) actionCircuit.omega
                 (actionCircuit.fixedRows.getD (column : ℕ) [])) +
               (1 : Fp) • (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w =
-            hcoh.key.commitInstance (actionCircuit.fixedRows.getD (column : ℕ) []) 1 :=
+            (LagrangeCommitmentKey.canonical
+              (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
+              actionCircuit.omega).commitInstance
+                (actionCircuit.fixedRows.getD (column : ℕ) []) 1 :=
           (LagrangeCommitmentKey.commitInstance_eq _ _ 1).symm
         _ = (actionCircuit.fixedCommitments
               (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)).getD (column : ℕ) 0 :=
-          (hcoh.commitment (column : ℕ) column.isLt).symm
+          (hcoh (column : ℕ) column.isLt).symm
         _ = (adaptiveActionStatementVk pp basis).fixedCommitment (column : ℕ) :=
           (actionCircuit.toVerifierKey_fixedCommitment _ (column : ℕ)).symm)
 
