@@ -283,30 +283,12 @@ def circuit : FormalCircuit Fp
 
   soundness := by
     circuit_proof_start2 [Ecc.Mul.mul, Ecc.WitnessPoint.pointNonIdFormal,
+      Ecc.WitnessPoint.pointNonIdFormal_output_cells,
       Ecc.Mul.Assumptions, Ecc.Mul.Spec]
     -- because our framework did the right thing throughout, a trivially composing
     -- parent is trivially sound
-    rw [Ecc.WitnessPoint.pointNonIdFormal_output_cells] at pkDOld_eq
-    have hpkCells := congrArg Point.coords pkDOld_eq
-    simp only [Point.coords, Prod.mk.injEq] at hpkCells
-    have hpkDOld : ({ x := output_x, y := output_y } : Point Fp) =
-        { x := AssignedCell.eval place env pkDOld_x,
-          y := AssignedCell.eval place env pkDOld_y } := by
-      apply Point.ext_coords
-      simp only [Point.coords, Prod.mk.injEq, ← hpkCells.1, ← hpkCells.2,
-        circuit_norm]
-      exact ⟨output_eq.1.symm, output_eq.2.symm⟩
-    have hderived := derived_spec env_assumptions assumptions
-    have hpkValue :
-        ({ x := AssignedCell.eval place env pkDOld_x,
-           y := AssignedCell.eval place env pkDOld_y } : Point Fp) =
-          ZMod.val (show Fp from input_ivk) •
-            ({ x := input_gDOld_x, y := input_gDOld_y } : Point Fp) := by
-      rw [← hderived]
-      apply Point.ext_coords
-      simp only [Point.coords, Prod.mk.injEq]
-      exact ⟨region_0.1.symm, region_0.2.symm⟩
-    exact ⟨hpkDOld ▸ pkDOld_spec, hpkDOld.trans hpkValue⟩
+    rcases pkDOld_eq with ⟨rfl, rfl⟩
+    simp_all [circuit_norm]
 
   completeness := by
     circuit_proof_start2 [Ecc.Mul.mul, Ecc.WitnessPoint.pointNonIdFormal,
