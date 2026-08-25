@@ -270,21 +270,68 @@ the classifier, and the correctness theorems cannot silently drift apart.  The
 Merkle queries consume the raw 255-bit child encodings verbatim; a noncanonical
 representative is never reduced before hashing. -/
 
-/-- The exact `Commit^ivk` chunk query of a witness. -/
+/-- The exact `Commit^ivk` chunk query of a witness (§5.4.8.4). -/
 abbrev ivkQuery (wit : ActionData) : List ℕ :=
   commitIvkChunks wit.akP.x.val wit.nk.val
 
-/-- The exact old-note commitment chunk query. -/
+/-- The exact old-note commitment chunk query (`NoteCommit`, §5.4.8.4). -/
 abbrev noteOldQuery (wit : ActionData) : List ℕ :=
   (NoteCommit.noteScalars wit.gdOld wit.pkdOld wit.vOld wit.rhoOld wit.psiOld).chunks
 
-/-- The exact new-note commitment chunk query (`ρ_new = nf_old`). -/
+/-- The exact new-note commitment chunk query (`NoteCommit` with `ρ_new = nf_old`,
+§5.4.8.4). -/
 abbrev noteNewQuery (wit : ActionData) : List ℕ :=
   (NoteCommit.noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks
 
-/-- The exact layer-`i` Merkle chunk query, over the raw 255-bit child encodings. -/
+/-- The exact layer-`i` Merkle chunk query, over the raw 255-bit child encodings
+(`MerkleCRH`, §5.4.1.4). -/
 abbrev merkleQuery (wit : ActionData) (i : Fin 32) : List ℕ :=
   merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)
+
+/-! The per-site hash abbreviations pin the deployed generator table and the site's
+domain point once, so the definedness facts and success predicates below spell each
+hash the same way.  `extractP` and the two `sinsemillaCommit…` steps name the
+spec-level operations the statements would otherwise spell out. -/
+
+/-- The `Commit^ivk` hash of the witness's exact query (`SinsemillaHashToPoint`,
+§5.4.1.9, at the §5.4.8.4 domain). -/
+abbrev ivkHash (wit : ActionData) : Option (Point Fp) :=
+  hashToPoint orchardGenerators.S orchardBases.ivkQ (ivkQuery wit)
+
+/-- The old-note commitment hash of the witness's exact query
+(`SinsemillaHashToPoint`, §5.4.1.9, at the `NoteCommit` domain, §5.4.8.4). -/
+abbrev noteOldHash (wit : ActionData) : Option (Point Fp) :=
+  hashToPoint orchardGenerators.S orchardBases.noteQ (noteOldQuery wit)
+
+/-- The new-note commitment hash of the witness's exact query
+(`SinsemillaHashToPoint`, §5.4.1.9, at the `NoteCommit` domain, §5.4.8.4). -/
+abbrev noteNewHash (wit : ActionData) : Option (Point Fp) :=
+  hashToPoint orchardGenerators.S orchardBases.noteQ (noteNewQuery wit)
+
+/-- The layer-`i` Merkle hash of the witness's exact query (`SinsemillaHashToPoint`,
+§5.4.1.9, at the `MerkleCRH` domain, §5.4.1.4). -/
+abbrev merkleHash (wit : ActionData) (i : Fin 32) : Option (Point Fp) :=
+  hashToPoint orchardGenerators.S orchardBases.merkleQ (merkleQuery wit i)
+
+/-- `Extract_ℙ` (§5.4.9.7).  Not definitionally the `x`-projection: the spec maps
+`𝒪` to `0` and any other point to its affine `x`-coordinate.  It can be implemented
+as `.x` here because this development represents `𝒪` as the off-curve coordinate
+pair `(0, 0)`. -/
+abbrev extractP (p : Point Fp) : Fp := p.x
+
+/-- The blinding step shared by the Sinsemilla commitments (§5.4.8.4): add the
+randomness term to the hash point.  Statements use this name so they do not depend
+on how `SinsemillaCommit` spells the blinding.  Generic over the point or group
+representation and the scalar type, so the circuit-level `Point` form and the
+ledger-level group form spell their blinding the same way. -/
+def sinsemillaCommitBlind {G R : Type*} [Add G] [SMul R G] (hp : G) (r : R)
+    (base : G) : G :=
+  hp + r • base
+
+/-- The blinding-and-extraction step of the short Sinsemilla commitments
+(§5.4.8.4): `Extract_ℙ` of the blinded hash point. -/
+def sinsemillaCommitBlindShort (hp : Point Fp) (r : ℕ) (R : Point Fp) : Fp :=
+  extractP (sinsemillaCommitBlind hp r R)
 
 /-- The four circuit-facing exceptional outcomes, each tied to the witness's own
 exact Sinsemilla hash query via a `hashToPointB … = .inr br` equation and certified
