@@ -1023,24 +1023,6 @@ theorem configure_output_sinsemilla2_qS2_mem_regionFixedColumns
       ((configure G).output counts).regionFixedColumns := by
   simp [Config.regionFixedColumns]
 
-private theorem lt_add_three_of_eq_add_zero_or_one_or_two
-    {base value : ℕ}
-    (hvalue : value = base ∨ value = base + 1 ∨ value = base + 2) :
-    value < base + 3 := by
-  omega
-
-private theorem add_three_le_of_eq_add_eleven_or_twelve_or_thirteen
-    {base value : ℕ}
-    (hvalue : value = base + 11 ∨ value = base + 12 ∨ value = base + 13) :
-    base + 3 ≤ value := by
-  omega
-
-private theorem add_three_le_of_lagrange_index
-    {base value : ℕ} (index : Fin 8)
-    (hvalue : base + 3 + index = value) :
-    base + 3 ≤ value := by
-  omega
-
 theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
     (G : Generators) (counts : ConfigureCounts) :
     let cfg := (configure G).output counts
@@ -1060,7 +1042,7 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
     simp only [Config.generatorTableColumns, List.map_cons, List.map_nil,
       List.mem_cons, List.not_mem_nil, or_false] at hindex
     rw [htableIdx, htableX, htableY] at hindex
-    exact lt_add_three_of_eq_add_zero_or_one_or_two hindex
+    omega
   have hregionColumn : ∀ column ∈
       ((configure G).output counts).regionFixedColumns,
       counts.numFixedColumns + 3 ≤ column.index := by
@@ -1070,7 +1052,7 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
     · obtain ⟨index, hindex⟩ := List.mem_ofFn.mp hlagrange
       have hcolumnIndex := congrArg Column.index hindex
       rw [configure_output_lagrangeCoeff_index] at hcolumnIndex
-      exact add_three_le_of_lagrange_index index hcolumnIndex
+      omega
     · have hindex : column.index ∈
           [((configure G).output counts).eccConfig.mulFixedShort.superConfig.fixedZ,
             ((configure G).output counts).sinsemilla1.qS2,
@@ -1079,7 +1061,7 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
       simp only [List.map_cons, List.map_nil, List.mem_cons,
         List.not_mem_nil, or_false] at hindex
       rw [hfixedZ, hqS21, hqS22] at hindex
-      exact add_three_le_of_eq_add_eleven_or_twelve_or_thirteen hindex
+      omega
   rw [List.disjoint_left]
   intro column htable hregion
   exact (Nat.not_lt_of_ge (hregionColumn column hregion))

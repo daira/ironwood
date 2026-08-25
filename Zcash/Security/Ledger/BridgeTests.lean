@@ -226,10 +226,9 @@ assert_axioms Zcash.Security.Ledger.BridgeTests.actionSpec_bridge_smoke +native(
 -- plain compiled `def` over the break datum, with the relation and nontriviality
 -- facts in erased `Prop` fields (same `+choice` reading as the classifier above).
 assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
--- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s, asserted
--- computable per the breaks-as-computed-data convention.  Their erased `Prop` fields
--- additionally carry the deployed base points' native on-curve certificates, so they sit
--- one tier up at `+choice +native`.
+-- `relationOfBreakData` and `classifyRelation` are likewise plain compiled `def`s. Their erased
+-- `Prop` fields use CompElliptic's native Pallas point-count certificate, so they sit one tier up
+-- at `+choice +native`.
 assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native(

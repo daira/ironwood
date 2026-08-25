@@ -706,7 +706,7 @@ the abstract `ResolverPermutationCycle`: the cycle is the Action active replay.
 theorem actionCopyPairValue_of_resolverPermutation
     {G : Type} [AddCommGroup G] [Inhabited G]
     (pp : ProofParams) (urs : URS G)
-    (ch : Challenges actionCircuit.shape.k Fp)
+    (ch : Challenges actionCircuit.domainExponent Fp)
     (poly : CommitmentId → CPoly)
     (proofIndex : Fin pp.numProofs)
     {n : ℕ}

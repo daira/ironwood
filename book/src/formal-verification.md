@@ -101,15 +101,15 @@ research document linked above records the observed Lake behaviour behind this r
 
 **Concrete, closed facts with no free variables** may additionally use `native_decide`
 (which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
-the kernel's GMP-backed bignum arithmetic. Ironwood-owned uses are confined to the four fixture
-lanes: captured verifier/transcript and fingerprint checks, negative mutation checks, numerical
-facts about the captured keys, cross-capture provenance, and the keygen/deployment seam that
-identifies the derived key, public-input rows, and instance commitments with the capture, plus the
-reusable NU6.3 cross-address separation check. The six fixed-base window-table certificates are
-kernel-checked. CompElliptic separately uses native checking for its point-count witnesses and
-Pasta Tonelli–Shanks data; its primality certificates are kernel-checked. All of these closed facts
-are independently re-checkable, so another implementation or hand computation can detect
-disagreement.
+the kernel's GMP-backed bignum arithmetic. The principal such facts in this repository are the
+four derived-form fingerprint boundary theorems `nonInteractiveFingerprint_matches_derived`
+(the generated per-capture `fingerprint_matches` are their raw forms): numeric checks that the
+Lean verifier's assembled multi-scalar multiplication equals the Rust verifier's on each
+captured proof — two honest, two at random inputs. The CompElliptic dependency applies the
+same discipline to its concrete curve-arithmetic facts (cardinalities, primality
+certificates). Such facts are independently re-checkable (another implementation, or hand
+computation, would compute the same result), so a miscompiled or buggy oracle could in
+principle be caught by disagreement.
 
 These boundaries are *checked at build time*, not merely documented. `Zcash.TrustBoundary` is the
 top-level census for reusable library claims — the key-binding, birthday, ledger, and

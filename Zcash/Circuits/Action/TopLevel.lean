@@ -172,8 +172,8 @@ def Internal.actionCircuitImpl : TopLevelCircuit Fp Config PublicInputs where
   constantSiteCount_le_constantCapacityLowerBound := by
     dsimp only
     rw [Zcash.Circuits.Action.Circuit.circuit_synthesisSummary_eq]
-    set_option maxRecDepth 10000 in
-      decide
+    norm_num [Circuit.mainPostSynthesisSummary,
+      Circuit.synthesizeBaseSynthesisSummary, synthesis_summary_norm]
   publicInputLayout := PublicInputs.layout
   PrivateWitness := PrivateWitness
   extractPrivate := fun cfg env =>
