@@ -199,9 +199,10 @@ def actionTopLevelCircuitCorrectness
               NontrivialRelation (F := Fp) urs.g urs.u urs.w)
             (fun column hcolumn =>
               relation.fixedColumn_eq_rowPolynomial_or_relation
-                column fixedCoherence.key
+                column
+                (LagrangeCommitmentKey.canonical urs actionCircuit.omega)
                 (actionCircuit.fixedRows.getD column [])
-                (fixedCoherence.commitment column hcolumn)
+                (fixedCoherence column hcolumn)
                 hfixedRows
                 (by
                   obtain ⟨rotation, hlayout⟩ :=
