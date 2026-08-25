@@ -1,149 +1,10 @@
 import Zcash.Circuits.Action.Planner
-import Clean.Halo2.Keygen.PdqsortCorrectness
+import Clean.Halo2.Keygen.PlannerTrace
 
 namespace Zcash.Circuits.Action
 
 open Halo2 FloorPlanner
-
-private def aboveKey (threshold : ℕ)
-    (summaries : List RegionShapeSummary) : List RegionShapeSummary :=
-  summaries.filter fun summary => decide (threshold < summary.key)
-
-private def atMostKey (threshold : ℕ)
-    (summaries : List RegionShapeSummary) : List RegionShapeSummary :=
-  summaries.filter fun summary => decide (summary.key ≤ threshold)
-
-private theorem sorted_eq_aboveKey_append_atMostKey
-    (threshold : ℕ) (summaries : List RegionShapeSummary)
-    (hsorted :
-      (summaries.map fun summary =>
-        (summary.key : OrderDual ℕ)).SortedLE) :
-    summaries = aboveKey threshold summaries ++ atMostKey threshold summaries := by
-  induction summaries with
-  | nil => rfl
-  | cons head tail inductionHypothesis =>
-      rw [List.sortedLE_iff_pairwise, List.map_cons,
-        List.pairwise_cons] at hsorted
-      by_cases habove : threshold < head.key
-      · rw [aboveKey, List.filter_cons_of_pos (by simp [habove]),
-          atMostKey, List.filter_cons_of_neg (by simp [habove])]
-        apply congrArg (List.cons head)
-        apply inductionHypothesis
-        rw [List.sortedLE_iff_pairwise]
-        exact hsorted.2
-      · have htailAtMost : ∀ summary ∈ tail, summary.key ≤ threshold := by
-          intro summary hsummary
-          have hdescending : summary.key ≤ head.key :=
-            hsorted.1 (summary.key : OrderDual ℕ)
-              (List.mem_map.mpr ⟨summary, hsummary, rfl⟩)
-          omega
-        have htailAbove : aboveKey threshold tail = [] := by
-          rw [aboveKey, List.filter_eq_nil_iff]
-          intro summary hsummary
-          simp only [Bool.not_eq_true, decide_eq_false_iff_not]
-          exact Nat.not_lt.mpr (htailAtMost summary hsummary)
-        have htailAtMostEq : atMostKey threshold tail = tail := by
-          rw [atMostKey, List.filter_eq_self]
-          intro summary hsummary
-          simp only [decide_eq_true_eq]
-          exact htailAtMost summary hsummary
-        have hheadAtMost : head.key ≤ threshold := by omega
-        rw [show aboveKey threshold (head :: tail) = [] by
-            rw [aboveKey, List.filter_cons_of_neg (by simp [habove])]
-            exact htailAbove,
-          show atMostKey threshold (head :: tail) = head :: tail by
-            rw [atMostKey,
-              List.filter_cons_of_pos (by simp [hheadAtMost])]
-            exact congrArg (List.cons head) htailAtMostEq,
-          List.nil_append]
-
-private theorem filter_key_sorted
-    (predicate : RegionShapeSummary → Bool)
-    (summaries : List RegionShapeSummary)
-    (hsorted :
-      (summaries.map fun summary =>
-        (summary.key : OrderDual ℕ)).SortedLE) :
-    (((summaries.filter predicate).map fun summary =>
-      (summary.key : OrderDual ℕ))).SortedLE := by
-  rw [List.sortedLE_iff_pairwise, List.pairwise_map] at hsorted ⊢
-  exact hsorted.filter predicate
-
-private theorem perm_replicate_append_singleton_iff
-    {T : Type} [DecidableEq T] {items : List T} {repeated singleton : T}
-    (hne : repeated ≠ singleton) (count : ℕ) :
-    items.Perm (List.replicate count repeated ++ [singleton]) ↔
-      ∃ before after, before + after = count ∧
-        items = List.replicate before repeated ++
-          singleton :: List.replicate after repeated := by
-  constructor
-  · intro hperm
-    have hsingleton : singleton ∈ items :=
-      hperm.symm.subset (by simp)
-    obtain ⟨beforeItems, afterItems, hitems⟩ :=
-      List.mem_iff_append.mp hsingleton
-    have hcounts := (List.perm_replicate_append_replicate
-      (l := items) (a := repeated) (b := singleton)
-      (m := count) (n := 1) hne).mp hperm
-    have hbeforeOnly : ∀ item ∈ beforeItems, item = repeated := by
-      intro item hitem
-      have hmember := hcounts.2.2 (hitems ▸
-        List.mem_append.mpr (Or.inl hitem))
-      rw [List.mem_cons, List.mem_singleton] at hmember
-      rcases hmember with hrepeat | hsingle
-      · exact hrepeat
-      · have hitemSingleton : singleton ∈ beforeItems := hsingle ▸ hitem
-        have hsingletonCount : items.count singleton = 1 := hcounts.2.1
-        rw [hitems, List.count_append, List.count_cons] at hsingletonCount
-        simp only [BEq.beq, decide_true, if_true] at hsingletonCount
-        have hbeforeZero : beforeItems.count singleton = 0 := by omega
-        exact (List.count_eq_zero.mp hbeforeZero hitemSingleton).elim
-    have hafterOnly : ∀ item ∈ afterItems, item = repeated := by
-      intro item hitem
-      have hmember := hcounts.2.2 (hitems ▸
-        List.mem_append.mpr (Or.inr (List.mem_cons_of_mem singleton hitem)))
-      rw [List.mem_cons, List.mem_singleton] at hmember
-      rcases hmember with hrepeat | hsingle
-      · exact hrepeat
-      · have hitemSingleton : singleton ∈ afterItems := hsingle ▸ hitem
-        have hsingletonCount : items.count singleton = 1 := hcounts.2.1
-        rw [hitems, List.count_append, List.count_cons] at hsingletonCount
-        simp only [BEq.beq, decide_true, if_true] at hsingletonCount
-        have hafterZero : afterItems.count singleton = 0 := by omega
-        exact (List.count_eq_zero.mp hafterZero hitemSingleton).elim
-    have hbefore := List.eq_replicate_length.mpr hbeforeOnly
-    have hafter := List.eq_replicate_length.mpr hafterOnly
-    refine ⟨beforeItems.length, afterItems.length, ?_, ?_⟩
-    · have hlength := hperm.length_eq
-      rw [hitems] at hlength
-      simp only [List.length_append, List.length_cons,
-        List.length_replicate, List.length_nil] at hlength
-      omega
-    · exact hitems.trans (congrArg₂ (fun left right =>
-        left ++ singleton :: right) hbefore hafter)
-  · rintro ⟨before, after, hcount, rfl⟩
-    have hperm := (List.perm_replicate_append_replicate
-      (l := List.replicate before repeated ++
-        singleton :: List.replicate after repeated)
-      (a := repeated) (b := singleton) (m := count) (n := 1) hne).mpr
-        (by
-          refine ⟨by simp [Ne.symm hne, hcount],
-            ?_, ?_⟩
-          · rw [List.count_append, List.count_cons,
-              List.count_replicate, List.count_replicate]
-            simp [hne]
-          rw [List.append_subset, List.cons_subset]
-          refine ⟨?_, by simp, ?_⟩ <;>
-            intro item hitem <;>
-            rw [List.mem_replicate] at hitem <;>
-            simp [hitem.2])
-    simpa [List.replicate_succ] using hperm
-
-private theorem listCoe_cons {T : Type} (head : T) (tail : List T) :
-    (↑(head :: tail) : Multiset T) = head ::ₘ (↑tail : Multiset T) := rfl
-
-private theorem multisetCons_eq_add {T : Type} (head : T)
-    (tail : Multiset T) : head ::ₘ tail = {head} + tail :=
-  (Multiset.singleton_add head tail).symm
+open FloorPlanner.V1
 
 /-- A concise physical region shape for Action's ten advice columns and selected
 fixed columns. -/
@@ -239,53 +100,12 @@ private def notesPlannerBlocks : List (ℕ × RegionShapeSummary) :=
     (8, plannerShape [6] 1), (1, plannerShape [0] 1),
     (8, plannerShape [7] 1), (1, plannerShape [] 0)]
 
-private def expandPlannerBlocks
-    (blocks : List (ℕ × RegionShapeSummary)) : List RegionShapeSummary :=
-  blocks.flatMap fun block => List.replicate block.1 block.2
-
-private theorem expandPlannerBlocks_key_sorted
-    {K : Type} [LinearOrder K] (key : RegionShapeSummary → K)
-    (blocks : List (ℕ × RegionShapeSummary))
-    (hsorted : (blocks.map fun block => key block.2).SortedLE) :
-    ((expandPlannerBlocks blocks).map key).SortedLE := by
-  induction blocks with
-  | nil =>
-      rw [List.sortedLE_iff_pairwise]
-      exact List.Pairwise.nil
-  | cons block rest inductionHypothesis =>
-      rw [List.sortedLE_iff_pairwise, List.map_cons,
-        List.pairwise_cons] at hsorted
-      rw [expandPlannerBlocks, List.flatMap_cons, List.map_append,
-        List.sortedLE_iff_pairwise, List.pairwise_append]
-      refine ⟨?_, ?_, ?_⟩
-      · rw [← List.sortedLE_iff_pairwise]
-        simpa only [List.map_replicate] using
-          List.sortedLE_replicate (a := key block.2) block.1
-      · have hrest := inductionHypothesis (by
-          rw [List.sortedLE_iff_pairwise]
-          exact hsorted.2)
-        rw [List.sortedLE_iff_pairwise] at hrest
-        exact hrest
-      · intro left hleft right hright
-        rw [List.mem_map] at hleft hright
-        obtain ⟨leftSummary, hleftSummary, rfl⟩ := hleft
-        obtain ⟨rightSummary, hrightSummary, rfl⟩ := hright
-        rw [List.mem_replicate] at hleftSummary
-        rcases hleftSummary with ⟨_, hleftSummary⟩
-        subst leftSummary
-        apply hsorted.1
-        rw [List.mem_flatMap] at hrightSummary
-        obtain ⟨rightBlock, hrightBlock, hrightSummary⟩ := hrightSummary
-        rw [List.mem_replicate] at hrightSummary
-        rcases hrightSummary with ⟨_, rfl⟩
-        exact List.mem_map.mpr ⟨rightBlock, hrightBlock, rfl⟩
-
 private theorem actionCanonicalPlannerSummaries_key_sorted :
     ((actionCanonicalPlannerSummaries.map fun summary =>
       (summary.key : OrderDual ℕ))).SortedLE := by
   rw [show actionCanonicalPlannerSummaries =
       expandPlannerBlocks actionPlannerBlocks by rfl]
-  apply expandPlannerBlocks_key_sorted
+  apply expandPlannerBlocks_keySorted
   unfold actionPlannerBlocks plannerShape RegionShapeSummary.key
     RegionShapeSummary.adviceCols RegionColumn.isAdvice
   decide
@@ -303,18 +123,6 @@ private theorem actionPlannerBlocks_wellFormed :
     actionPlannerBlocks.Forall fun block => block.2.WellFormed := by
   unfold actionPlannerBlocks plannerShape RegionShapeSummary.WellFormed
   decide
-
-private theorem expandPlannerBlocks_wellFormed
-    (blocks : List (ℕ × RegionShapeSummary))
-    (hblocks : blocks.Forall fun block => block.2.WellFormed) :
-    (expandPlannerBlocks blocks).Forall RegionShapeSummary.WellFormed := by
-  rw [List.forall_iff_forall_mem]
-  intro summary hsummary
-  rw [expandPlannerBlocks, List.mem_flatMap] at hsummary
-  obtain ⟨block, hblock, hsummary⟩ := hsummary
-  rw [List.mem_replicate] at hsummary
-  exact hsummary.2 ▸
-    List.forall_iff_forall_mem.mp hblocks block hblock
 
 private theorem actionCanonicalPlannerSummaries_wellFormed :
     actionCanonicalPlannerSummaries.Forall RegionShapeSummary.WellFormed := by
@@ -473,34 +281,6 @@ private theorem plannerSegments_eq
           plannerBelow4 summaries := by
       rw [hkey8, hmiddle, hkey4, hbelow]
       simp only [plannerAbove8, List.append_assoc]
-
-private def plannerBlockMultiset
-    (blocks : List (ℕ × RegionShapeSummary)) : Multiset RegionShapeSummary :=
-  blocks.foldr (fun block result => block.1 • {block.2} + result) 0
-
-private theorem coe_replicate_eq_nsmul {T : Type} (count : ℕ) (item : T) :
-    (List.replicate count item : Multiset T) = count • {item} := by
-  induction count with
-  | zero => rfl
-  | succ count inductionHypothesis =>
-      rw [List.replicate_succ, listCoe_cons, multisetCons_eq_add,
-        inductionHypothesis, succ_nsmul]
-      ac_rfl
-
-private theorem coe_expandPlannerBlocks
-    (blocks : List (ℕ × RegionShapeSummary)) :
-    (expandPlannerBlocks blocks : Multiset RegionShapeSummary) =
-      plannerBlockMultiset blocks := by
-  induction blocks with
-  | nil => rfl
-  | cons block blocks inductionHypothesis =>
-      rw [show expandPlannerBlocks (block :: blocks) =
-        List.replicate block.1 block.2 ++ expandPlannerBlocks blocks by
-          simp [expandPlannerBlocks]]
-      change (List.replicate block.1 block.2 : Multiset RegionShapeSummary) +
-        (expandPlannerBlocks blocks : Multiset RegionShapeSummary) = _
-      rw [coe_replicate_eq_nsmul, inductionHypothesis]
-      rfl
 
 private theorem witnessPlannerBlocks_correct :
     ((Circuit.synthWitnessSynthesisSummary actionConfig).physicalRegionShapes.map
@@ -1264,36 +1044,6 @@ private def planner4Narrow : RegionShapeSummary :=
 private def planner4Wide : RegionShapeSummary :=
   plannerShape [6,7,8,9] 1
 
-private theorem filter_expandPlannerBlocks
-    (predicate : RegionShapeSummary → Bool)
-    (blocks : List (ℕ × RegionShapeSummary)) :
-    (expandPlannerBlocks blocks).filter predicate =
-      expandPlannerBlocks (blocks.filter fun block => predicate block.2) := by
-  induction blocks with
-  | nil => rfl
-  | cons block rest inductionHypothesis =>
-      rw [expandPlannerBlocks, List.flatMap_cons, List.filter_append,
-        show List.filter predicate
-            (List.flatMap (fun block => List.replicate block.1 block.2) rest) =
-          expandPlannerBlocks
-            (List.filter (fun block => predicate block.2) rest) from
-          inductionHypothesis]
-      by_cases hpredicate : predicate block.2 = true
-      · rw [show (block :: rest).filter (fun block =>
-            predicate block.2) = block :: rest.filter (fun block =>
-              predicate block.2) by simp [hpredicate],
-          show expandPlannerBlocks
-              (block :: rest.filter (fun block => predicate block.2)) =
-            List.replicate block.1 block.2 ++
-              expandPlannerBlocks
-                (rest.filter (fun block => predicate block.2)) by
-            rfl]
-        simp [hpredicate]
-      · rw [show (block :: rest).filter (fun block =>
-            predicate block.2) = rest.filter (fun block =>
-              predicate block.2) by simp [hpredicate]]
-        simp [hpredicate]
-
 private theorem plannerKey8_canonical_eq :
     plannerKey8 actionCanonicalPlannerSummaries =
       List.replicate 8 planner8Wide ++ [planner8Short] := by
@@ -1371,27 +1121,6 @@ private theorem canonicalFiltered_wellFormed
   rw [List.mem_filter] at hsummary
   exact List.forall_iff_forall_mem.mp
     actionCanonicalPlannerSummaries_wellFormed summary hsummary.1
-
-private theorem allocationsValid_of_summaryStateEquivalent
-    {left right : ℕ × CircuitAllocations}
-    (hequivalent : V1.SummaryStateEquivalent left right)
-    (hrightValid : right.2.Valid) : left.2.Valid := by
-  intro column
-  rw [hequivalent.2 column]
-  exact hrightValid column
-
-private theorem continueCanonicalSegment
-    (summaries : List RegionShapeSummary)
-    (hwellFormed : summaries.Forall RegionShapeSummary.WellFormed)
-    {left right : ℕ × CircuitAllocations}
-    (hrightValid : right.2.Valid)
-    (hequivalent : V1.SummaryStateEquivalent left right) :
-    V1.SummaryStateEquivalent
-      (V1.slotSummaryStateFromWith left.1 summaries left.2)
-      (V1.slotSummaryStateFromWith right.1 summaries right.2) :=
-  V1.slotSummaryStateFromWith_equivalent summaries hwellFormed
-    (allocationsValid_of_summaryStateEquivalent hequivalent hrightValid)
-    hrightValid hequivalent
 
 private theorem plannerAbove8_equivalent
     (initial : ℕ) (allocations : CircuitAllocations)
@@ -1510,17 +1239,11 @@ def actionPlannerTrace : List V1.PlannedSummaryBlock :=
    { count := 56, summary := plannerShape [7] 1, start := 274 }]
 
 def actionPlannerTraceSummaries : List RegionShapeSummary :=
-  (V1.PlannedSummaryBlock.blocks actionPlannerTrace).flatMap fun block =>
-    List.replicate block.1 block.2
-
-private def plannerTraceSummaries
-    (trace : List V1.PlannedSummaryBlock) : List RegionShapeSummary :=
-  (V1.PlannedSummaryBlock.blocks trace).flatMap fun block =>
-    List.replicate block.1 block.2
+  V1.PlannedSummaryBlock.summaries actionPlannerTrace
 
 private theorem plannerAbove8_canonical_eq_trace :
     plannerAbove8 actionCanonicalPlannerSummaries =
-      plannerTraceSummaries (actionPlannerTrace.take 19) := by
+      V1.PlannedSummaryBlock.summaries (actionPlannerTrace.take 19) := by
   rw [show actionCanonicalPlannerSummaries =
       expandPlannerBlocks actionPlannerBlocks by rfl,
     plannerAbove8, aboveKey, filter_expandPlannerBlocks]
@@ -1532,8 +1255,9 @@ private theorem plannerAbove8_canonical_eq_trace :
       RegionShapeSummary.adviceCols RegionColumn.isAdvice
     simp
   rw [hblocks]
-  unfold actionPlannerBlocks actionPlannerTrace plannerTraceSummaries
-    V1.PlannedSummaryBlock.blocks expandPlannerBlocks
+  unfold actionPlannerBlocks actionPlannerTrace
+    V1.PlannedSummaryBlock.summaries V1.PlannedSummaryBlock.blocks
+    expandPlannerBlocks
   simp only [List.map_cons, List.map_nil, List.flatMap_cons,
     List.flatMap_nil, List.take]
   rw [show List.replicate 20 (plannerShape [5,6,7,8,9] 2) =
@@ -1544,7 +1268,8 @@ private theorem plannerAbove8_canonical_eq_trace :
 
 private theorem plannerBetween8And4_canonical_eq_trace :
     plannerBetween8And4 actionCanonicalPlannerSummaries =
-      plannerTraceSummaries ((actionPlannerTrace.drop 21).take 5) := by
+      V1.PlannedSummaryBlock.summaries
+        ((actionPlannerTrace.drop 21).take 5) := by
   rw [show actionCanonicalPlannerSummaries =
       expandPlannerBlocks actionPlannerBlocks by rfl,
     plannerBetween8And4, filter_expandPlannerBlocks]
@@ -1556,8 +1281,9 @@ private theorem plannerBetween8And4_canonical_eq_trace :
       RegionShapeSummary.adviceCols RegionColumn.isAdvice
     simp
   rw [hblocks]
-  unfold actionPlannerBlocks actionPlannerTrace plannerTraceSummaries
-    V1.PlannedSummaryBlock.blocks expandPlannerBlocks
+  unfold actionPlannerBlocks actionPlannerTrace
+    V1.PlannedSummaryBlock.summaries V1.PlannedSummaryBlock.blocks
+    expandPlannerBlocks
   simp only [List.map_cons, List.map_nil, List.flatMap_cons,
     List.flatMap_nil, List.drop, List.take]
   rw [show List.replicate 16 (plannerShape [5,6,7,8,9] 1) =
@@ -1567,38 +1293,30 @@ private theorem plannerBetween8And4_canonical_eq_trace :
       rw [← List.replicate_add, ← List.replicate_add]]
   simp only [List.append_assoc, List.append_nil]
 
-private theorem plannerTraceSummaries_append
-    (left right : List V1.PlannedSummaryBlock) :
-    plannerTraceSummaries (left ++ right) =
-      plannerTraceSummaries left ++ plannerTraceSummaries right := by
-  simp [plannerTraceSummaries, V1.PlannedSummaryBlock.blocks]
-
 private theorem plannerPrefix4_canonical_eq_trace :
     plannerAbove8 actionCanonicalPlannerSummaries ++
         plannerKey8 actionCanonicalPlannerSummaries ++
           plannerBetween8And4 actionCanonicalPlannerSummaries =
-      plannerTraceSummaries (actionPlannerTrace.take 26) := by
+      V1.PlannedSummaryBlock.summaries (actionPlannerTrace.take 26) := by
   rw [plannerAbove8_canonical_eq_trace, plannerKey8_canonical_eq,
     plannerBetween8And4_canonical_eq_trace]
   have hkey8 :
       List.replicate 8 planner8Wide ++ [planner8Short] =
-        plannerTraceSummaries ((actionPlannerTrace.drop 19).take 2) := by
-    unfold actionPlannerTrace plannerTraceSummaries
+        V1.PlannedSummaryBlock.summaries
+          ((actionPlannerTrace.drop 19).take 2) := by
+    unfold actionPlannerTrace V1.PlannedSummaryBlock.summaries
       V1.PlannedSummaryBlock.blocks planner8Wide planner8Short
     simp
   rw [hkey8]
-  rw [← plannerTraceSummaries_append, ← plannerTraceSummaries_append]
+  rw [← V1.PlannedSummaryBlock.summaries_append,
+    ← V1.PlannedSummaryBlock.summaries_append]
   congr 1
-
-private def plannedRun (count : ℕ) (summary : RegionShapeSummary)
-    (start : ℕ) : List V1.PlannedSummaryBlock :=
-  if count = 0 then [] else [{ count, summary, start }]
 
 private def plannerKey8Trace (before after : ℕ) :
     List V1.PlannedSummaryBlock :=
-  plannedRun before planner8Wide 580 ++
+  V1.PlannedSummaryBlock.run before planner8Wide 580 ++
     [{ count := 1, summary := planner8Short, start := 1745 }] ++
-      plannedRun after planner8Wide (580 + before * 2)
+      V1.PlannedSummaryBlock.run after planner8Wide (580 + before * 2)
 
 private theorem plannerKey8Trace_summaries
     (before after : ℕ) :
@@ -1609,24 +1327,28 @@ private theorem plannerKey8Trace_summaries
         planner8Short :: List.replicate after planner8Wide := by
   rcases Nat.eq_zero_or_pos before with rfl | hbefore <;>
     rcases Nat.eq_zero_or_pos after with rfl | hafter
-  · simp [plannerKey8Trace, plannedRun,
+  · simp [plannerKey8Trace, V1.PlannedSummaryBlock.run,
       V1.PlannedSummaryBlock.blocks]
-  · simp [plannerKey8Trace, plannedRun, Nat.ne_of_gt hafter,
+  · simp [plannerKey8Trace, V1.PlannedSummaryBlock.run,
+      Nat.ne_of_gt hafter,
       V1.PlannedSummaryBlock.blocks]
-  · simp [plannerKey8Trace, plannedRun, Nat.ne_of_gt hbefore,
+  · simp [plannerKey8Trace, V1.PlannedSummaryBlock.run,
+      Nat.ne_of_gt hbefore,
       V1.PlannedSummaryBlock.blocks]
-  · simp [plannerKey8Trace, plannedRun, Nat.ne_of_gt hbefore,
+  · simp [plannerKey8Trace, V1.PlannedSummaryBlock.run,
+      Nat.ne_of_gt hbefore,
       Nat.ne_of_gt hafter, V1.PlannedSummaryBlock.blocks]
 
 private theorem plannerKey8Trace_endpoint
     {before after : ℕ} (hcount : before + after = 8) :
     V1.PlannedSummaryBlock.endpointFrom 1745
       (plannerKey8Trace before after) = 1746 := by
-  unfold plannerKey8Trace plannedRun planner8Wide planner8Short plannerShape
+  unfold plannerKey8Trace V1.PlannedSummaryBlock.run planner8Wide
+    planner8Short plannerShape
   split <;> split <;>
     (simp_all [V1.PlannedSummaryBlock.endpointFrom]; try omega)
 
-macro "trace_step" : tactic =>
+macro "action_trace_step" : tactic =>
   `(tactic|
     (unfold V1.PlannedSummaryBlock.TraceLawfulAfter
      refine ⟨by first | omega | norm_num,
@@ -1653,30 +1375,33 @@ private theorem plannerKey8Trace_traceLawful
     rcases Nat.eq_zero_or_pos after with rfl | hafter
   · omega
   ·
-    unfold actionPlannerTrace plannerKey8Trace plannedRun planner8Wide
+    unfold actionPlannerTrace plannerKey8Trace V1.PlannedSummaryBlock.run
+      planner8Wide
       planner8Short
     simp only [Nat.zero_mul, Nat.ne_of_gt hafter,
       if_false, if_true, List.nil_append,
       List.cons_append, List.take]
-    trace_step
-    trace_step
+    action_trace_step
+    action_trace_step
     trivial
   ·
-    unfold actionPlannerTrace plannerKey8Trace plannedRun planner8Wide
+    unfold actionPlannerTrace plannerKey8Trace V1.PlannedSummaryBlock.run
+      planner8Wide
       planner8Short
     simp only [Nat.ne_of_gt hbefore, if_false, if_true, List.nil_append,
       List.append_nil, List.cons_append, List.take]
-    trace_step
-    trace_step
+    action_trace_step
+    action_trace_step
     trivial
   ·
-    unfold actionPlannerTrace plannerKey8Trace plannedRun planner8Wide
+    unfold actionPlannerTrace plannerKey8Trace V1.PlannedSummaryBlock.run
+      planner8Wide
       planner8Short
     simp only [Nat.ne_of_gt hbefore, Nat.ne_of_gt hafter, if_false,
       List.nil_append, List.cons_append, List.take]
-    trace_step
-    trace_step
-    trace_step
+    action_trace_step
+    action_trace_step
+    action_trace_step
     trivial
 
 private def plannerKey8CanonicalTrace : List V1.PlannedSummaryBlock :=
@@ -1694,7 +1419,8 @@ private theorem plannerKey8Trace_finalView
   · omega
   · have : after = 8 := by omega
     subst after
-    simp only [plannerKey8Trace, plannerKey8CanonicalTrace, plannedRun,
+    simp only [plannerKey8Trace, plannerKey8CanonicalTrace,
+      V1.PlannedSummaryBlock.run,
       if_pos, Nat.zero_mul, List.nil_append, List.cons_append,
       V1.PlannedSummaryBlock.finalView,
       V1.AllocationView.insertRepeated_one]
@@ -1705,9 +1431,11 @@ private theorem plannerKey8Trace_finalView
     omega
   · have : before = 8 := by omega
     subst before
-    simp [plannerKey8Trace, plannerKey8CanonicalTrace, plannedRun,
+    simp [plannerKey8Trace, plannerKey8CanonicalTrace,
+      V1.PlannedSummaryBlock.run,
       V1.PlannedSummaryBlock.finalView]
-  · simp only [plannerKey8Trace, plannerKey8CanonicalTrace, plannedRun,
+  · simp only [plannerKey8Trace, plannerKey8CanonicalTrace,
+      V1.PlannedSummaryBlock.run,
       Nat.ne_of_gt hbefore, Nat.ne_of_gt hafter, if_false,
       List.nil_append, List.cons_append,
       V1.PlannedSummaryBlock.finalView,
@@ -1770,9 +1498,9 @@ private def PlannerKey4Order.trace :
 
 private theorem PlannerKey4Order.trace_summaries
     (order : PlannerKey4Order) :
-    plannerTraceSummaries order.trace = order.summaries := by
+    V1.PlannedSummaryBlock.summaries order.trace = order.summaries := by
   cases order <;>
-    simp [plannerTraceSummaries, trace, summaries,
+    simp [V1.PlannedSummaryBlock.summaries, trace, summaries,
       V1.PlannedSummaryBlock.blocks]
 
 private theorem plannerKey4_perm_order
@@ -1916,11 +1644,11 @@ private theorem actionPlannerTrace_chunk1 :
       (actionPlannerTrace.take 0)
       ((actionPlannerTrace.drop 0).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk2 :
@@ -1928,11 +1656,11 @@ private theorem actionPlannerTrace_chunk2 :
       (actionPlannerTrace.take 5)
       ((actionPlannerTrace.drop 5).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk3 :
@@ -1940,11 +1668,11 @@ private theorem actionPlannerTrace_chunk3 :
       (actionPlannerTrace.take 10)
       ((actionPlannerTrace.drop 10).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk4 :
@@ -1952,11 +1680,11 @@ private theorem actionPlannerTrace_chunk4 :
       (actionPlannerTrace.take 15)
       ((actionPlannerTrace.drop 15).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk5 :
@@ -1964,11 +1692,11 @@ private theorem actionPlannerTrace_chunk5 :
       (actionPlannerTrace.take 20)
       ((actionPlannerTrace.drop 20).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk6 :
@@ -1976,11 +1704,11 @@ private theorem actionPlannerTrace_chunk6 :
       (actionPlannerTrace.take 25)
       ((actionPlannerTrace.drop 25).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk7 :
@@ -1988,11 +1716,11 @@ private theorem actionPlannerTrace_chunk7 :
       (actionPlannerTrace.take 30)
       ((actionPlannerTrace.drop 30).take 5) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem actionPlannerTrace_chunk8 :
@@ -2000,12 +1728,12 @@ private theorem actionPlannerTrace_chunk8 :
       (actionPlannerTrace.take 35)
       ((actionPlannerTrace.drop 35).take 6) := by
   unfold actionPlannerTrace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 theorem actionPlannerTrace_traceLawful :
@@ -2045,10 +1773,10 @@ private theorem plannerKey4TraceLawful_narrowWideNarrowWide :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.narrowWideNarrowWide.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem plannerKey4TraceLawful_narrowWideWideNarrow :
@@ -2056,9 +1784,9 @@ private theorem plannerKey4TraceLawful_narrowWideWideNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.narrowWideWideNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem plannerKey4TraceLawful_wideNarrowNarrowWide :
@@ -2066,9 +1794,9 @@ private theorem plannerKey4TraceLawful_wideNarrowNarrowWide :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideNarrowNarrowWide.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem plannerKey4TraceLawful_wideNarrowWideNarrow :
@@ -2076,10 +1804,10 @@ private theorem plannerKey4TraceLawful_wideNarrowWideNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideNarrowWideNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  trace_step
-  trace_step
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem plannerKey4TraceLawful_wideWideNarrowNarrow :
@@ -2087,8 +1815,8 @@ private theorem plannerKey4TraceLawful_wideWideNarrowNarrow :
       (actionPlannerTrace.take 26)
       PlannerKey4Order.wideWideNarrowNarrow.trace := by
   unfold actionPlannerTrace PlannerKey4Order.trace
-  trace_step
-  trace_step
+  action_trace_step
+  action_trace_step
   trivial
 
 private theorem PlannerKey4Order.traceLawful
@@ -2097,8 +1825,8 @@ private theorem PlannerKey4Order.traceLawful
       (actionPlannerTrace.take 26) order.trace := by
   cases order
   · unfold actionPlannerTrace trace
-    trace_step
-    trace_step
+    action_trace_step
+    action_trace_step
     trivial
   · exact plannerKey4TraceLawful_narrowWideNarrowWide
   · exact plannerKey4TraceLawful_narrowWideWideNarrow
@@ -2154,7 +1882,7 @@ private theorem plannerKey8_equivalent
         (V1.PlannedSummaryBlock.blocks (actionPlannerTrace.take 19)) 0
         (∅ : CircuitAllocations) := by
     rw [hrightPrefix, plannerAbove8_canonical_eq_trace,
-      plannerTraceSummaries,
+      V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
   let prefixView := V1.PlannedSummaryBlock.finalView
     V1.AllocationView.empty (actionPlannerTrace.take 19)
@@ -2212,12 +1940,13 @@ private theorem plannerKey8_equivalent
         V1.slotSummaryBlocksState
           (V1.PlannedSummaryBlock.blocks plannerKey8CanonicalTrace)
           rightPrefix.1 rightPrefix.2 := by
-    have hsummaries : plannerTraceSummaries plannerKey8CanonicalTrace =
+    have hsummaries :
+        V1.PlannedSummaryBlock.summaries plannerKey8CanonicalTrace =
         List.replicate 8 planner8Wide ++ [planner8Short] := by
-      simp [plannerTraceSummaries, plannerKey8CanonicalTrace,
+      simp [V1.PlannedSummaryBlock.summaries, plannerKey8CanonicalTrace,
         V1.PlannedSummaryBlock.blocks]
     rw [plannerKey8_canonical_eq, ← hsummaries,
-      plannerTraceSummaries,
+      V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
   have hprefixCounts : (actionPlannerTrace.take 19).Forall
       fun block => 0 < block.count := by
@@ -2267,7 +1996,7 @@ private theorem plannerKey4_equivalent
         (V1.PlannedSummaryBlock.blocks (actionPlannerTrace.take 26)) 0
         (∅ : CircuitAllocations) := by
     rw [hrightPrefix, plannerPrefix4_canonical_eq_trace,
-      plannerTraceSummaries,
+      V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
   let prefixView := V1.PlannedSummaryBlock.finalView
     V1.AllocationView.empty (actionPlannerTrace.take 26)
@@ -2314,7 +2043,8 @@ private theorem plannerKey4_equivalent
         V1.slotSummaryBlocksState
           (V1.PlannedSummaryBlock.blocks order.trace)
           leftPrefix.1 leftPrefix.2 := by
-    rw [halignedEq, ← order.trace_summaries, plannerTraceSummaries,
+    rw [halignedEq, ← order.trace_summaries,
+      V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
   have hcanonicalBlocks :
       V1.slotSummaryStateFromWith rightPrefix.1
@@ -2328,7 +2058,7 @@ private theorem plannerKey4_equivalent
           List.replicate 2 planner4Wide =
         PlannerKey4Order.narrowNarrowWideWide.summaries by rfl,
       ← PlannerKey4Order.narrowNarrowWideWide.trace_summaries,
-      plannerTraceSummaries,
+      V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
   have hprefixCounts : (actionPlannerTrace.take 26).Forall
       fun block => 0 < block.count := by
@@ -2486,7 +2216,8 @@ theorem actionCanonicalPlannerSummaries_eq_trace :
       actionPlannerTraceSummaries ++
         List.replicate 2 (plannerShape [] 0) := by
   unfold actionCanonicalPlannerSummaries actionPlannerTraceSummaries
-    V1.PlannedSummaryBlock.blocks actionPlannerBlocks actionPlannerTrace
+    V1.PlannedSummaryBlock.summaries V1.PlannedSummaryBlock.blocks
+    actionPlannerBlocks actionPlannerTrace
   simp only [List.map_cons, List.map_nil, List.flatMap_cons,
     List.flatMap_nil]
   rw [show List.replicate 20 (plannerShape [5,6,7,8,9] 2) =
@@ -2525,7 +2256,7 @@ theorem actionCanonicalPlannerSummaries_endpoint :
   have htrace :
       (V1.slotSummaryStateFromWith 0 actionPlannerTraceSummaries
         (∅ : CircuitAllocations)).1 = 1779 := by
-    rw [actionPlannerTraceSummaries,
+    rw [actionPlannerTraceSummaries, V1.PlannedSummaryBlock.summaries,
       V1.slotSummaryStateFromWith_flatMap_replicate]
     exact actionPlannerTrace_blocks_endpoint
   generalize hresult : V1.slotSummaryStateFromWith 0
