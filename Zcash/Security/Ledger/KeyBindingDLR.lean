@@ -47,23 +47,20 @@ theorem commitIvkHash_isSome {a n : Fp} {g : PallasGroup}
   rcases Option.bind_eq_some_iff.mp h with ⟨p, hp, -⟩
   exact hp ▸ rfl
 
-/-- The chain a defined `commitIvkHash` hit names is valid, and the hit is its image. -/
-theorem commitIvkHash_get_spec {a n : Fp} {g : PallasGroup}
+/-- The chain a defined `commitIvkHash` hit names is valid. -/
+theorem commitIvkHash_get_valid {a n : Fp} {g : PallasGroup}
     (h : commitIvkHash a n = some g) :
-    ∃ hv : ((hashToPoint orchardGenerators.S ivkQ
-        (commitIvkChunks a.val n.val)).get (commitIvkHash_isSome h)).Valid,
-      g = PallasGroup.ofPoint _ hv := by
-  unfold commitIvkHash at h
-  rcases Option.bind_eq_some_iff.mp h with ⟨p, hp, hop⟩
-  have hget : (hashToPoint orchardGenerators.S ivkQ
-      (commitIvkChunks a.val n.val)).get (commitIvkHash_isSome h) = p := by
-    simp [hp]
-  rw [hget]
-  unfold PallasGroup.ofPoint? at hop
-  split at hop
-  · rename_i hv
-    exact ⟨hv, (Option.some_inj.mp hop).symm⟩
-  · exact absurd hop (by simp)
+    ((hashToPoint orchardGenerators.S ivkQ
+      (commitIvkChunks a.val n.val)).get (commitIvkHash_isSome h)).Valid :=
+  hashToPoint_valid (Or.inl ivkQ_onCurve) (fun _ hm => chunksOf_mem_lt hm)
+    (Option.some_get (commitIvkHash_isSome h)).symm
+
+/-- A defined `commitIvkHash` hit is the image of its chain. -/
+theorem commitIvkHash_get_eq {a n : Fp} {g : PallasGroup}
+    (h : commitIvkHash a n = some g) :
+    g = PallasGroup.ofPoint _ (commitIvkHash_get_valid h) :=
+  Option.some_inj.mp (h.symm.trans (commitIvkHash_eq_some_of_hashToPoint
+    (Option.some_get (commitIvkHash_isSome h)).symm (commitIvkHash_get_valid h)))
 
 /-- **The Orchard-protocol key-binding break computes a discrete-log relation.** Two
 valid `Commit^ivk` openings of the same `ivk` disagreeing on their opening projection:
@@ -82,16 +79,16 @@ def relationOfKeyBindingBreak
   relationOfChainPmEq (Q := ivkQ) (Or.inl ivkQ_onCurve) (W := commitIvkRpt)
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)
     (by simp)
-    (Option.some_get hs₁).symm (commitIvkHash_get_spec b.kb₁.hash_eq).choose
-    (Option.some_get hs₂).symm (commitIvkHash_get_spec b.kb₂.hash_eq).choose
+    (Option.some_get hs₁).symm (commitIvkHash_get_valid b.kb₁.hash_eq)
+    (Option.some_get hs₂).symm (commitIvkHash_get_valid b.kb₂.hash_eq)
     (by
       have hx : extract (w₁.hashPoint + w₁.rivk • commitIvkRpt)
           = extract (w₂.hashPoint + w₂.rivk • commitIvkRpt) := by
         rw [← b.kb₁.ivk_eq, ← b.kb₂.ivk_eq]
         exact b.ivk_eq
       have hpm := (PallasGroup.toPoint_x_eq_iff _ _).mp hx
-      rwa [(commitIvkHash_get_spec b.kb₁.hash_eq).choose_spec,
-        (commitIvkHash_get_spec b.kb₂.hash_eq).choose_spec] at hpm)
+      rwa [commitIvkHash_get_eq b.kb₁.hash_eq,
+        commitIvkHash_get_eq b.kb₂.hash_eq] at hpm)
     (by simp)
     (by
       rintro ⟨hl, hr⟩

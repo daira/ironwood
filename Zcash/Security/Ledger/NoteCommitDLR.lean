@@ -55,26 +55,29 @@ theorem noteCommit_hash_isSome {rcm : Fq} {n : Note PallasGroup Fp Fp}
   rcases Option.bind_eq_some_iff.mp h with ⟨bp, hbp, -⟩
   exact hbp ▸ rfl
 
-/-- The chain a defined `noteCommit` hit names is valid, and the hit decomposes as
-the chain plus the blinding term. -/
-theorem noteCommit_get_spec {rcm : Fq} {n : Note PallasGroup Fp Fp}
+/-- The chain a defined `noteCommit` hit names is valid. -/
+theorem noteCommit_get_valid {rcm : Fq} {n : Note PallasGroup Fp Fp}
     {cm : PallasGroup} (h : noteCommit rcm n = some cm) :
-    ∃ hv : ((noteHash n).get (noteCommit_hash_isSome h)).Valid,
-      cm = PallasGroup.ofPoint _ hv + rcm • noteCommitRpt := by
-  unfold noteCommit at h
-  rcases Option.bind_eq_some_iff.mp h with ⟨bp, hbp, hop⟩
-  have hget : (noteHash n).get (noteCommit_hash_isSome h) = bp := by simp [hbp]
-  have hbpv : bp.Valid := hashToPoint_valid (Or.inl noteQ_onCurve)
-    (fun m hm => chunksOf_mem_lt hm) hbp
-  rw [hget]
-  refine ⟨hbpv, ?_⟩
-  unfold PallasGroup.ofPoint? at hop
-  split at hop
-  · rw [← Option.some_inj.mp hop]
-    rw [smul_eq_val_nsmul, noteCommitRpt, ← PallasGroup.ofPoint_nsmul,
-      ← PallasGroup.ofPoint_add hbpv
-        (Point.valid_nsmul (Or.inl Ecc.MulFixed.Certs.noteCommitR.onCurve) rcm.val)]
-  · exact absurd hop (by simp)
+    ((noteHash n).get (noteCommit_hash_isSome h)).Valid :=
+  hashToPoint_valid (Or.inl noteQ_onCurve) (fun _ hm => chunksOf_mem_lt hm)
+    (Option.some_get (noteCommit_hash_isSome h)).symm
+
+/-- A defined `noteCommit` hit decomposes as its chain plus the blinding term. -/
+theorem noteCommit_get_eq {rcm : Fq} {n : Note PallasGroup Fp Fp}
+    {cm : PallasGroup} (h : noteCommit rcm n = some cm) :
+    cm = sinsemillaCommitBlind (PallasGroup.ofPoint _ (noteCommit_get_valid h))
+      rcm noteCommitRpt := by
+  show cm = PallasGroup.ofPoint _ (noteCommit_get_valid h) + rcm • noteCommitRpt
+  have hval : ((noteHash n).get (noteCommit_hash_isSome h)
+      + rcm.val • Ecc.MulFixed.Certs.noteCommitR.point).Valid :=
+    Point.valid_add (noteCommit_get_valid h)
+      (Point.valid_nsmul (Or.inl Ecc.MulFixed.Certs.noteCommitR.onCurve) rcm.val)
+  have hsome := noteCommit_eq_some_of_hashToPoint
+    (Option.some_get (noteCommit_hash_isSome h)).symm rfl hval
+  rw [smul_eq_val_nsmul, noteCommitRpt, ← PallasGroup.ofPoint_nsmul,
+    ← PallasGroup.ofPoint_add (noteCommit_get_valid h)
+      (Point.valid_nsmul (Or.inl Ecc.MulFixed.Certs.noteCommitR.onCurve) rcm.val)]
+  exact Option.some_inj.mp (h.symm.trans hsome)
 
 /-- **The Orchard-protocol note-commitment break computes a discrete-log relation.** Two
 openings with distinct `(rcm, note)` pairs whose commitments share an extracted
@@ -89,13 +92,12 @@ def relationOfNoteCommitBreak {MSG SIG : Type*}
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)
     (by simp [Pool.noteScalars])
     (Option.some_get (noteCommit_hash_isSome b.open₁)).symm
-    (noteCommit_get_spec b.open₁).choose
+    (noteCommit_get_valid b.open₁)
     (Option.some_get (noteCommit_hash_isSome b.open₂)).symm
-    (noteCommit_get_spec b.open₂).choose
+    (noteCommit_get_valid b.open₂)
     (by
       have hx : extract b.cm₁ = extract b.cm₂ := b.extract_eq
-      rw [(noteCommit_get_spec b.open₁).choose_spec,
-        (noteCommit_get_spec b.open₂).choose_spec] at hx
+      rw [noteCommit_get_eq b.open₁, noteCommit_get_eq b.open₂] at hx
       exact (PallasGroup.toPoint_x_eq_iff _ _).mp hx)
     (by simp [Pool.noteScalars])
     (by

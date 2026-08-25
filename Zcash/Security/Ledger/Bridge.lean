@@ -468,12 +468,11 @@ theorem actionBreak_of_classifyMerkle {wit : ActionData} {br : ActionBreakData}
 /-- A `none` Merkle verdict leaves every layer's hash defined. -/
 theorem classifyMerkle_none_defined {wit : ActionData}
     (h : classifyMerkle wit = none) :
-    ∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
-      (merkleQuery wit i) = some B := by
+    ∀ i : Fin 32, (merkleHash wit i).isSome := by
   intro i
   have hi := List.findSome?_eq_none_iff.mp h i (List.mem_finRange i)
   cases hb : hashToPointB orchardGenerators.S merkleQ (merkleQuery wit i) with
-  | inl B => exact ⟨B, hashToPointB_inl hb⟩
+  | inl B => exact Option.isSome_iff_exists.mpr ⟨B, hashToPointB_inl hb⟩
   | inr brd => simp [hb] at hi
 
 /-- **Classifier soundness**: a classified escape is an exhibited break of the
@@ -499,14 +498,8 @@ theorem actionBreak_of_classify {wit : ActionData} {br : ActionBreakData}
 the witness defined, so each guarded circuit clause lands in its successful
 branch. -/
 theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none) :
-    (∃ B, hashToPoint orchardGenerators.S orchardBases.ivkQ
-      (ivkQuery wit) = some B) ∧
-    (∃ B, hashToPoint orchardGenerators.S orchardBases.noteQ
-      (noteOldQuery wit) = some B) ∧
-    (∃ B, hashToPoint orchardGenerators.S orchardBases.noteQ
-      (noteNewQuery wit) = some B) ∧
-    ∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
-      (merkleQuery wit i) = some B := by
+    (ivkHash wit).isSome ∧ (noteOldHash wit).isSome ∧ (noteNewHash wit).isSome ∧
+    ∀ i : Fin 32, (merkleHash wit i).isSome := by
   unfold classifyAction at h
   cases hivk : hashToPointB orchardGenerators.S ivkQ (ivkQuery wit) with
   | inr brd => simp [hivk] at h
@@ -520,8 +513,10 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
       | inr brd => simp [hnew] at h
       | inl Bn =>
         simp only [hnew] at h
-        exact ⟨⟨Bi, hashToPointB_inl hivk⟩, ⟨Bo, hashToPointB_inl hold⟩,
-          ⟨Bn, hashToPointB_inl hnew⟩, classifyMerkle_none_defined h⟩
+        exact ⟨Option.isSome_iff_exists.mpr ⟨Bi, hashToPointB_inl hivk⟩,
+          Option.isSome_iff_exists.mpr ⟨Bo, hashToPointB_inl hold⟩,
+          Option.isSome_iff_exists.mpr ⟨Bn, hashToPointB_inl hnew⟩,
+          classifyMerkle_none_defined h⟩
 
 /-- **The Prop-level break and the computed classifier cannot diverge**: an exhibited
 `ActionBreak` holds exactly when the classifier reports an escape.  This is what lets
@@ -536,7 +531,8 @@ theorem actionBreak_iff_classify_isSome {wit : ActionData} :
     cases hcl : classifyAction wit with
     | some _ => rfl
     | none =>
-      obtain ⟨⟨Bi, hBi⟩, ⟨Bo, hBo⟩, ⟨Bn, hBn⟩, hMk⟩ := classify_none_defined hcl
+      obtain ⟨hBi, hBo, hBn, hMk⟩ := classify_none_defined hcl
+      simp only [ivkHash, noteOldHash, noteNewHash, merkleHash] at hBi hBo hBn hMk
       cases hb with
       | commitIvk br heq _ =>
         rw [hashToPoint_of_inr heq] at hBi
@@ -548,46 +544,44 @@ theorem actionBreak_iff_classify_isSome {wit : ActionData} :
         rw [hashToPoint_of_inr heq] at hBn
         exact absurd hBn (by simp)
       | merkle i br heq _ =>
-        obtain ⟨B, hB⟩ := hMk i
+        have hB := hMk i
         rw [hashToPoint_of_inr heq] at hB
         exact absurd hB (by simp)
   · intro h
     obtain ⟨abr, habr⟩ := Option.isSome_iff_exists.mp h
     exact actionBreak_of_classify habr
 
+/-- The incoming viewing key computed from a defined `Commit^ivk` chain
+(§5.4.8.4). -/
+def commitIvkOf (wit : ActionData) (hdef : (ivkHash wit).isSome) : Fp :=
+  sinsemillaCommitBlindShort ((ivkHash wit).get hdef) wit.rivk.2.val
+    Ecc.MulFixed.Certs.commitIvkR.point
+
 /-- Successful `Commit^ivk` information: the defined branch of the guarded
-`Commit^ivk` clause, on the witness's exact query. -/
-def CommitIvkSuccess (wit : ActionData) : Prop :=
-  ∃ ivk : Fp, ∃ hashPoint : Point Fp,
-    hashToPoint orchardGenerators.S orchardBases.ivkQ
-      (commitIvkChunks wit.akP.x.val wit.nk.val) = some hashPoint ∧
-    ivk = (hashPoint + wit.rivk.2 • orchardBases.commitIvkR).x ∧
-    wit.pkdOld = ivk.val • wit.gdOld
+`Commit^ivk` clause, on the witness's exact query.  The computed key
+(`commitIvkOf`) opens the witnessed address equation. -/
+structure CommitIvkSuccess (wit : ActionData) : Prop where
+  defined : (ivkHash wit).isSome
+  pkd_eq : wit.pkdOld = (commitIvkOf wit defined).val • wit.gdOld
 
 /-- The successful incoming viewing key cannot be zero.  This is a circuit fact,
 not an additional ledger assumption: the address-integrity equation would otherwise
 make the witnessed, on-curve `pkdOld` the affine identity sentinel. -/
-theorem CommitIvkSuccess.ivk_ne {wit : ActionData} {ivk : Fp}
-    (hpkd : wit.pkdOld.OnCurve)
-    (h : ∃ hashPoint : Point Fp,
-      hashToPoint orchardGenerators.S orchardBases.ivkQ
-        (commitIvkChunks wit.akP.x.val wit.nk.val) = some hashPoint ∧
-      ivk = (hashPoint + wit.rivk.2 • orchardBases.commitIvkR).x ∧
-      wit.pkdOld = ivk.val • wit.gdOld) : ivk ≠ 0 := by
-  rcases h with ⟨_, _, _, hpkdEq⟩
+theorem CommitIvkSuccess.ivk_ne {wit : ActionData} (hpkd : wit.pkdOld.OnCurve)
+    (h : CommitIvkSuccess wit) : commitIvkOf wit h.defined ≠ 0 := by
   intro hiz
-  have hval : ivk.val = 0 := by simp [hiz]
+  have hval : (commitIvkOf wit h.defined).val = 0 := by simp [hiz]
   have hzero : wit.pkdOld = 0 := by
-    rw [hpkdEq, hval]
+    rw [h.pkd_eq, hval]
     rfl
   exact Point.ne_zero_of_onCurve hpkd hzero
 
 /-- A successful `Commit^ivk` opening makes the ledger's own hash primitive defined
 on the witnessed key material. -/
 theorem CommitIvkSuccess.hash_isSome {wit : ActionData} (h : CommitIvkSuccess wit) :
-    (Pool.commitIvkHash wit.akP.x wit.nk).isSome := by
-  obtain ⟨ivk, bp, hbp, -, -⟩ := h
-  exact Option.isSome_iff_exists.mpr ⟨_, commitIvkHash_of_action_hash hbp⟩
+    (Pool.commitIvkHash wit.akP.x wit.nk).isSome :=
+  Option.isSome_iff_exists.mpr
+    ⟨_, commitIvkHash_of_action_hash (Option.some_get h.defined).symm⟩
 
 /-- The exact deployed Orchard key-binding witness of a successful `Commit^ivk`
 opening, computed through the ledger's own primitives: the hash point is the defined
@@ -622,24 +616,23 @@ theorem commitIvkWitness_kb {wit : ActionData}
       PallasGroup.ofPoint wit.pkdOld (.inl hpkd) =
         PallasGroup.embedFp (commitIvkWitness wit hak hdef).ivk •
           PallasGroup.ofPoint wit.gdOld (.inl hgd) := by
-  obtain ⟨ivk, bp, hbp, hivk, hpkdEq⟩ := h
-  have hbpValid : bp.Valid :=
+  have hbp : ivkHash wit = some ((ivkHash wit).get h.defined) :=
+    (Option.some_get h.defined).symm
+  have hbpValid :=
     hashToPoint_valid (Or.inl orchardBases.ivkQ_onCurve)
       (fun _ hm => chunksOf_mem_lt hm) hbp
   have hsome : Pool.commitIvkHash wit.akP.x wit.nk =
-      some (PallasGroup.ofPoint bp hbpValid) :=
+      some (PallasGroup.ofPoint _ hbpValid) :=
     commitIvkHash_of_action_hash hbp
   have hget : (Pool.commitIvkHash wit.akP.x wit.nk).get hdef =
-      PallasGroup.ofPoint bp hbpValid := by
+      PallasGroup.ofPoint _ hbpValid := by
     simp only [hsome, Option.get_some]
-  have hivk' : ivk =
-      (bp + wit.rivk.2.val • Ecc.MulFixed.Certs.commitIvkR.point).x := by
-    simpa [orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hivk
-  have hivk_eq : (commitIvkWitness wit hak hdef).ivk = ivk := by
-    show Pool.extract _ = ivk
-    rw [hget, hivk']
+  have hivk_eq : (commitIvkWitness wit hak hdef).ivk = commitIvkOf wit h.defined := by
+    show Pool.extract _ = commitIvkOf wit h.defined
+    rw [hget]
     simp only [Pool.extract, PallasGroup.toPoint_add, PallasGroup.toPoint_smul,
       PallasGroup.toPoint_ofPoint]
+    rfl
   refine ⟨⟨?_, rfl, ?_⟩, ?_⟩
   · show Pool.commitIvkHash
       (Pool.extract (PallasGroup.ofPoint wit.akP (.inl hak))) wit.nk =
@@ -647,25 +640,23 @@ theorem commitIvkWitness_kb {wit : ActionData}
     rw [hget]
     simpa [Pool.extract, PallasGroup.toPoint_ofPoint] using hsome
   · rw [hivk_eq]
-    exact CommitIvkSuccess.ivk_ne hpkd ⟨bp, hbp, hivk, hpkdEq⟩
+    exact h.ivk_ne hpkd
   · rw [hivk_eq]
-    exact ofPoint_eq_embed_smul (.inl hpkd) (.inl hgd) hpkdEq
+    exact ofPoint_eq_embed_smul (.inl hpkd) (.inl hgd) h.pkd_eq
 
-/-- Successful old-note Sinsemilla opening. -/
-def NoteCommitOldSuccess (wit : ActionData) : Prop :=
-  ∃ hashPoint : Point Fp,
-    hashToPoint orchardGenerators.S orchardBases.noteQ
-      (NoteCommit.noteScalars wit.gdOld wit.pkdOld wit.vOld wit.rhoOld wit.psiOld).chunks
-        = some hashPoint ∧
-    wit.cmOld = hashPoint + wit.rcmOld.2 • orchardBases.noteCommitR
+/-- Successful old-note Sinsemilla opening: the commitment opens as the defined chain
+value plus the blinding term. -/
+structure NoteCommitOldSuccess (wit : ActionData) : Prop where
+  defined : (noteOldHash wit).isSome
+  cmOld_eq : wit.cmOld = sinsemillaCommitBlind ((noteOldHash wit).get defined)
+    wit.rcmOld.2.val Ecc.MulFixed.Certs.noteCommitR.point
 
-/-- Successful new-note Sinsemilla opening. -/
-def NoteCommitNewSuccess (wit : ActionData) : Prop :=
-  ∃ hashPoint : Point Fp,
-    hashToPoint orchardGenerators.S orchardBases.noteQ
-      (NoteCommit.noteScalars wit.gdNew wit.pkdNew wit.vNew wit.nfOld wit.psiNew).chunks
-        = some hashPoint ∧
-    wit.cmx = (hashPoint + wit.rcmNew.2 • orchardBases.noteCommitR).x
+/-- Successful new-note Sinsemilla opening: the public `cmx` is the extracted
+coordinate of the defined chain value plus the blinding term. -/
+structure NoteCommitNewSuccess (wit : ActionData) : Prop where
+  defined : (noteNewHash wit).isSome
+  cmx_eq : wit.cmx = sinsemillaCommitBlindShort ((noteNewHash wit).get defined)
+    wit.rcmNew.2.val Ecc.MulFixed.Certs.noteCommitR.point
 
 /-- A successful output-note opening makes the ledger's own commitment primitive
 defined on the witnessed new note.  Unlike the circuit public input, the ledger
@@ -677,7 +668,7 @@ theorem NoteCommitNewSuccess.commit_isSome {wit : ActionData}
       { gd := PallasGroup.ofPoint wit.gdNew (.inl hgd),
         pkd := PallasGroup.ofPoint wit.pkdNew (.inl hpkd),
         v := wit.vNew.val, ρ := wit.nfOld, ψ := wit.psiNew }).isSome := by
-  rcases h with ⟨bp, hbp, hcmx⟩
+  obtain ⟨bp, hbp⟩ := Option.isSome_iff_exists.mp h.defined
   have hbpValid : bp.Valid :=
     hashToPoint_valid (Or.inl orchardBases.noteQ_onCurve)
       (fun _ hm => chunksOf_mem_lt hm) hbp
@@ -703,7 +694,9 @@ theorem NoteCommitNewSuccess.extract_get {wit : ActionData}
       { gd := PallasGroup.ofPoint wit.gdNew (.inl hgd),
         pkd := PallasGroup.ofPoint wit.pkdNew (.inl hpkd),
         v := wit.vNew.val, ρ := wit.nfOld, ψ := wit.psiNew }).get hdef) = wit.cmx := by
-  rcases h with ⟨bp, hbp, hcmx⟩
+  obtain ⟨bp, hbp⟩ := Option.isSome_iff_exists.mp h.defined
+  have hcmx := h.cmx_eq
+  rw [show (noteNewHash wit).get h.defined = bp by simp [hbp]] at hcmx
   have hbpValid : bp.Valid :=
     hashToPoint_valid (Or.inl orchardBases.noteQ_onCurve)
       (fun _ hm => chunksOf_mem_lt hm) hbp
@@ -730,60 +723,63 @@ theorem NoteCommitNewSuccess.extract_get {wit : ActionData}
   simp only [Pool.extract, PallasGroup.toPoint_ofPoint]
   simpa [cmNewP, orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hcmx.symm
 
-/-- The successful Merkle outcome as consumed by the ledger refinement: the exact
-raw-encoding path together with every layer's hash landing in its defined branch,
-and the dummy-spend anchor gate.  The raw child encodings are tied to these defined
-hashes before any `Merkle.Path` is constructed. -/
-def MerkleSuccess (wit : ActionData) : Prop :=
-  ∃ root : Fp,
-    ExactMerklePathData wit root ∧
-    (∀ i : Fin 32, ∃ B, hashToPoint orchardGenerators.S orchardBases.merkleQ
-      (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = some B) ∧
-    wit.vOld * (root - wit.anchor) = 0
+/-- The Merkle root computed from the last layer's defined hash: the exact chain pins
+each running node by its own layer's hash, so the root is the final layer's extracted
+coordinate. -/
+def merkleRootOf (wit : ActionData) (hdef : (merkleHash wit 31).isSome) : Fp :=
+  extractP ((merkleHash wit 31).get hdef)
 
-/-- Split all four exceptional sites in the circuit statement at once, by running
-the classifier: either the witness's own queries compute an exhibited break, or
-every query is defined and each guarded clause of `ActionSpec` lands in its
-successful branch. -/
-theorem successes_or_break {wit : ActionData}
-    (h : ActionSpec (PublicInputs.ofActionData wit)
-      (PrivateWitness.ofActionData wit)) :
-    (CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
-      MerkleSuccess wit) ∨ ActionBreak wit := by
-  have h := (actionSpec_ofActionData_iff_specPost wit).mp h
-  cases hcl : classifyAction wit with
-  | some br => exact Or.inr (actionBreak_of_classify hcl)
-  | none =>
-    obtain ⟨⟨Bi, hBi⟩, ⟨Bo, hBo⟩, ⟨Bn, hBn⟩, hMk⟩ := classify_none_defined hcl
-    rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, ⟨ivk, hivk, hpkd⟩,
-      hold, hnew, ⟨root, hexact, hanchor⟩, _, _, _⟩
-    exact Or.inl ⟨⟨ivk, Bi, hBi, hivk Bi hBi, hpkd⟩,
-      ⟨Bo, hBo, hold Bo hBo⟩, ⟨Bn, hBn, hnew Bn hBn⟩,
-      ⟨root, hexact, hMk, hanchor⟩⟩
+/-- The successful Merkle outcome as consumed by the ledger refinement: every layer's
+hash lands in its defined branch, the exact raw-encoding chain reaches the computed
+root (`merkleRootOf`), and the dummy-spend anchor gate holds at that root.  The raw
+child encodings are tied to these defined hashes before any `Merkle.Path` is
+constructed. -/
+structure MerkleSuccess (wit : ActionData) : Prop where
+  defined : ∀ i : Fin 32, (merkleHash wit i).isSome
+  path : ExactMerklePathData wit (merkleRootOf wit (defined 31))
+  anchor : wit.vOld * (merkleRootOf wit (defined 31) - wit.anchor) = 0
 
-/-- If the caller rules out all four exhibited exceptional cases, the circuit's
-guarded clauses reduce to their successful openings.  The exact-Merkle export
-subsequently turns the final component into a ledger `Merkle.Path`. -/
-theorem successes_of_noBreak {wit : ActionData}
+/-- The exact chain's root is the computed root: the last layer's hash guard pins
+it. -/
+private theorem exactMerklePathData_root_eq {wit : ActionData} {root : Fp}
+    (hpath : ExactMerklePathData wit root)
+    (hdef : (merkleHash wit 31).isSome) :
+    root = merkleRootOf wit hdef := by
+  rcases hpath with ⟨nodes, -, hroot, hsteps⟩
+  have hB : hashToPoint orchardGenerators.S orchardBases.merkleQ
+      (merkleChunks (0 + 31) (merkleLeftEncoding wit 31) (merkleRightEncoding wit 31))
+        = some ((merkleHash wit 31).get hdef) := by
+    have h := (Option.some_get hdef).symm
+    rw [show merkleLeftEncoding wit 31 = wit.leftEncoding 31 from rfl,
+      show merkleRightEncoding wit 31 = wit.rightEncoding 31 from rfl, Nat.zero_add]
+    exact h
+  have hstep := (hsteps 31 (by norm_num)).2.2.2 _ hB
+  exact hroot.symm.trans hstep
+
+/-- The classifier's `none` verdict, on a satisfied Action statement, lands every
+guarded clause of `ActionSpec` in its successful branch: the four sites' success
+facts, with their data pinned to the computed values. -/
+theorem successes_of_classify_none {wit : ActionData}
     (h : ActionSpec (PublicInputs.ofActionData wit)
       (PrivateWitness.ofActionData wit))
-    (hno : ¬ ActionBreak wit) :
+    (hcl : classifyAction wit = none) :
     CommitIvkSuccess wit ∧ NoteCommitOldSuccess wit ∧ NoteCommitNewSuccess wit ∧
-      MerkleSuccess wit :=
-  (successes_or_break h).resolve_right hno
-
-/-- Recover the successful Sinsemilla hash underlying a defined Merkle
-compression: the converse direction of `Pool.merkleCompress_eq_of_hashToPoint`,
-used to turn a guard hypothesis `merkleCompress … = some b` back into the exact
-hash query that the exported chain pins. -/
-private theorem hashToPoint_of_merkleCompress {i : Fin 32}
-    {children : Pool.Encoding × Pool.Encoding} {b : Fp}
-    (h : Pool.merkleCompress i children = some b) :
-    ∃ B, hashToPoint orchardGenerators.S Pool.merkleQ
-      (merkleChunks i.1 children.1.1 children.2.1) = some B ∧ b = B.x := by
-  simp only [Pool.merkleCompress, Option.map_eq_some_iff] at h
-  obtain ⟨B, hB, hbx⟩ := h
-  exact ⟨B, hB, hbx.symm⟩
+      MerkleSuccess wit := by
+  have h := (actionSpec_ofActionData_iff_specPost wit).mp h
+  obtain ⟨hBi, hBo, hBn, hMk⟩ := classify_none_defined hcl
+  rcases h.1 with ⟨_, _, _, _, _, _, _, _, _, _, _, ⟨ivk, hivk, hpkd⟩,
+    hold, hnew, ⟨root, hexact, hanchor⟩, _, _, _⟩
+  have hivk_eq : ivk = commitIvkOf wit hBi := hivk _ (Option.some_get hBi).symm
+  have hroot_eq : root = merkleRootOf wit (hMk 31) :=
+    exactMerklePathData_root_eq hexact (hMk 31)
+  refine ⟨⟨hBi, ?_⟩, ⟨hBo, hold _ (Option.some_get hBo).symm⟩,
+    ⟨hBn, hnew _ (Option.some_get hBn).symm⟩, ⟨hMk, ?_, ?_⟩⟩
+  · rw [← hivk_eq]
+    exact hpkd
+  · rw [← hroot_eq]
+    exact hexact
+  · rw [← hroot_eq]
+    exact hanchor
 
 /-- The exact circuit Merkle chain, transferred into the ledger's guarded
 (⊥-model) path.  No definedness hypothesis is needed: each guarded clause is
@@ -809,7 +805,13 @@ theorem guardedPath_of_exact {wit : ActionData} {root : Fp}
       c.1.1 = wit.leftEncoding k → c.2.1 = wit.rightEncoding k →
       Pool.merkleCompress k c = some b → nodes (k.1 + 1) = b := by
     intro k c b hcl hcr hcomp
-    obtain ⟨B, hB, hbB⟩ := hashToPoint_of_merkleCompress hcomp
+    -- Recover the successful hash underlying the defined compression: the converse
+    -- direction of `Pool.merkleCompress_eq_of_hashToPoint`.
+    obtain ⟨B, hB, hbB⟩ : ∃ B, hashToPoint orchardGenerators.S Pool.merkleQ
+        (merkleChunks k.1 c.1.1 c.2.1) = some B ∧ b = B.x := by
+      simp only [Pool.merkleCompress, Option.map_eq_some_iff] at hcomp
+      obtain ⟨B, hB, hbx⟩ := hcomp
+      exact ⟨B, hB, hbx.symm⟩
     rw [hcl, hcr] at hB
     have hB' : hashToPoint orchardGenerators.S orchardBases.merkleQ
         (merkleChunks (0 + k.1) (merkleLeftEncoding wit k.1) (merkleRightEncoding wit k.1))
@@ -858,9 +860,7 @@ field element.  The proof is the guarded split: transfer the exact chain into th
 per-layer definedness supplied by `hhash`. -/
 theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
     (hpath : ExactMerklePathData wit root)
-    (hhash : ∀ i : Fin 32, ∃ B,
-      hashToPoint orchardGenerators.S orchardBases.merkleQ
-        (merkleChunks i.1 (wit.leftEncoding i) (wit.rightEncoding i)) = some B) :
+    (hhash : ∀ i : Fin 32, (merkleHash wit i).isSome) :
     Merkle.Path Pool.merkle wit.cmOld.x root
       (fun i : Fin 32 =>
         (⟨wit.leftEncoding i, by
@@ -871,15 +871,23 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
             simpa only [merkleRightEncoding_fin] using (hsteps i i.isLt).2.1⟩))
       wit.merkleSide :=
   Merkle.Path.of_guarded_of_defined (guardedPath_of_exact hpath) fun i => by
-    obtain ⟨B, hB⟩ := hhash i
-    exact ⟨B.x, Pool.merkleCompress_eq_of_hashToPoint (by
-      simpa [orchardBases, Zcash.Circuits.Action.merkleQ, Pool.merkleQ] using hB)⟩
+    obtain ⟨B, hB⟩ := Option.isSome_iff_exists.mp (hhash i)
+    exact Option.isSome_iff_exists.mpr
+      ⟨B.x, Pool.merkleCompress_eq_of_hashToPoint (by
+        simpa [orchardBases, Zcash.Circuits.Action.merkleQ, Pool.merkleQ] using hB)⟩
 
 /-- The refined ledger action retained as data: the concrete instance and witness that
 annotate an accepted Action, together with the proofs that they satisfy the
 games-facing statement.  The structure is indexed by the full circuit witness, so no
 component of the extracted data is projected away: the Balance games consume
-`satisfied`, and other games may consume the index directly. -/
+`satisfied`, and other games may consume the index directly.
+
+The circuit witness is the chain's one genuinely free value; everything below it —
+the hash points, the computed viewing key, the Merkle root, and `inst`/`w`
+themselves — is computed from it.  That is why the per-site success predicates carry
+only definedness facts (`isSome` fields, with `Option.get` recovering the values),
+and why `inst` and `w` are carried here as fields for the consumers' convenience
+rather than as free choices: `ofSpec` computes them. -/
 structure ActionLedgerSuccess
     (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     (wit : ActionData) where
@@ -919,9 +927,7 @@ def ActionLedgerSuccess.ofSpec
       combine] using h
   have hPost := (actionSpec_ofActionData_iff_specPost wit').mp hData
   have hcl' : classifyAction wit' = none := hcl
-  have hno : ¬ ActionBreak wit' := fun hb =>
-    Option.ne_none_iff_isSome.mpr (actionBreak_iff_classify_isSome.mp hb) hcl'
-  obtain ⟨hivk, hold, hnew, hmerkle⟩ := successes_of_noBreak hData hno
+  obtain ⟨hivk, hold, hnew, hmerkle⟩ := successes_of_classify_none hData hcl'
   rcases hPost.1 with ⟨hcmOld, hgdOld, hakP, hpkdOld, hgdNew, hpkdNew,
     hvOld, hvNew, hvc, hnf, hrk, -, -, -, -, hvalue, hes, heo⟩
   rcases hvc with ⟨hmag, hcv⟩
@@ -933,12 +939,10 @@ def ActionLedgerSuccess.ofSpec
     simpa [orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hnf
   let path : Fin 32 → Pool.Encoding × Pool.Encoding := fun i =>
     (⟨wit'.leftEncoding i, by
-        obtain ⟨root, hpath, -, -⟩ := hmerkle
-        rcases hpath with ⟨_, _, _, hsteps⟩
+        rcases hmerkle.path with ⟨_, _, _, hsteps⟩
         simpa only [merkleLeftEncoding_fin] using (hsteps i i.isLt).1⟩,
      ⟨wit'.rightEncoding i, by
-        obtain ⟨root, hpath, -, -⟩ := hmerkle
-        rcases hpath with ⟨_, _, _, hsteps⟩
+        rcases hmerkle.path with ⟨_, _, _, hsteps⟩
         simpa only [merkleRightEncoding_fin] using (hsteps i i.isLt).2.1⟩)
   have hkwDef : (Pool.commitIvkHash wit'.akP.x wit'.nk).isSome := hivk.hash_isSome
   have hcmNewDef : (Pool.noteCommit wit'.rcmNew.2
@@ -987,25 +991,24 @@ def ActionLedgerSuccess.ofSpec
               hvalue hcv
       satisfied :=
         { commit_old := by
-            rcases hold with ⟨bold, hbold, hcmOldEq⟩
-            have hcmOldEq' : wit'.cmOld =
-                bold + wit'.rcmOld.2.val • Ecc.MulFixed.Certs.noteCommitR.point := by
-              simpa [orchardBases, Ecc.MulFixed.FixedBase.scalarMul] using hcmOldEq
+            obtain ⟨bold, hbold⟩ := Option.isSome_iff_exists.mp hold.defined
+            have hcmOldEq := hold.cmOld_eq
+            rw [show (noteOldHash wit').get hold.defined = bold
+              by simp [hbold]] at hcmOldEq
             simpa [w] using
-              noteCommit_of_action_hash hgdOld hpkdOld hcmOld hbold hcmOldEq'
+              noteCommit_of_action_hash hgdOld hpkdOld hcmOld hbold hcmOldEq
           merkle_path := by
             intro hv
-            obtain ⟨root, hpath, hhash, hanchor⟩ := hmerkle
             have hv' : wit'.vOld ≠ 0 := by
               intro hz
               apply hv
               dsimp [w]
               simp [hz]
-            have hroot : root = wit'.anchor := by
-              have hz : root - wit'.anchor = 0 :=
-                (mul_eq_zero.mp hanchor).resolve_left hv'
+            have hroot : merkleRootOf wit' (hmerkle.defined 31) = wit'.anchor := by
+              have hz : merkleRootOf wit' (hmerkle.defined 31) - wit'.anchor = 0 :=
+                (mul_eq_zero.mp hmerkle.anchor).resolve_left hv'
               exact sub_eq_zero.mp hz
-            have hp := merkle_path_of_exact hpath hhash
+            have hp := merkle_path_of_exact hmerkle.path hmerkle.defined
             simpa [w, inst, path, Pool.extract, hroot] using hp
           nf_old_eq := by
             simpa [inst, w, Pool.primitives, Pool.keyBinding,
