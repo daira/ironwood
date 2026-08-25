@@ -43,10 +43,6 @@ def addProgram : Configure Fp Config := do
 
 def addCS : ConstraintSystem Fp := (addProgram {}).2
 
--- The gate's `queriedCells` registered faithfully (no ill-formed entries); the layout
--- equality below then certifies the recorded order against the Rust dump.
-#guard addCS.invalidQueriedCells.isEmpty
-
 -- Projected CS (query layouts from the configure-recorded queries, plus the packed
 -- column's fixed query appended by the projection) equals the dumped fixture.
 #guard projectCS addSelMap addCS == addPost

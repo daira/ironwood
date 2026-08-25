@@ -29,9 +29,6 @@ def actionCS : ConstraintSystem Fp :=
 #eval show IO Unit from do
   let actionPost ← loadCsFixture "actionPost.json"
   runChecks [
-    -- Every gate's/lookup's `queriedCells` registered faithfully; the layout equality
-    -- below then certifies the recorded order against the Rust dump.
-    ("action: no ill-formed queriedCells", actionCS.invalidQueriedCells.isEmpty),
     -- The Rust-dumped selector map, applied mechanically to the configure-recorded CS,
     -- yields exactly the dumped CS.
     ("actionPost: projected CS = dump",

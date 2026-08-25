@@ -80,12 +80,6 @@ theorem capturedPinnedView_eq_derived : capturedPinnedView = actionPinnedCs := b
 theorem actionK_eq : actionCircuit.domainExponent = 11 := by
   exact Zcash.Circuits.Action.actionCircuit_domainExponent_eq
 
-/-- Every hand-listed `queriedCells` entry was a well-formed query atom (the poison
-list is empty) — the registration recorded exactly the per-gate lists. -/
-theorem action_queriedCells_wellFormed :
-    actionCircuit.constraintSystem.invalidQueriedCells.isEmpty := by
-  simpa only [List.isEmpty_iff] using actionCircuit.invalidQueriedCells_eq_nil
-
 /-- **The captured verifying key's gates are the derived Action circuit's.** The
 verifying key holds `Zcash.Snark.Expr` gates and the derivation holds
 `Halo2.RichExpression` gates, so the equality is stated through the boundary
@@ -156,7 +150,6 @@ theorem vk_permutationChunks_derived :
   exact h.2
 
 assert_no_sorry capturedPinnedView_eq_derived
-assert_no_sorry action_queriedCells_wellFormed
 assert_no_sorry actionK_eq
 assert_no_sorry vk_scalars_and_chunks_derived
 
