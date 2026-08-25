@@ -9,7 +9,7 @@ import Zcash.Circuits.Integration.TopLevelCircuit
 import Zcash.Circuits.Integration.TopLevelGates
 import Zcash.Circuits.Integration.TopLevelCorrectness
 import Zcash.Circuits.Integration.ActionCopyReplay
-import Zcash.Circuits.Integration.ActionFixedCoherence
+import Zcash.Circuits.Integration.FixedColumns
 import Zcash.Circuits.Integration.ActionConstraintBounds
 import Zcash.Snark.Keygen.Pipeline
 import Mathlib.Util.AssertNoSorry
@@ -106,7 +106,8 @@ def actionTopLevelCircuitCorrectness
     exact actionCircuit.shape_k.symm.trans hk
   have fixedCoherence :
       TopLevelFixedCoherence actionCircuit urs :=
-    ActionFixedCoherence.ofDerived urs hdomainExponent
+    TopLevelFixedCoherence.ofDerived actionCircuit urs hdomainExponent
+      ActionConstraintBounds.domainExponent_lt
   have hdomainSize :
       actionCircuit.n = 2 ^ urs.k := by
     rw [actionCircuit.n_eq_two_pow_domainExponent]

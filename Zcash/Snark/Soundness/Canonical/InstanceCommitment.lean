@@ -111,6 +111,14 @@ structure LagrangeCommitmentKey (urs : URS G) (omega : Fp) where
 
 namespace LagrangeCommitmentKey
 
+/-- The canonical Lagrange commitment key determined directly by the monomial URS. -/
+def canonical (urs : URS G) (omega : Fp) :
+    LagrangeCommitmentKey urs omega where
+  generators i :=
+    commit urs (polynomialCoefficients (2 ^ urs.k)
+      (rowPolynomial omega (Pi.single i 1)))
+  generator_eq _ := rfl
+
 /-- Commitment keys are determined by their generator family; the compatibility
 field is proof-irrelevant. -/
 @[ext] theorem ext {urs : URS G} {omega : Fp}

@@ -82,8 +82,9 @@ variable (pp : ProofParams)
 def adaptiveStatementFixedCoherence :
     TopLevelFixedCoherence actionCircuit
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) :=
-  ActionFixedCoherence.ofDerived
+  TopLevelFixedCoherence.ofDerived actionCircuit
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    ActionConstraintBounds.domainExponent_lt
 
 /-- Rewrite the derived Lagrange generators into the monomial form used by permutation
 commitments. -/
