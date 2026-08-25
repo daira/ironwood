@@ -1031,7 +1031,7 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
   simp only at hindices
   rcases hindices with
     ⟨htableIdx, htableX, htableY,
-      _, _, _, _, _, _, _, _, hfixedZ, hqS21, hqS22⟩
+      -, -, -, -, -, -, -, -, hfixedZ, hqS21, hqS22⟩
   have hgenerator : ∀ column ∈
       ((configure G).output counts).generatorTableColumns,
       column.index < counts.numFixedColumns + 3 := by
@@ -1042,6 +1042,7 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
     simp only [Config.generatorTableColumns, List.map_cons, List.map_nil,
       List.mem_cons, List.not_mem_nil, or_false] at hindex
     rw [htableIdx, htableX, htableY] at hindex
+    clear G hcolumn htableIdx htableX htableY hfixedZ hqS21 hqS22
     omega
   have hregionColumn : ∀ column ∈
       ((configure G).output counts).regionFixedColumns,
@@ -1052,6 +1053,8 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
     · obtain ⟨index, hindex⟩ := List.mem_ofFn.mp hlagrange
       have hcolumnIndex := congrArg Column.index hindex
       rw [configure_output_lagrangeCoeff_index] at hcolumnIndex
+      clear G hgenerator hlagrange hindex
+        htableIdx htableX htableY hfixedZ hqS21 hqS22
       omega
     · have hindex : column.index ∈
           [((configure G).output counts).eccConfig.mulFixedShort.superConfig.fixedZ,
@@ -1061,6 +1064,8 @@ theorem configure_output_generatorTableColumns_disjoint_regionFixedColumns
       simp only [List.map_cons, List.map_nil, List.mem_cons,
         List.not_mem_nil, or_false] at hindex
       rw [hfixedZ, hqS21, hqS22] at hindex
+      clear G hgenerator hrest
+        htableIdx htableX htableY hfixedZ hqS21 hqS22
       omega
   rw [List.disjoint_left]
   intro column htable hregion

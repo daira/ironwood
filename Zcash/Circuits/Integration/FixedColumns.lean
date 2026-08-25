@@ -788,7 +788,6 @@ def topLevelFixedColumns_eq_rowPolynomials_or_relation
         instanceRowPolynomial (2 ^ urs.k)
           top.omega (top.fixedRows.getD column [])) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let key := LagrangeCommitmentKey.canonical urs top.omega
   have hrowsVk : Function.Injective
       fun i : Fin (2 ^ urs.k) =>
         (top.toVerifierKey urs).omega ^ (i : ℕ) := by
@@ -800,13 +799,14 @@ def topLevelFixedColumns_eq_rowPolynomials_or_relation
       (by
         have hcommitment :
             (top.toVerifierKey urs).fixedCommitment column =
-              key.commitInstance
+              (LagrangeCommitmentKey.canonical urs top.omega).commitInstance
                 (top.fixedRows.getD column []) 1 := by
           rw [top.toVerifierKey_fixedCommitment]
           exact coherence column hcolumn
         have source :=
           relation.fixedColumn_eq_rowPolynomial_or_relation
-            column key (top.fixedRows.getD column [])
+            column (LagrangeCommitmentKey.canonical urs top.omega)
+            (top.fixedRows.getD column [])
             hcommitment hrowsVk
             (by
               obtain ⟨rotation, hlayout⟩ :=
@@ -899,19 +899,19 @@ def topLevelFixedConstraints_or_relation
           (top.usableRowsAt top.domainExponent))
         (top.operations) 0) ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let key := LagrangeCommitmentKey.canonical urs top.omega
   apply topLevelFixedConstraints_or_bad
     relation.polynomial
       hrows hn
   · intro column hcolumn
     have hcommitment :
         (top.toVerifierKey urs).fixedCommitment column =
-          key.commitInstance
+          (LagrangeCommitmentKey.canonical urs top.omega).commitInstance
             (top.fixedRows.getD column []) 1 := by
       rw [top.toVerifierKey_fixedCommitment]
       exact coherence column hcolumn
     exact relation.fixedColumn_eq_rowPolynomial_or_relation
-      column key (top.fixedRows.getD column [])
+      column (LagrangeCommitmentKey.canonical urs top.omega)
+      (top.fixedRows.getD column [])
       hcommitment hrows
       (by
         obtain ⟨rotation, hlayout⟩ :=
@@ -979,19 +979,19 @@ def topLevelFixedEntryRead_or_relation
         (top.usableRowsAt top.domainExponent)).fixed
           ⟨column⟩ (row : ℤ) = value ⊕'
       NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
-  let key := LagrangeCommitmentKey.canonical urs top.omega
   apply topLevelFixedEntryRead_or_bad
     relation.polynomial
       hrows hn
   · intro fixedColumn hcolumn
     have hcommitment :
         (top.toVerifierKey urs).fixedCommitment fixedColumn =
-          key.commitInstance
+          (LagrangeCommitmentKey.canonical urs top.omega).commitInstance
             (top.fixedRows.getD fixedColumn []) 1 := by
       rw [top.toVerifierKey_fixedCommitment]
       exact coherence fixedColumn hcolumn
     exact relation.fixedColumn_eq_rowPolynomial_or_relation
-      fixedColumn key (top.fixedRows.getD fixedColumn [])
+      fixedColumn (LagrangeCommitmentKey.canonical urs top.omega)
+      (top.fixedRows.getD fixedColumn [])
       hcommitment hrows
       (by
         obtain ⟨rotation, hlayout⟩ :=
