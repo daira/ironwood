@@ -353,27 +353,6 @@ theorem fixedCommitment_eq_commitInstance
   rw [top.fixedRows_getD_length column hcolumn]
   simp only [TopLevelCircuit.n, hk]
 
-/--
-Construct fixed coherence from the exact circuit-derived keygen rows.
-
-Dense-row realization, commitment provenance, query coverage, and query bounds are
-generic. The caller supplies only the setup's Lagrange-basis equations.
--/
-def ofKeygen
-    {Config : Type} {PublicInput : TypeMap}
-    [ProvableType PublicInput]
-    (top : TopLevelCircuit Fp Config PublicInput)
-    (urs : URS G)
-    (hk : top.domainExponent = urs.k)
-    (hlen : (derivedUrsGLagrange urs).length = 2 ^ urs.k)
-    (hgenerators : ∀ i : Fin (2 ^ urs.k),
-      (derivedUrsGLagrange urs).getD (i : ℕ) 0 =
-        commit urs (polynomialCoefficients (2 ^ urs.k)
-          (rowPolynomial top.omega
-            (Pi.single i (1 : Fp))))) :
-    TopLevelFixedCoherence top urs :=
-  fixedCommitment_eq_commitInstance top urs hk hlen hgenerators
-
 /-- Construct fixed coherence from the derived Lagrange basis of any top-level
 circuit whose domain is supported by the Pasta field. -/
 def ofDerived
@@ -389,7 +368,8 @@ def ofDerived
     exact Nat.le_of_lt_succ hdomainExponent
   have homega : top.omega = omegaOf urs.k := by
     simp only [TopLevelCircuit.omega, hk]
-  apply ofKeygen top urs hk (derivedUrsGLagrange_length urs)
+  apply fixedCommitment_eq_commitInstance top urs hk
+    (derivedUrsGLagrange_length urs)
   intro i
   simpa only [homega] using
     Keygen.ofPrefix_setup_of_closed urs hkUrs
