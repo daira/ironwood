@@ -108,7 +108,7 @@ theorem path_layers_defined
     {B E : Type*} {P : Merkle.MerklePrimitives B E} {leaf root : B}
     {children : Fin P.depth → E × E} {side : Fin P.depth → Bool}
     (h : Merkle.Path P leaf root children side) (i : Fin P.depth) :
-    ∃ b, P.compress i (children i) = some b :=
+    (P.compress i (children i)).isSome :=
   Merkle.Path.compress_isSome h i
 
 /-- Flag zero leaves the post-NU6.3 address condition inert. -/
@@ -162,7 +162,7 @@ theorem path_iff_guarded_smoke
     (side : Fin Pool.merkle.depth → Bool) :
     Merkle.Path Pool.merkle leaf root children side ↔
       Merkle.GuardedPath Pool.merkle leaf root children side ∧
-        ∀ i, ∃ b, Pool.merkle.compress i (children i) = some b :=
+        ∀ i, (Pool.merkle.compress i (children i)).isSome :=
   Merkle.path_iff_guarded_defined
 
 /-- The circuit-level postcondition refines directly to ledger action data or a computed
