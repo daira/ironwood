@@ -73,20 +73,8 @@ def capturedPinnedView : PinnedConstraintSystem Fp :=
     lookupInputExprs := (List.ofFn vk.lookupInputExprs).map (·.map RichExpression.ofExpr)
     lookupTableExprs := (List.ofFn vk.lookupTableExprs).map (·.map RichExpression.ofExpr) }
 
-/-- **The capture is the derived Action circuit** (pinned CS), and no `queriedCells`
-entry poisoned registration. One bundled `native_decide` shares the concrete circuit
-evaluation across these two capture checks. The domain exponent is proved structurally
-from the circuit's planner trace instead. -/
-private theorem bundle_pinned :
-    (capturedPinnedView,
-      actionCircuit.constraintSystem.invalidQueriedCells.isEmpty)
-      = (actionPinnedCs, true) := by native_decide
-
 /-- **The capture is the derived Action circuit** (pinned CS, captured families). -/
-theorem capturedPinnedView_eq_derived : capturedPinnedView = actionPinnedCs := by
-  have h := bundle_pinned
-  simp only [Prod.mk.injEq] at h
-  exact h.1
+theorem capturedPinnedView_eq_derived : capturedPinnedView = actionPinnedCs := by native_decide
 
 /-- The derived domain exponent is orchard's pinned `K = 11` (`circuit.rs:76`). -/
 theorem actionK_eq : actionCircuit.domainExponent = 11 := by
@@ -96,9 +84,7 @@ theorem actionK_eq : actionCircuit.domainExponent = 11 := by
 list is empty) — the registration recorded exactly the per-gate lists. -/
 theorem action_queriedCells_wellFormed :
     actionCircuit.constraintSystem.invalidQueriedCells.isEmpty := by
-  have h := bundle_pinned
-  simp only [Prod.mk.injEq] at h
-  exact h.2
+  simpa only [List.isEmpty_iff] using actionCircuit.invalidQueriedCells_eq_nil
 
 /-- **The captured verifying key's gates are the derived Action circuit's.** The
 verifying key holds `Zcash.Snark.Expr` gates and the derivation holds
