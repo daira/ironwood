@@ -1,6 +1,6 @@
 import Zcash.Common.Satisfying
 import Zcash.Security.Ledger.SinsemillaDLR
-import Zcash.Snark.Soundness.Action.StraightLineTerminal
+import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
 
 /-!
 # The bundle-level Action-to-ledger bridge
@@ -70,5 +70,56 @@ def bundleLedgerData
     (∀ i, MemberLedgerData spendAuthVerify bindingVerify (inputs i)) ⊕' ActionDLBreak :=
   finForallOrRelationWitness fun i =>
     memberLedgerData spendAuthVerify bindingVerify (witness i)
+
+section Extraction
+
+open Zcash.Arithmetic (scalarFieldOrder)
+
+variable {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp)
+  (hchar : ∀ basis O, deployedX4PairCount (adaptiveActionStatementVk pp basis)
+    (adaptiveActionStatementInstanceCommitment pp basis (family.runOutput basis O).inputs)
+    (family.runProof basis O).proof.1 (family.runRecord basis O) < scalarFieldOrder)
+  (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
+
+/-- The ledger-level outcome of one adaptive-statement run: every member's ledger data, a
+ledger Sinsemilla escape, or the circuit-side algebraic relation over the run's own basis.
+`none` is exactly the runs on which the shared knowledge outcome is undefined
+(`actionLedgerOutcome_isSome_iff`).  The routing is deliberate: circuit-side relations
+stay in their own arm —on accepting runs, that arm and `none` together are the
+knowledge-failure event that the knowledge-error endpoint bounds— and only the
+bridge's Sinsemilla escapes surface as ledger breaks. -/
+def actionLedgerOutcome
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    Option ((∀ i, MemberLedgerData spendAuthVerify bindingVerify
+        ((family.runOutput basis O).inputs i))
+      ⊕ (ActionDLBreak ⊕ AlgebraicRelationWitness (F := Fp) basis)) :=
+  (family.adaptiveStatementKnowledgeOutcome hchar basis O).map fun
+    | Sum.inl witness =>
+        match bundleLedgerData spendAuthVerify bindingVerify witness with
+        | PSum.inl members => Sum.inl members
+        | PSum.inr dlb => Sum.inr (Sum.inl dlb)
+    | Sum.inr relation => Sum.inr (Sum.inr relation)
+
+/-- The composed ledger-level extractor: every member's ledger data, on the runs
+where the witness extraction succeeds and no member escapes. -/
+def actionLedgerExtractor
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) :
+    Option (∀ i, MemberLedgerData spendAuthVerify bindingVerify
+      ((family.runOutput basis O).inputs i)) :=
+  match actionLedgerOutcome family hchar spendAuthVerify bindingVerify basis O with
+  | some (Sum.inl members) => some members
+  | _ => none
+
+/-- The ledger outcome is defined exactly where the shared knowledge outcome is:
+the composition adds no new failure. -/
+theorem actionLedgerOutcome_isSome_iff (basis) (O) :
+    (actionLedgerOutcome family hchar spendAuthVerify bindingVerify basis O).isSome ↔
+      (family.adaptiveStatementKnowledgeOutcome hchar basis O).isSome := by
+  unfold actionLedgerOutcome
+  simp
+
+end Extraction
 
 end Zcash.Security.Ledger.ActionBundleBridge
