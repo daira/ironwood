@@ -1,27 +1,47 @@
 name: Workflow audit
 
+# Always triggers, so the required `zizmor` check is always reported (a
+# workflow skipped by `on.paths` would leave a required check pending and
+# block merges).  The audit is instead gated on a path filter computed
+# inside the run, mirroring the Lean, book, and fixtures workflows.
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/**'
-      - '.github/actions/**'
   pull_request:
-    paths:
-      - '.github/workflows/**'
-      - '.github/actions/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
+  changes:
+    name: Detect workflow-relevant changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      workflows: ${{ steps.filter.outputs.workflows }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3.0.3
+        id: filter
+        with:
+          filters: |
+            workflows:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+
   zizmor:
     name: zizmor
+    needs: changes
+    if: needs.changes.outputs.workflows == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
