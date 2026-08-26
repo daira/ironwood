@@ -69,6 +69,15 @@ theorem independentProductPMF_map_fst {A B : Type*} (p : PMF A) (q : PMF B) :
     PMF.map_const]
   exact PMF.bind_pure p
 
+/-- The second marginal of an independent product is its second factor. -/
+theorem independentProductPMF_map_snd {A B : Type*} (p : PMF A) (q : PMF B) :
+    (independentProductPMF p q).map Prod.snd = q := by
+  rw [independentProductPMF, PMF.map_bind]
+  simp only [PMF.map_comp,
+    show ∀ a : A, Prod.snd ∘ Prod.mk a = (id : B → B) from fun _ => rfl,
+    PMF.map_id]
+  exact PMF.bind_const p q
+
 /-- Independent uniform draws are the uniform draw on the product type. -/
 theorem independentProductPMF_uniform {A B : Type*} [Fintype A] [Fintype B]
     [Nonempty A] [Nonempty B] :
