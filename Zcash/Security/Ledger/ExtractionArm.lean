@@ -160,17 +160,30 @@ def extractFailEvent (S : ValueShape P) (B : BindingSigShape P S)
   {ω | ∃ e, balanceConservationOrBreak (issuance := issuance)
     (txBalancePremissFallible kv S B hr E ω) i = .inr (.inr e)}
 
-/-- Every sample of the extraction-failure arm exhibits a `RedDSA.ExtractionFailure`:
-the arm's named `κ` is a bound on the adversary's probability of beating the
-extractor, and nothing else. -/
-theorem extractFailEvent_failure (S : ValueShape P) (B : BindingSigShape P S)
+variable (kv) in
+/-- The extraction failure computed on a sample: the branch value of the conservation
+reduction, when it lands in the extraction-failure arm. -/
+def extractFailureOf (S : ValueShape P) (B : BindingSigShape P S)
+    (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
+    (E : RedDSA.Extractor (ZMod r) G MSG)
+    (ω : ValidAnnotated P kv issuance maxActions) (i : ℕ) :
+    Option (RedDSA.ExtractionFailure B.sch E) :=
+  match balanceConservationOrBreak (issuance := issuance)
+    (txBalancePremissFallible kv S B hr E ω) i with
+  | .inr (.inr e) => some e
+  | _ => none
+
+/-- On the extraction-failure arm the computed failure is defined: the arm's named
+`κ` is a bound on the adversary's probability of beating the extractor, and nothing
+else. -/
+theorem extractFailureOf_isSome (S : ValueShape P) (B : BindingSigShape P S)
     (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG) (i : ℕ)
     {ω : ValidAnnotated P kv issuance maxActions}
     (hω : ω ∈ extractFailEvent kv S B hr E i) :
-    Nonempty (RedDSA.ExtractionFailure B.sch E) := by
-  obtain ⟨e, _⟩ := hω
-  exact ⟨e⟩
+    (extractFailureOf kv S B hr E ω i).isSome := by
+  obtain ⟨e, he⟩ := hω
+  simp only [extractFailureOf, he, Option.isSome_some]
 
 /-- The transaction-balance premiss arm splits into the relation arm and the
 extraction-failure arm. -/

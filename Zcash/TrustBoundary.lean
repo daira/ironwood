@@ -635,7 +635,8 @@ takes `εdlr + κ` in place of the opaque `ε_bindsig`. `+choice` is the erased-
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
 assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
-assert_axioms Zcash.Security.Ledger.Model.extractFailEvent_failure
+assert_computable Zcash.Security.Ledger.Model.extractFailureOf +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFailureOf_isSome
 assert_axioms Zcash.Security.Ledger.Model.txBalanceBreakEvent_fallible_subset
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le_kerr
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le_kerr
