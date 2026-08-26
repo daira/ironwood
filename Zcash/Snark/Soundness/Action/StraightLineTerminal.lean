@@ -23,7 +23,9 @@ open Zcash.Arithmetic (scalarFieldOrder)
 
 variable {G : Type} [AddCommGroup G] [Module Fp G] [DecidableEq G] [Inhabited G]
 
-local instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
+/-- The concrete inhabitant every straight-line module uses; public so importers
+composing with the terminal share the same instance term. -/
+instance vestaInhabitedStraightLineActionTerminal : Inhabited VestaG := ⟨0⟩
 
 /-- Type-valued private witnesses for every Action in the accepted bundle. -/
 abbrev ActionBundleWitness {numProofs : ℕ}

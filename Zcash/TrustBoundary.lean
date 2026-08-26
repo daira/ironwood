@@ -1885,7 +1885,10 @@ private witness together with its refined ledger action— or the computed discr
 relation of its first Sinsemilla escape (`memberLedgerData`); the bundle traversal
 returns every member's data or the first escape (`bundleLedgerData`).
 `memberSatisfying` transports the extracted witness across the circuit boundary as a
-satisfying witness of `ActionSpec`. Data end to end, at the classifiers' budget. -/
+satisfying witness of `ActionSpec`. Composed with the adaptive-statement knowledge
+outcome, one run yields every member's ledger data, a ledger Sinsemilla escape, or the
+circuit-side algebraic relation (`actionLedgerOutcome`), with `actionLedgerExtractor`
+its ledger projection; the composition adds no new undefinedness. Data end to end. -/
 
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberSatisfying +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
@@ -1893,6 +1896,14 @@ assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberLedgerData +cho
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.bundleLedgerData +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerOutcome +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerExtractor +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
 assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
