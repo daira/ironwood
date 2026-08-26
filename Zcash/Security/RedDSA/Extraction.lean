@@ -21,7 +21,7 @@ every group element the adversary presents carries a representation over the pub
 has received — here an arbitrary finite family, with the ℛ slot distinguished (`r_idx`).
 `QueryRep` is the representation data for one signature: the coefficient vectors of the
 commitment `R` and of the key `bvk`. Substituting them into the Schnorr verification equation
-`[S] ℛ = R + [c] bvk` at challenge `c` assembles the coefficients
+`S • ℛ = R + c • bvk` at challenge `c` assembles the coefficients
 `commitment + c · key − S · e_ℛ` (`QueryRep.assembled`), whose evaluation against the basis is
 zero. Whenever some assembled coordinate is nonzero, that is an `AlgebraicRelationWitness`
 (`bindingSig_relation_of_nontrivial`). Extraction failure forces a nonzero slope coefficient
@@ -155,7 +155,7 @@ theorem assembled_ne_zero_of_ne_badChallenge {t : QueryRep F m} {r_idx j : Fin m
 end QueryRep
 
 /-- **A verifying binding signature computes a discrete-log relation.** Substituting the
-representations of `R` and `bvk` into the Schnorr verification equation `[S] ℛ = R + [c] bvk`
+representations of `R` and `bvk` into the Schnorr verification equation `S • ℛ = R + c • bvk`
 makes the assembled coefficients evaluate to zero against the basis, so whenever they are
 nonzero somewhere they are an `AlgebraicRelationWitness`.
 `QueryRep.assembled_ne_zero_of_ne_badChallenge` provides the nonzeroness away from the one

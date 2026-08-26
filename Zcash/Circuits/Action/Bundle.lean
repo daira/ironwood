@@ -338,7 +338,7 @@ def SpecBase (G : Generators) (B : Bases) (wit : ActionData) : Prop :=
   -- the note values are 64-bit, as §4.17.4 types them (exported from the NoteCommit
   -- value decompositions; the commitment clauses alone can't bound the field elements)
   wit.vOld.val < 2 ^ 64 ∧ wit.vNew.val < 2 ^ 64 ∧
-  -- value-commitment integrity: `cv_net = [v_old − v_new] V + [rcv] R`
+  -- value-commitment integrity: `cv_net = (v_old − v_new) • V + rcv • R`
   (wit.magnitude.val < 2 ^ 64 ∧
     ((wit.sign = 1 ∧ (⟨wit.cvX, wit.cvY⟩ : Point Fp)
         = (wit.magnitude.val : Fq) • B.valueCommitV
@@ -346,15 +346,15 @@ def SpecBase (G : Generators) (B : Bases) (wit : ActionData) : Prop :=
      (wit.sign = -1 ∧ (⟨wit.cvX, wit.cvY⟩ : Point Fp)
         = -(wit.magnitude.val : Fq) • B.valueCommitV
           + wit.rcv.2 • B.valueCommitR))) ∧
-  -- nullifier integrity: `nf_old = Extract([PRF(nk, ρ) + ψ] K + cm_old)`
+  -- nullifier integrity: `nf_old = Extract((PRF(nk, ρ) + ψ) • K + cm_old)`
   wit.nfOld = (wit.cmOld +
     ((Poseidon.Hash.ConstantLength.value #v[wit.nk, wit.rhoOld] + wit.psiOld).val : Fq)
       • B.nullifierK).x ∧
-  -- spend authority: `rk = [α] SpendAuthG + ak_P`
+  -- spend authority: `rk = α • SpendAuthG + ak_P`
   (⟨wit.rkX, wit.rkY⟩ : Point Fp)
     = wit.alpha.2 • B.spendAuthG + wit.akP ∧
   -- diversified-address integrity: `ivk ∈ {Commit^ivk, ⊥}` (guarded ⊥-model) and
-  -- `pk_d_old = [ivk] g_d_old`
+  -- `pk_d_old = ivk • g_d_old`
   (∃ ivk : Fp,
     HashGuarded G.S B.ivkQ (commitIvkChunks wit.akP.x.val wit.nk.val)
       (fun bp => ivk = (bp + wit.rivk.2 • B.commitIvkR).x) ∧

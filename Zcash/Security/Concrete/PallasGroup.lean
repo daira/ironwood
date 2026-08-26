@@ -30,6 +30,13 @@ instance : AddCommGroup PallasGroup := Equiv.addCommGroup equivSW
 @[simp] theorem equivSW_apply (P : PallasGroup) : equivSW P = P.toSW := rfl
 @[simp] theorem equivSW_symm_apply (P : SWPoint Pallas.curve) : equivSW.symm P = ⟨P⟩ := rfl
 
+/-- The affine representation is a computable finite enumeration (`instFintypeSWPoint`,
+choice-free), so experiments can take the Pallas group as a `Fintype` — for example as a
+component of a finite challenge-query type. -/
+instance : Fintype PallasGroup := Fintype.ofEquiv _ equivSW.symm
+
+instance : Inhabited PallasGroup := ⟨0⟩
+
 theorem q_nsmul_eq_zero (P : PallasGroup) : PALLAS_SCALAR_CARD • P = 0 := by
   apply equivSW.injective
   change PALLAS_SCALAR_CARD • P.toSW = 0

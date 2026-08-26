@@ -26,7 +26,7 @@ def ActionSpec (input : PublicInputs Fp) (wit : PrivateWitness) : Prop :=
   wit.gdNew.OnCurve ∧ wit.pkdNew.OnCurve ∧
   -- the note values are 64-bit
   wit.vOld.val < 2 ^ 64 ∧ wit.vNew.val < 2 ^ 64 ∧
-  -- value-commitment integrity: `cv_net = [v_old − v_new] V + [rcv] R`
+  -- value-commitment integrity: `cv_net = (v_old − v_new) • V + rcv • R`
   (wit.magnitude.val < 2 ^ 64 ∧
     ((wit.sign = 1 ∧ (⟨input.cvX, input.cvY⟩ : Point Fp)
         = (wit.magnitude.val : Fq) • orchardBases.valueCommitV
@@ -34,12 +34,12 @@ def ActionSpec (input : PublicInputs Fp) (wit : PrivateWitness) : Prop :=
      (wit.sign = -1 ∧ (⟨input.cvX, input.cvY⟩ : Point Fp)
         = -(wit.magnitude.val : Fq) • orchardBases.valueCommitV
           + wit.rcv.2 • orchardBases.valueCommitR))) ∧
-  -- nullifier integrity: `nf_old = Extract([PRF(nk, ρ) + ψ] K + cm_old)`
+  -- nullifier integrity: `nf_old = Extract((PRF(nk, ρ) + ψ) • K + cm_old)`
   input.nfOld = (wit.cmOld +
     ((Poseidon.Hash.ConstantLength.value
       #v[wit.nk, wit.rhoOld] + wit.psiOld).val : Fq)
       • orchardBases.nullifierK).x ∧
-  -- spend authority: `rk = [α] SpendAuthG + ak_P`
+  -- spend authority: `rk = α • SpendAuthG + ak_P`
   (⟨input.rkX, input.rkY⟩ : Point Fp)
     = wit.alpha.2 • orchardBases.spendAuthG + wit.akP ∧
   -- diversified-address integrity

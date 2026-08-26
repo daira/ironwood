@@ -10,6 +10,7 @@ import Zcash.Circuits.NoteCommit.MainTheorems
 import Zcash.Security.Concrete.PallasGroup
 import Zcash.Security.Ledger.Statement
 import Zcash.Security.KeyBinding.Pool
+import Zcash.Security.RedDSA.Basic
 
 /-!
 # The deployed pool's concrete ledger primitives
@@ -152,6 +153,20 @@ def valueCommit (z : ℤ) (r : Fq) : PallasGroup :=
     + r • PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitR.point
       (Or.inl Ecc.MulFixed.Certs.valueCommitR.onCurve)
 
+/-- The deployed binding base ℛ^Orchard —the value-commitment randomness base— as a group
+element. -/
+def bindingBase : PallasGroup :=
+  PallasGroup.ofPoint Ecc.MulFixed.Certs.valueCommitR.point
+    (Or.inl Ecc.MulFixed.Certs.valueCommitR.onCurve)
+
+/-- Deployed RedPallas binding verification with challenge hash `H`: RedDSA's Schnorr
+equation at ℛ^Orchard (`bindingBase`), byte encodings elided. Balance uses its
+extractability —the binding signature as a signature of knowledge of `bsk`— not its
+unforgeability. -/
+def redPallasBindingVerify {MSG : Type*} (H : PallasGroup → PallasGroup → MSG → Fq) :
+    PallasGroup → MSG → Zcash.Security.RedDSA.Sig Fq PallasGroup → Prop :=
+  (Zcash.Security.RedDSA.Scheme.mk bindingBase H).Verify
+
 theorem toPoint_valueCommit (z : ℤ) (r : Fq) :
     PallasGroup.toPoint (valueCommit z r) =
       (intScalar z).val • Ecc.MulFixed.Certs.valueCommitV.point +
@@ -167,7 +182,7 @@ def noteHash (n : Note PallasGroup Fp Fp) : Option (Point Fp) :=
   hashToPoint orchardGenerators.S noteQ (noteScalars n).chunks
 
 /-- The deployed note commitment: the Sinsemilla hash of the note message, plus the
-blinding term `[rcm] NoteCommitR`.
+blinding term `rcm • NoteCommitR`.
 
 The blinding addition is the complete group addition, matching both the protocol spec's
 `SinsemillaCommit` (§5.4.8.4, complete addition since spec version 2021.2.16) and the
@@ -209,6 +224,7 @@ schemes; the concrete RedPallas instantiations compose downstream. -/
 def primitives (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop) :
     Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG SIG where
   valueBound := 2 ^ 64
+  vBalanceBound := 2 ^ 63
   emb := PallasGroup.embedFp
   emb_injective := PallasGroup.embedFp_injective
   extract := extract
@@ -235,7 +251,7 @@ theorem commitIvkHash_eq_some_of_hashToPoint {ak nk : Fp} {p : Point Fp}
   exact PallasGroup.ofPoint?_eq_some p hp
 
 /-- The deployed circuit's key-binding interface: the bare `Commit^ivk` opening
-`Extract(hashPoint + [rivk] CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
+`Extract(hashPoint + rivk • CommitIvkR)` plus `ivk ≠ 0`.  As with `noteCommit`, the
 blinding addition is the complete group addition, matching both §5.4.8.4 and the
 deployed gadget. -/
 def keyBinding : KeyBindingInterface (KeyBinding.Pool.Witness Fq PallasGroup Fp)

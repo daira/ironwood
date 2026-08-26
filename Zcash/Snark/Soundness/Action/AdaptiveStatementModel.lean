@@ -59,12 +59,6 @@ theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
     actionCircuit.shape_numInstanceColumns]
   exact actionCircuit_numInstanceColumns_eq
 
-/-- Every unconfigured Action instance column serializes only zero rows. -/
-theorem adaptiveActionPublicInputRows_ne_zero (input : PublicInputs Fp)
-    {column : ℕ} (hcolumn : column ≠ 0) :
-    ∀ i, (actionCircuit.publicInputRows input ⟨column⟩).getD i 0 = 0 := by
-  exact actionCircuit_publicInputRows_ne_zero input hcolumn
-
 /-- A zero public-instance column commits only to its blinding generator, for any verifier URS. -/
 theorem adaptiveCommitInstance_of_rows_zero {G : Type*} [AddCommGroup G] [Module Fp G]
     {urs : URS G} {omega : Fp} (key : LagrangeCommitmentKey urs omega)
@@ -127,7 +121,7 @@ theorem adaptiveActionStatementInstanceCommitment_eq_bounded (pp : ProofParams)
             (inputs (Fin.cast (actionCircuit.shape.withProofParams_numProofs pp) p)) ⟨column⟩) 1 =
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w
     rw [adaptiveCommitInstance_of_rows_zero _
-      (adaptiveActionPublicInputRows_ne_zero _ hne)]
+      (actionCircuit_publicInputRows_ne_zero _ hne)]
     simp
 
 /-- Canonical initial-transcript length, independent of the selected statement's values. -/

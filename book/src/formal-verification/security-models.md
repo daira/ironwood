@@ -22,8 +22,73 @@ So each definition sits on a three-layer stack:
   Layer-A break (`NontrivialRelation.ofImbalance`, `Merkle.collisionOfWrongLeaf`,
   `noteCommitBreakOfNe`). Deterministic; no hardness assumption.
 - **Layer C — probability.** The bound that producing the break is hard: the birthday
-  bound $q \cdot (q-1)/|\mathbb{F}|$, or the discrete-log advantage. The only layer that
+  bound $q \cdot (q-1)/\FieldSize$, or the discrete-log advantage. The only layer that
   consumes an assumption.
+
+## How the layers compose
+
+A capstone is assembled from several sub-reductions, called "arms", each with its
+own bound. The composition happens at the **reduction layer** (Layer B), not the
+probability layer (Layer C).
+
+We use that approach because probability statements over *different* sample spaces
+don't combine straightforwardly — conditioning on a sub-event reweights the measure,
+and product measures and marginals get in the way. Computable reductions cause no
+such friction. A reduction is a total function from the adversary's output to a
+break, and so "run the adversary, then run the reduction" is just another machine
+(algebraic if both its components are) at an unchanged query count. Reductions
+compose by ordinary function composition —the path of least resistance that Lean's
+proof tactics handle well— and probability is taken *once*, at the end.
+
+Three pieces of structure make that last step essentially mechanical:
+
+- The *event sets* form a **Boolean algebra**, ordered by inclusion $\subseteq$
+  and combined by union $\cup$.
+- The *probability measure*, $\mu$, of an event set is **monotone** and
+  **finitely subadditive**. Monotone means that if $A \subseteq B$ then
+  $\mu(A) \le \mu(B)$ (a subset of events has no greater probability than the
+  original set). Finitely subadditive means that
+  $\mu(A \cup B) \le \mu(A) + \mu(B)$ (the probability of a union is at most
+  the sum of the probabilities of its parts). That's all we need: no independence
+  and no inclusion–exclusion principle.
+- The *lift that carries a per-parameter event into the sample space* is a
+  **monotone join-homomorphism** — it preserves both $\subseteq$ and $\cup$.
+  The lift is "there is a valid run, at the sampled parameters, whose output
+  lands in the event"; it preserves unions because $\exists$ distributes over
+  $\lor$.
+
+So a composed bound is proved in two moves. First, a distribution-independent
+**set-level containment**: the bad event is contained in a union of per-arm
+events. This involves no probability over multiple sample spaces, so it is
+easily reusable. Second, lift to a probability, and sum:
+
+* monotonicity carries the containment into the sample space;
+* the join-homomorphism distributes it over the union;
+* subadditivity turns the union into the sum of the per-arm bounds.
+
+### The Balance integrity argument as a worked example
+
+Balance integrity has exactly this shape. Its set of violation events —the
+shielded pool going negative, or the pools failing to sum to the minted
+issuance— is contained in the union of the three Balance-subset break arms
+(Merkle, note-commitment, key-binding) and the Balance conservation violation.
+That containment is `balanceIntegrityViolationBefore_subset_conservation`; it
+mentions no probabilities and holds at every prefix at once.
+
+Lifting it to the sample space through the join-homomorphism `sampledLedgerEvent`
+and applying subadditivity, gives the integrity experiment's bound as the sum
+of the non-negativity side and the conservation side. This is optimally tight
+and has no factor of the number of prefixes. The conservation side is reused
+wholesale — the conservation experiment is one arm dropped in as a black box.
+And at the Orchard instantiation, the three non-negativity arms collapse onto
+a single advantage, that of finding a nontrivial discrete-log relation among
+the fixed Sinsemilla bases. That is, each arm's break is routed through its
+deterministic reducer, so all three land in one event and are bounded once.
+
+Naming the Boolean algebra, the subadditive measure, and the join-homomorphism
+is what turns per-composition plumbing into three reusable lemmas. This is an
+instance of a widely applicable principle — looking for the algebraic structure
+in a problem often drastically simplifies and clarifies it.
 
 ## What a reduction in these models says
 
@@ -100,7 +165,7 @@ view is identical to the honestly sampled game, so its success probability is un
 and the challenge is hidden perfectly rather than computationally. What the reduction
 gains is private knowledge of the pairs. A returned relation among the bases then becomes
 a linear equation in $z$, solvable unless the relation's coefficients land on the single
-$1/|\mathbb{F}|$ hyperplane where the $y$ component cancels — the form of reduction the
+$1/\FieldSize$ hyperplane where the $y$ component cancels — the form of reduction the
 definitions page calls [programmed-basis](definitions.md#programmed-basis). The argument
 is Jaeger–Tessaro's proof of their Lemma 3, presented there as a careful use of
 self-reducibility techniques.
