@@ -67,7 +67,7 @@ failure, and neither is an accepted run that yielded a witness.
 
 The endpoint's compositional formula: the adversary's
 [discrete-log advantage](definitions.md#adv-dlog) at its query and group-work counts, plus
-$1/|\mathbb{F}|$, plus a per-query term collecting the Schwartz–Zippel budgets of each challenge
+$1/\FieldSize$, plus a per-query term collecting the Schwartz–Zippel budgets of each challenge
 surface. At the $2^{123}$ work-factor target it lands on
 $\mathrm{Adv}_{\mathrm{DLOG}}(2^{126}, 2^{126}) + 2^{-83}$, whose two arguments are the
 random-oracle query count and the group-operation count.

@@ -190,7 +190,7 @@ def action (hs : HonestAction P kv ledger) (sig : SIG) :
   w := hs.witness
   sig := sig
 
-/-- A dummy note: zero value, addressed to `kw` (`pk_d = [ivk] g_d`) with diversified
+/-- A dummy note: zero value, addressed to `kw` (`pk_d = ivk • g_d`) with diversified
 base `gd`. The wallet's random samples (`gd`, `ρ`, `ψ`) are parameters, since the
 model has no randomness. -/
 def dummyNote (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
@@ -294,7 +294,7 @@ theorem honestTx_valid
         + ((issuance ledger.length : ℤ) + (honestTx spends sighash bindingSig).vBalance))
     (hbind : P.bindingVerify ((honestTx spends sighash bindingSig).bvk P) sighash
         bindingSig)
-    (hvb : (honestTx spends sighash bindingSig).vBalance.natAbs < P.valueBound)
+    (hvb : (honestTx spends sighash bindingSig).vBalance.natAbs ≤ P.vBalanceBound)
     (hbound : spends.length ≤ maxActions) :
     ValidLedger P kv issuance maxActions (ledger ++ [honestTx spends sighash bindingSig]) := by
   have hmem : ∀ tx ∈ ledger ++ [honestTx spends sighash bindingSig],
@@ -438,7 +438,7 @@ def spendabilityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq NK]
     (htrans : 0 ≤ transparentPoolBalance issuance ledger ledger.length
         + ((issuance ledger.length : ℤ) + (honestTx [(hs, sig)] sighash bsig).vBalance))
     (hbind : P.bindingVerify ((honestTx [(hs, sig)] sighash bsig).bvk P) sighash bsig)
-    (hvb : (honestTx [(hs, sig)] sighash bsig).vBalance.natAbs < P.valueBound)
+    (hvb : (honestTx [(hs, sig)] sighash bsig).vBalance.natAbs ≤ P.vBalanceBound)
     (hbound : 1 ≤ maxActions) :
     ValidLedger P kv issuance maxActions (ledger ++ [honestTx [(hs, sig)] sighash bsig])
       ⊕' Respend ledger hs.rcm_old hs.note_old

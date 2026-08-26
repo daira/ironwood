@@ -46,13 +46,33 @@ theorem orchard_natAbs_lt {r : ℕ} (vs : List ℤ) (vBalance : ℤ)
 theorem orchardVSumBound_lt_pallasScalarOrder : orchardVSumBound < (pallasScalarOrder : ℤ) := by
   norm_num [orchardVSumBound, vSumBound, pallasScalarOrder]
 
+/-- The ledger model's no-overflow bound at the Orchard limits: under the dedicated consensus
+action caps —`nActionsOrchard` and `nActionsIronwood` are each less than `2^16` (spec §7.1.2,
+<https://zips.z.cash/protocol/protocol.pdf#txnconsensus>), so the bound applies to either
+Orchard-protocol pool— the ledger layer's `vSum`-shaped per-transaction bound fits the
+Pallas scalar order. Derived from `orchardVSumBound_lt_pallasScalarOrder` by monotonicity
+of `vSumBound` in the action count: no numeric fact beyond the one anchor. -/
+theorem orchard_ledger_no_overflow {n : ℕ} (hn : n < 2^16) :
+    n * (2^64 - 1) + 2^63 < pallasScalarOrder := by
+  have hle : (n : ℤ) ≤ ((2^16 - 1 : ℕ) : ℤ) := by
+    exact_mod_cast Nat.le_pred_of_lt hn
+  have hmono : vSumBound n ≤ orchardVSumBound := by
+    unfold orchardVSumBound vSumBound
+    gcongr
+  have h := lt_of_le_of_lt hmono orchardVSumBound_lt_pallasScalarOrder
+  have hcast : ((n * (2^64 - 1) + 2^63 : ℕ) : ℤ) = vSumBound n := by
+    push_cast [vSumBound]
+    norm_num
+  exact_mod_cast hcast ▸ h
+
 /-- **Orchard integer balance reduction (§4.14), as a computed relation.** A verifying Orchard
 bundle of `≤ 2^16 − 1` actions — each committing a net value `v ∈ [−2^64+1, 2^64−1]`, with
 signed-64-bit `vBalance` — that does not balance over ℤ (`∑ v_net − vBalance ≠ 0`) yields an
-explicit nontrivial discrete-log relation between `Vbase` and `Rbase`, as data. The no-overflow bound is
-discharged here by `orchard_natAbs_lt`; there is no binding assumption (RedDSA extractability
-`hExtract` is the only cryptographic input). The computed relation is discharged against DLR
-hardness at the computational layer, and Orchard bundle balance is the contrapositive. -/
+explicit nontrivial discrete-log relation between `Vbase` and `Rbase`, as data. The no-overflow
+bound is discharged here by `orchard_natAbs_lt`; there is no binding assumption (RedDSA
+extractability `hExtract` is the only cryptographic input). The computed relation is discharged
+against DLR hardness at the computational layer, and Orchard bundle balance is the
+contrapositive. -/
 def NontrivialRelation.ofOrchardImbalance {M : Type*} [AddCommGroup M]
     [Module (ZMod pallasScalarOrder) M]
     (Vbase Rbase : M) (actions : List (ℤ × ZMod pallasScalarOrder)) (vBalance : ℤ)

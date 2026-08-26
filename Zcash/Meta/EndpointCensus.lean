@@ -45,11 +45,18 @@ initialize censusPinExt : SimplePersistentEnvExtension Name NameSet ←
 def recordCensusPin (name : Name) : CommandElabM Unit :=
   modifyEnv fun env => censusPinExt.addEntry env name
 
-/-- The semantic endpoint suffixes of `ENDPOINT_RE`, each also matched with a trailing `_for`
-(the consensus-generic forms take the bundle size as a parameter). -/
+/-- The semantic endpoint suffixes of `ENDPOINT_RE`, each also matched with one of the
+`endpointTrailers`. -/
 def endpointSuffixes : List String :=
   ["_error_bound", "_finite_security", "_measure_le", "_probability_bound", "_prob_le",
     "_capstone"]
+
+/-- The qualifier trailers an endpoint suffix may carry: the consensus-generic forms take
+the bundle size as a parameter (`_for`), `_experiment` marks a bound placed in the
+challenge-oracle experiment, `_idealizedks` marks a capstone that names the
+knowledge-soundness idealization, and the last two compose. -/
+def endpointTrailers : List String :=
+  ["", "_for", "_experiment", "_idealizedks", "_experiment_idealizedks"]
 
 /-- Whether `pat` occurs anywhere in `s`. -/
 def containsSubstring (s pat : String) : Bool :=
@@ -65,7 +72,7 @@ def isEndpointBaseName (s : String) : Bool :=
   containsSubstring s "bundleStatement_or_relation" ||
   containsSubstring s "workFactor" ||
   containsSubstring s "fingerprint_matches_positional" ||
-  endpointSuffixes.any fun suf => s.endsWith suf || s.endsWith (suf ++ "_for")
+  endpointSuffixes.any fun suf => endpointTrailers.any fun tr => s.endsWith (suf ++ tr)
 
 /-- Every elaborated constant kind can carry an endpoint-shaped declaration.  Keeping this match
 exhaustive makes a new Lean declaration kind fail closed until it is classified, while inductive

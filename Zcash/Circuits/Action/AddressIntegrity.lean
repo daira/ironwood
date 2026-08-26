@@ -22,7 +22,7 @@ separate building block; its output cell feeds in here as `ivk`):
    region (`ecc/chip.rs:474-488`), two copy constraints.
 
 The block returns the witnessed `pk_d_old`. `Spec` is knowledge-sound with no
-existential: `pk_d_old = [ivk] g_d_old` at the input `ivk` cell (the phase-1 donor
+existential: `pk_d_old = ivk • g_d_old` at the input `ivk` cell (the phase-1 donor
 carried the whole `CommitIvk` call inside and an `∃ ivk` — here `ivk` is an input, so
 the statement is direct).
 
@@ -46,9 +46,9 @@ structure Input (F : Type) where
 deriving CircuitType
 
 /-- Rust `Circuit::synthesize`'s diversified-address-integrity block (post-`commit_ivk`):
-`[ivk] g_d_old` (variable-base `Ecc.Mul`), the witnessed `pk_d_old`, and the equality
+`ivk • g_d_old` (variable-base `Ecc.Mul`), the witnessed `pk_d_old`, and the equality
 constraint between them. `Spec` is knowledge soundness at the input `ivk` cell:
-`pk_d_old = [ivk] g_d_old`, on-curve — no existential. -/
+`pk_d_old = ivk • g_d_old`, on-curve — no existential. -/
 def circuit : FormalCircuit Fp
     (Ecc.Mul.Config × Ecc.WitnessPoint.Config)
     (Ecc.Mul.Config × Ecc.WitnessPoint.Config)

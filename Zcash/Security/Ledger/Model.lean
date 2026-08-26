@@ -196,9 +196,10 @@ structure ValidLedger (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
   /-- Each transaction's declared value balance is in range. The consensus rule
   (§7.1.2, [NU5 onward]) is `valueBalanceOrchard ∈ {-MAX_MONEY .. MAX_MONEY}` (inclusive;
   MAX_MONEY ~2^51 zatoshi), i.e. `|vBalance| <= MAX_MONEY`. This conjunct states the
-  weaker `natAbs < valueBound` (= 2^64 at the intended instantiation), a loose consequence
-  that suffices for the no-overflow bound in the integer-balance lift. -/
-  vbalance_bound : ∀ tx ∈ ledger, tx.vBalance.natAbs < P.valueBound
+  weaker `natAbs ≤ vBalanceBound` (= 2^63, the signed two's-complement endpoint, at the
+  intended instantiation), a loose consequence that suffices for the no-overflow bound in
+  the integer-balance lift. -/
+  vbalance_bound : ∀ tx ∈ ledger, tx.vBalance.natAbs ≤ P.vBalanceBound
   /-- The transparent pool balance never goes negative: a transaction can move value
   into the shielded pool only from issuance already minted, less what earlier
   transactions consumed. This is the consensus non-negative chain value balance rule for

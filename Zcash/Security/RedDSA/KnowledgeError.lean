@@ -1,4 +1,4 @@
-import Zcash.Common.RelationProbability
+import Zcash.Common.RelationProbabilityCoins
 import Zcash.Security.RedDSA.Extraction
 import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 
@@ -114,7 +114,7 @@ def effectiveRep (O : Q → F) (s : Fin m → F) : QueryRep F m :=
   ((adv (scalarBasis gen s)).findLabel O (dischargeOut m gen adv O s).queryPoint).getD
     (dischargeOut m gen adv O s).announced
 
-/-- The Schnorr verification equation `[S] ℛ = R + [c] bvk`, with `R` and `bvk` read off the
+/-- The Schnorr verification equation `S • ℛ = R + c • bvk`, with `R` and `bvk` read off the
 effective representation at the presented basis. -/
 def Verifies (O : Q → F) (s : Fin m → F) : Prop :=
   letI b := scalarBasis gen s
@@ -265,6 +265,41 @@ theorem kappaEvent_measure_le {qH : ℕ} {ε : ℝ≥0∞}
     (kappaEvent_subset m gen r_idx adv)
     (fun s => badFiber_measure_le m gen r_idx adv (hQ s))
     (fun O => relFiber_measure_le m gen r_idx adv (hdl O))
+
+/-- **The knowledge error bounded, with a single randomized reduction:
+κ ≤ (qH+1)/#F + (ε_DL + 1/#F).** As `kappaEvent_measure_le`, with the per-table DL
+hypothesis replaced by one bound for the coin-consuming finder — the reduction samples the
+challenge table as its own coins (`TextbookDLWithCoinsAdvantageLE` at `ρ := Q → F`), so the
+supremum over tables disappears. -/
+theorem kappaEvent_measure_le_of_coins {qH : ℕ} {ε : ℝ≥0∞}
+    (hQ : ∀ s : Fin m → F, (adv (scalarBasis gen s)).QueryBound qH)
+    (hdl : TextbookDLWithCoinsAdvantageLE gen (fun b O => relFinder m r_idx adv O b) ε) :
+    (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure (kappaEvent m gen r_idx adv)
+      ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F + (ε + 1 / Fintype.card F) := by
+  haveI : Nonempty (Fin m) := ⟨r_idx⟩
+  have hsub : kappaEvent m gen r_idx adv
+      ⊆ {ω | ω.1 ∈ badFiber m gen r_idx adv ω.2}
+        ∪ {ω : (Q → F) × (Fin m → F) |
+            (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b))} := by
+    intro ω hω
+    rcases kappaEvent_subset m gen r_idx adv hω with h | h
+    · exact Or.inl h
+    · refine Or.inr (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _, ?_⟩))
+      simpa only [relFiber, Set.mem_setOf_eq] using h
+  refine le_trans (MeasureTheory.measure_mono hsub) ?_
+  refine le_trans (MeasureTheory.measure_union_le _ _) (add_le_add ?_ ?_)
+  · exact uniformOfFintype_prod_fiber_bound (badFiber m gen r_idx adv)
+      (fun s => badFiber_measure_le m gen r_idx adv (hQ s))
+  · have hswap : (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure
+        {ω : (Q → F) × (Fin m → F) |
+          (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b))}
+        = (PMF.uniformOfFintype ((Fin m → F) × (Q → F))).toOuterMeasure
+          ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b)) := by
+      rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → F) (Fin m → F)),
+        PMF.toOuterMeasure_map_apply]
+      congr 1
+    rw [hswap]
+    exact relationWithCoins_prob_le_of_textbookDL gen _ hdl
 
 end Discharge
 

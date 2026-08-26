@@ -84,6 +84,11 @@ and lemmas. `emb` is the embedding of base-field values used as scalars
 spend-authorization scheme. -/
 structure Primitives (F G IVK NK RHO PSI MHASH MENC MSG SIG : Type*) where
   valueBound : ℕ
+  /-- The magnitude bound on a transaction's declared value balance
+  (`|vBalance| ≤ vBalanceBound`; the signed two's-complement endpoint `2^63` at the
+  intended instantiation). Separate from `valueBound` so the no-overflow hypothesis
+  takes the `vSum` shape `maxActions · (valueBound − 1) + vBalanceBound`. -/
+  vBalanceBound : ℕ
   emb : IVK → F
   emb_injective : Function.Injective emb
   extract : G → MHASH
@@ -185,7 +190,7 @@ structure ActionSatisfied (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
     P.deriveNullifier (kv.nk w.kw) w.note_old.ρ w.note_old.ψ w.cm_old
   /-- The key-binding condition on the key witness. -/
   key_binding : kv.KB w.kw
-  /-- Diversified address integrity: `pk_d = [ivk] g_d`. -/
+  /-- Diversified address integrity: `pk_d = ivk • g_d`. -/
   pkd_eq : w.note_old.pkd = P.emb (kv.ivk w.kw) • w.note_old.gd
   /-- `g_d` is not the zero element. -/
   gd_ne : w.note_old.gd ≠ 0

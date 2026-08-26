@@ -24,7 +24,7 @@ Not established here:
   used before and after NU6.3 activation.
 * A *satisfying* pre-NU6.3 witness that violates the clause — i.e.
   `¬ ∀ wit, SpecBase G B wit → crossAddressBinding wit`. A concrete such witness must
-  open the honest `Commit^ivk`/note/nullifier chains, whose `[ivk] g_d` and
+  open the honest `Commit^ivk`/note/nullifier chains, whose `ivk • g_d` and
   Poseidon-scalar terms are ~255-bit `nsmul`s that `native_decide` cannot evaluate; that
   separation is left as the remaining step.
 -/

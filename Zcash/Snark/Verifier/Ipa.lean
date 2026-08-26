@@ -28,7 +28,7 @@ namespace Zcash.Snark
 open Zcash.Arithmetic (Msm Msm.eval_addToGScalars Msm.eval_addToUScalar Msm.eval_addToWScalar Msm.eval_appendTerm)
 
 /-- halo2 `compute_s`: the `2 ^ u.length` coefficients of `init · ∏ᵢ (1 + u_{k-1-i} · X^{2ⁱ})`.
-With `init = -c` these are the fingerprint's URS-generator coefficients for `[-c] G'`, where `G'`
+With `init = -c` these are the fingerprint's URS-generator coefficients for `(-c) • G'`, where `G'`
 is the fully folded generator. Built by the same left-half doubling as the Rust. -/
 def computeS {F : Type*} [CommRing F] (u : List F) (init : F) : List F :=
   u.reverse.foldl (fun v uⱼ => v ++ v.map (· * uⱼ)) [init]
@@ -55,7 +55,7 @@ def ipaFold {F G : Type*} [Field F] {k : ℕ} (x v c f xi z : F) (u : List F)
   let m := m.addToWScalar (-f)
   m.addToGScalars (computeS u (-c))
 
-/-- The per-round `[uⱼ⁻¹] Lⱼ + [uⱼ] Rⱼ` fold contributes exactly `Σⱼ (uⱼ⁻¹ • Lⱼ + uⱼ • Rⱼ)` to the
+/-- The per-round `uⱼ⁻¹ • Lⱼ + uⱼ • Rⱼ` fold contributes exactly `Σⱼ (uⱼ⁻¹ • Lⱼ + uⱼ • Rⱼ)` to the
 evaluation. By induction over the rounds, using `Msm.eval_appendTerm`. -/
 theorem eval_foldl_rounds {F G : Type*} [Field F] [AddCommGroup G] [Module F G]
     (urs : URS G) (l : List ((G × G) × F)) (m0 : Msm urs.k F G) :
