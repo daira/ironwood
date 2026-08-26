@@ -94,10 +94,40 @@ if [[ -z "$census" ]]; then
 fi
 
 # Every pinned name, fully qualified, one per line. An optional `_root_.` prefix is accepted by
-# the macros, so strip it here too.
-pins=$(echo "$census" | xargs grep -hE '^assert_(axioms|computable) ' \
-  | sed -E 's/^assert_(axioms|computable)[[:space:]]+//; s/^_root_\.//; s/[[:space:]].*$//' \
-  | sort -u)
+# the macros, so strip it here too. A pin may wrap its name onto the following line (the
+# assert command alone, then the indented name) to keep long names within the line-width
+# convention; accept both layouts.
+# A name that fails to parse (an empty continuation, or a token carrying syntax like
+# `+native(`) is reported as a violation rather than skipped: a silently dropped pin would
+# make a pinned endpoint read as unpinned — or, combined with a declaration-side parse gap,
+# read as nothing at all. The elaborated `CensusCheck` remains the backstop for the
+# declaration side.
+pins=$(echo "$census" | xargs awk '
+  /^assert_(axioms|computable)[[:space:]]+[^[:space:]]/ {
+    name = $2
+    sub(/^_root_\./, "", name)
+    if (name == "" || name ~ /[+(),]/) name = "PARSE_ERROR"
+    print name
+    next
+  }
+  /^assert_(axioms|computable)[[:space:]]*$/ { pending = 1; next }
+  pending {
+    name = $1
+    sub(/^_root_\./, "", name)
+    if (name == "" || name ~ /[+(),]/) name = "PARSE_ERROR"
+    print name
+    pending = 0
+  }
+  END { if (pending) print "PARSE_ERROR" }
+' | sort -u)
+
+# A herestring rather than a pipe: `grep -q` exits at the first match, and under
+# `pipefail` the SIGPIPE it sends a still-writing `echo` would turn a MATCH into a
+# failed pipeline, silently skipping this guard.
+if grep -q '^PARSE_ERROR$' <<< "$pins"; then
+  echo "VIOLATION: unparseable assert_axioms/assert_computable entry layout in census files" >&2
+  exit 1
+fi
 
 status=0
 count=0
