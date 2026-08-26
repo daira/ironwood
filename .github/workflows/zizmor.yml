@@ -1,8 +1,8 @@
 name: Workflow audit
 
-# Always triggers, so the required `zizmor` check is always reported (a
-# workflow skipped by `on.paths` would leave a required check pending and
-# block merges).  The audit is instead gated on a path filter computed
+# Always triggers, so the required `Workflow CI` check is always reported
+# (a workflow skipped by `on.paths` would leave a required check pending
+# and block merges).  The audit is instead gated on a path filter computed
 # inside the run, mirroring the Lean, book, and fixtures workflows.
 on:
   push:
@@ -57,3 +57,28 @@ jobs:
           # injection or unpinned use slips in silently with future
           # workflow edits.
           min-severity: informational
+
+  workflow-ci:
+    # The single stable check to mark as a required status check. It always
+    # runs, so it always reports; it fails only if the audit actually failed.
+    name: Workflow CI
+    needs: [changes, zizmor]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate on the audit result
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          ZIZMOR_RESULT: ${{ needs.zizmor.result }}
+        run: |
+          if [ "$CHANGES_RESULT" != "success" ]; then
+            echo "The changes-detection job did not succeed."
+            exit 1
+          fi
+          case "$ZIZMOR_RESULT" in
+            success|skipped)
+              echo "Workflow audit passed or was not required for this change." ;;
+            *)
+              echo "Workflow audit result: $ZIZMOR_RESULT."
+              exit 1 ;;
+          esac
