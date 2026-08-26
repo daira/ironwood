@@ -98,7 +98,6 @@ def ValueShape.premissOrBreakFallible [DecidableEq G]
     {ledger : Ledger KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth}
     (S : ValueShape P) (B : BindingSigShape P S)
     (hval : ValidLedger P kv issuance maxActions ledger)
-    -- + 1 is for the valueBalance
     (hr : maxActions * (P.valueBound - 1) + P.vBalanceBound < r)
     (E : RedDSA.Extractor (ZMod r) G MSG)
     (tx : Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P.depth) (htx : tx ∈ ledger) :
