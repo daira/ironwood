@@ -57,7 +57,7 @@ flowchart TD
   NFB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>distinct derive-inputs +<br/>equal nullifier<br/>computes</a>"| NFC["NullifierCollision"]
   SPENDAUTH --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean'>verified signature over<br/>unsigned sighash computes</a>"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
-  STMT STMTtoKS@-. "<a target='_blank' href='https://github.com/zcash/ironwood/issues/147'>intended hand-off:<br/>not yet formalized<br/>(#147, #155)</a>" .-> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data<br/>(separate development)"]
+  STMT STMTtoKS@-- "<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/OrchardExtractionExperiment.lean'>extraction experiment:<br/>annotations computed from<br/>accepting proofs (#155 remains)</a>" --> KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data<br/>(separate development)"]
   NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
 
   KERR KERRtoNDLR@==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
@@ -100,19 +100,16 @@ flowchart TD
   classDef partial fill:#9a6700,stroke:#7d4e00,color:#ffffff
   classDef hyp fill:#cf222e,stroke:#a40e26,color:#ffffff
   classDef assumed fill:#57606a,stroke:#424a53,color:#ffffff
-  class BAL,SPEND,SPENDAUTH,KS partial
-  class NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR checked
+  class SPEND,SPENDAUTH,KS partial
+  class BAL,NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR checked
   class RDSA hyp
   class DL,ROM assumed
   classDef agmEdge stroke:#8858c8,stroke-width:4.2px
-  classDef gapEdge stroke:#cf222e,stroke-width:3.5px,stroke-dasharray: 7.5 3.2
-  class KERRtoNDLR,KStoDL,RDSAtoDL agmEdge
-  class STMTtoKS gapEdge
+  class KERRtoNDLR,KStoDL,RDSAtoDL,STMTtoKS agmEdge
 ```
 
 <p>
 <span style="color:#8858c8; font-weight: 700; font-size: 1.9rem">➞</span> heavy purple edge: a reduction (or intended reduction) in the online-AGM — both endpoint games are <a href="security-models.html#the-algebraic-adversary-restriction">algebraic</a><br/>
-<span style="color:#cf222e; font-weight: 700; font-size: 1.9rem">⇢</span> dashed red edge: an intended hand-off that is not yet formalized — the endpoints share no definition (<a href="https://github.com/zcash/ironwood/issues/147">#147</a>, <a href="https://github.com/zcash/ironwood/issues/155">#155</a>)<br/>
 <span style="font-size: 1.9rem">➝</span> thin edge: depends on (a reduction, assumption, or model)<br/>
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
 <span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
@@ -126,16 +123,23 @@ flowchart TD
 The Balance capstones are stated for a *Knowledge-Soundness-idealized* adversary
 ([`IdealizedKSBalanceAdversary`](https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/OrchardIntegrityExperiment.lean)):
 one that outputs a witness-annotated ledger, every Action carrying the witness for the
-Action statement. The annotation is where knowledge soundness of the Action circuit enters:
-nothing yet connects an accepting Halo 2 proof to those witnesses, so the `idealizedks` in
-the capstones' names marks results that are complete over this idealized ledger model but
-not yet composed with the circuit layer. That composition is the dashed red edge above
-([#147](https://github.com/zcash/ironwood/issues/147)); until it lands, the Balance
-integrity node stays amber even though every ledger-side arm is machine-checked. This is an
-incompleteness of the proof, not an accepted modelling trade-off. The capstones' accepted
+Action statement. The annotation is where knowledge soundness of the Action circuit enters,
+and it is an intermediate step rather than a remaining idealization: the extraction
+experiment ([`OrchardExtractionExperiment`](https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/OrchardExtractionExperiment.lean))
+constructs the annotated adversary from a proof-emitting one —the annotations are computed
+by the composed knowledge extractor from the sampled runs— and its endpoints
+(`orchardBalanceIntegrityExtraction_measure_le` and the conservation and cap forms)
+instantiate the capstones at that adversary, adding one knowledge-soundness bound and one
+escape bound per slot-size pair. The `idealizedks` in the capstones' names marks the
+instantiation target, and the Balance integrity node above is machine-checked end to end.
+The `k * maxActions` factor that the composition adds, and its removal by reduction-layer
+composition with the SNARK argument, are tracked as
+[#214](https://github.com/zcash/ironwood/issues/214). The capstones' accepted
 trade-offs —the binding challenge hash as a random oracle, the programmed value and
 binding bases carried to the deployed ones by the reference-string heuristic, elided byte
-encodings— are documented at `IdealizedKSBalanceAdversary.violationEvent`.
+encodings— are documented at `IdealizedKSBalanceAdversary.violationEvent`; the composed
+statement is for the reprogrammed basis, as the extraction experiment's module doc
+records.
 
 This picture is a deliberate approximation, and is likely to change as the formalization
 proceeds. The RedDSA node is a named hypothesis rather than a terminal assumption: its
@@ -168,15 +172,15 @@ As stated above, the KS-idealized ledger model requires the adversary to supply,
 with any accepting proof, a **witness or replay evidence** for the Action statement
 (`ActionSatisfied`) — in the replay case the ledger oracle can produce the previously
 supplied witness. Each component argument consumes the statement's satisfaction
-*on that witness*. Knowledge soundness is what is *intended* to justify that modelling:
-whenever the ledger layer needs a witness, the extractor would compute one —or compute
-break data— from the accepting proof. That hand-off is not yet formalized in any form:
-the games state `ActionSatisfied` over their own abstract types, and no definition is
-shared with the SNARK development. The dashed red edge marks exactly this gap
-([#147](https://github.com/zcash/ironwood/issues/147),
-[#155](https://github.com/zcash/ironwood/issues/155)). Until it lands, the
-witness-supply requirement is a modelling assumption of the ledger games, not a
-consequence of verifier knowledge soundness.
+*on that witness*. Knowledge soundness is what justifies that modelling: whenever the
+ledger layer needs a witness, the extractor computes one —or computes break data— from
+the accepting proof. For the Balance capstones that hand-off is formalized: the
+extraction experiment computes the annotations with the composed knowledge extractor and
+instantiates the capstones at the constructed adversary, so the witness-supply
+requirement there is a consequence of verifier knowledge soundness rather than an
+assumption. For the games that are not yet composed (Spendability, Spend authority), the
+requirement remains a modelling assumption; the remaining oracle-machine layer for the
+capstone ε slots is tracked as [#155](https://github.com/zcash/ironwood/issues/155).
 
 <style>
 /* "One picture, not yet connected" links: labels keep their ordinary colour at rest
