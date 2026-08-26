@@ -5,12 +5,12 @@ import Zcash.Snark.Soundness.Action.AdaptiveStatementKnowledge
 /-!
 # The bundle-level Action-to-ledger bridge
 
-Lift the per-Action data bridge across an accepted bundle.  Each extracted member
+Lift the per-Action data bridge across an accepted bundle. Each extracted member
 witness (`TopLevelSemanticWitness`) is a satisfying witness of the circuit-facing
 `ActionSpec` (`Zcash.Common.Satisfying`), and `actionSpecToLedgerData` refines it to
 the member's ledger data —the full extracted witness together with its refined
 ledger action— or the computed discrete-log relation of its first Sinsemilla
-escape.  The bundle traversal returns every member's data or the first escape
+escape. The bundle traversal returns every member's data or the first escape
 (`finForallOrRelationWitness`): knowledge soundness composed at the reduction layer,
 with everything carried as data.
 -/
@@ -84,7 +84,7 @@ variable {pp : ProofParams} (family : ComputedAdaptiveActionStatementFSFamily pp
 /-- The ledger-level outcome of one adaptive-statement run: every member's ledger data, a
 ledger Sinsemilla escape, or the circuit-side algebraic relation over the run's own basis.
 `none` is exactly the runs on which the shared knowledge outcome is undefined
-(`actionLedgerOutcome_isSome_iff`).  The routing is deliberate: circuit-side relations
+(`actionLedgerOutcome_isSome_iff`). The routing is deliberate: circuit-side relations
 stay in their own arm —on accepting runs, that arm and `none` together are the
 knowledge-failure event that the knowledge-error endpoint bounds— and only the
 bridge's Sinsemilla escapes surface as ledger breaks. -/
