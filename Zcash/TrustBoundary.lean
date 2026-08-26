@@ -2,6 +2,7 @@ import Zcash.Circuits.Action.RealBases
 import Zcash.Circuits.Action.Separation
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
+import Zcash.Security.Ledger.ActionBundleBridge
 import Zcash.Arithmetic.FastMsm
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
@@ -1875,6 +1876,22 @@ assert_computable Zcash.Security.Ledger.Bridge.breakCoeffs +choice
 assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+
+/-! ## The bundle-level Action-to-ledger bridge
+
+Every accepted bundle member's extracted witness refines to its ledger data —the full
+private witness together with its refined ledger action— or the computed discrete-log
+relation of its first Sinsemilla escape (`memberLedgerData`); the bundle traversal
+returns every member's data or the first escape (`bundleLedgerData`).
+`memberSatisfying` transports the extracted witness across the circuit boundary as a
+satisfying witness of `ActionSpec`. Data end to end, at the classifiers' budget. -/
+
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberSatisfying +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberLedgerData +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.bundleLedgerData +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
 assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation +native(
