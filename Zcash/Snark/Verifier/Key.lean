@@ -33,7 +33,7 @@ def ColumnRef.resolve {F : Type*} (cr : ColumnRef) (instanceEvals adviceEvals fi
 -- `Fixtures/MultiAction/Honest/VkCertificate.lean`), and the boundary statements consume the derived
 -- key (`Fixtures/*/*/Boundary.lean`). The URS dump is checked in turn by the derived commitments
 -- and the captured bases (see `Fingerprint/Match.lean`). Distinct from the output-side
--- semantic-adequacy gap (see `Soundness/Main.lean`).
+-- composition with the ledger relation (see the semantic-reach comment in `Soundness/Main.lean`).
 /-- The verifying-key–level circuit structure the assembly needs, mirroring halo2's `VerifyingKey`
 field-for-field: **circuit-fixed data only**. `omega` is the domain generator and `n = 2 ^ k` the
 domain size; `blindingFactors`, `delta`, `chunkLen` are the permutation-argument constants. `gates`
