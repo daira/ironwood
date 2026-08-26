@@ -1888,7 +1888,8 @@ returns every member's data or the first escape (`bundleLedgerData`).
 satisfying witness of `ActionSpec`. Composed with the adaptive-statement knowledge
 outcome, one run yields every member's ledger data, a ledger Sinsemilla escape, or the
 circuit-side algebraic relation (`actionLedgerOutcome`), with `actionLedgerExtractor`
-its ledger projection; the composition adds no new undefinedness. Data end to end. -/
+its ledger projection and `actionLedgerEscapeFinder` its computed escape arm; the
+composition adds no new undefinedness. Data end to end. -/
 
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberSatisfying +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
@@ -1901,6 +1902,10 @@ assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerOutcome +
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerExtractor +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerEscapeFinder +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
