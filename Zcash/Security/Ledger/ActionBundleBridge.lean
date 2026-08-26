@@ -120,6 +120,43 @@ theorem actionLedgerOutcome_isSome_iff (basis) (O) :
   unfold actionLedgerOutcome
   simp
 
+/-- The computed ledger escape of one run: the discrete-log relation data of the first
+member's Sinsemilla escape, on the runs where the extracted bundle escapes the bridge. -/
+def actionLedgerEscapeFinder
+    (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG)
+    (O : family.Coins) : Option ActionDLBreak :=
+  match actionLedgerOutcome family hchar spendAuthVerify bindingVerify basis O with
+  | some (Sum.inr (Sum.inl dlb)) => some dlb
+  | _ => none
+
+/-- The composed `actionLedgerExtractor` fails iff either:
+* the shared knowledge outcome carries no witness — i.e. on its undefined and relation arms; or
+* a member of the extracted bundle escapes the bridge (`actionLedgerEscapeFinder` returns
+  something). -/
+theorem actionLedgerExtractor_eq_none_iff (basis) (O) :
+    actionLedgerExtractor family hchar spendAuthVerify bindingVerify basis O = none ↔
+      (family.adaptiveStatementKnowledgeExtractor hchar basis O = none ∨
+        (actionLedgerEscapeFinder family hchar spendAuthVerify bindingVerify
+          basis O).isSome) := by
+  rw [ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeExtractor_eq_none_iff]
+  have houtEq : actionLedgerOutcome family hchar spendAuthVerify bindingVerify basis O =
+      (family.adaptiveStatementKnowledgeOutcome hchar basis O).map _ := rfl
+  unfold actionLedgerExtractor actionLedgerEscapeFinder
+  rw [houtEq]
+  cases houtcome : family.adaptiveStatementKnowledgeOutcome hchar basis O with
+  | none => simp
+  | some outcome =>
+      cases outcome with
+      | inl witness =>
+          cases hb : bundleLedgerData spendAuthVerify bindingVerify witness with
+          | inl members =>
+              refine iff_of_false (by simp [hb]) ?_
+              rintro (hforall | hesc)
+              · exact hforall witness rfl
+              · simp [hb] at hesc
+          | inr dlb => simp [hb]
+      | inr relation => simp
+
 end Extraction
 
 end Zcash.Security.Ledger.ActionBundleBridge

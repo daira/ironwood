@@ -2624,7 +2624,8 @@ returns every member's data or the first escape (`bundleLedgerData`).
 satisfying witness of `ActionSpec`. Composed with the adaptive-statement knowledge
 outcome, one run yields every member's ledger data, a ledger Sinsemilla escape, or the
 circuit-side algebraic relation (`actionLedgerOutcome`), with `actionLedgerExtractor`
-its ledger projection; the composition adds no new undefinedness. Data end to end. -/
+its ledger projection and `actionLedgerEscapeFinder` its computed escape arm; the
+composition adds no new undefinedness. Data end to end. -/
 
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberSatisfying +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
@@ -2688,6 +2689,35 @@ assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerOutcome +
   Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
   Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
 assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerExtractor +choice +native(
+  Zcash.Snark.actionConstantCellAddressFailures_eq_nil,
+  Zcash.Snark.actionConstantSites_fit,
+  Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
+  Zcash.Snark.actionCopyAddressFailures_eq_nil,
+  Zcash.Snark.actionCopyBounds,
+  Zcash.Snark.actionMissingConstantAllocations_eq_nil,
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.ActionFixedCoherence.queryCoverageFailures_eq_nil,
+  Zcash.Snark.ActionFixedCoherence.realizationFailures_eq_nil,
+  Zcash.Snark.ActionGateCoherence.adviceQueryColumnsAllocated,
+  Zcash.Snark.ActionGateCoherence.domainExponent_lt,
+  Zcash.Snark.ActionGateCoherence.gateData_eq,
+  Zcash.Snark.ActionGateCoherence.selectorDegree,
+  Zcash.Snark.ActionPermutationDomain.instanceQueryLayout_columns_lt,
+  Zcash.Snark.ActionPermutationDomain.numInstanceColumns_eq,
+  Zcash.Snark.ActionPermutationDomain.permutationColumnCount_eq,
+  Zcash.Snark.ActionPermutationDomain.routingFailures_eq_nil,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt,
+  Zcash.Circuits.Ecc.MulFixed.windowScalar_ne_zero,
+  Zcash.Security.Ledger.Pool.unc_thirteen_not_isSquare,
+  Zcash.Circuits.Ecc.MulFixed.Certs.commitIvkRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.noteCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.nullifierKCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.spendAuthGCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitRCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Certs.valueCommitVCert_check,
+  Zcash.Circuits.Ecc.MulFixed.Short.windowScalar_ne_zero)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerEscapeFinder +choice +native(
   Zcash.Snark.actionConstantCellAddressFailures_eq_nil,
   Zcash.Snark.actionConstantSites_fit,
   Zcash.Snark.actionCopyActiveRowFailures_eq_nil,
