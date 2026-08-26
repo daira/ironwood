@@ -81,13 +81,14 @@ Zcon3 in [Understanding the Security of Zcash](https://raw.githubusercontent.com
 
 The formalization of *Balance integrity* is in better shape (modelling honest parties
 is not an issue for Balance properties; the adversary merely has to exhibit an
-unbalanced consensus-valid ledger). All the important pieces have been completed, but
-they have not yet been connected up. The remaining **significant gap** is that ledger
-security arguments are not yet tied into the Action circuit knowledge soundness proof
-at all: the games state their circuit premiss over their own abstract types, and no
-definition is currently shared between the two developments
-([#147](https://github.com/zcash/ironwood/issues/147) and
-[#155](https://github.com/zcash/ironwood/issues/155)). Additional caveats are stated
+unbalanced consensus-valid ledger). The ledger security arguments are tied into the
+Action circuit knowledge soundness proof by the extraction experiment: its composed
+endpoints instantiate the Balance capstones at an adversary whose witness annotations
+are computed from its accepting proofs. The composition currently loses a factor of
+$k \cdot \mathsf{maxActions}$ in tightness
+([#214](https://github.com/zcash/ironwood/issues/214)), and the oracle-machine layer
+for the capstone ε slots remains open
+([#155](https://github.com/zcash/ironwood/issues/155)). Additional caveats are stated
 on the [Ledger Security Games](ledger-security-games.md) page.
 
 For tractability, the modelled ledger also abstracts away from the real protocol in

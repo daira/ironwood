@@ -825,9 +825,9 @@ the discrete-log base (`pallasGen`, not the identity), and the challenge query a
 literal signature triple (`orchardQueryOf`, injective by construction). This leaves as
 free parameters the adversary, an action cap giving no-overflow, and one named advantage
 per side. Its names carry `idealizedks` because knowledge soundness of the Action circuit
-is idealized by the witness annotations — a formalization gap tracked as #147, not an
-accepted modelling trade-off. The conservation and cap experiments are pinned at the same
-choices. -/
+is idealized by the witness annotations — the intermediate step that the extraction
+experiment's composed endpoints discharge (see the Orchard extraction experiment section
+below). The conservation and cap experiments are pinned at the same choices. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,

@@ -521,3 +521,10 @@ computed data.
   against the binding-signature layer, `KeyBindingArm` discharges the key-binding ε in the oracle
   model, `Capstone` lifts the deterministic layer to a distribution over valid annotated ledgers,
   and `Completeness` checks the other direction — that an honest wallet's spend actually verifies.
+  The experiment layer takes the probability once per composition: `IntegrityExperiment` and
+  `ConservationExperiment` state the challenge-oracle experiments, `ExtractionKnowledgeError`,
+  `ExtractionArm`, and `ValueRelationArm` supply their arms, and `OrchardCapstone` and
+  `OrchardIntegrityExperiment` instantiate them at deployed Orchard. `ActionBundleBridge` lifts
+  the per-Action bridge across an accepted bundle and composes it with the adaptive-statement
+  knowledge extractor, and `OrchardExtractionExperiment` builds the annotated adversary from a
+  proof-emitting one and instantiates the KS-idealized capstones at it.
