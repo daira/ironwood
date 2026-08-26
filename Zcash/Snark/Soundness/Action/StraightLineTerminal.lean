@@ -36,7 +36,7 @@ namespace ActionBundleWitness
 theorem statement
     {numProofs : ℕ} {inputs : Fin numProofs → PublicInputs Fp}
     (witness : ActionBundleWitness inputs) : BundleStatement inputs :=
-  fun proofIndex => (witness proofIndex).statement
+  fun proofIndex => TopLevelSemanticWitness.statement (witness proofIndex)
 
 end ActionBundleWitness
 
