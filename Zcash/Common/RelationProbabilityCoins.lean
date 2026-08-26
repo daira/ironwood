@@ -16,7 +16,22 @@ namespace Zcash
 
 variable {F G ρ : Type*} [Field F] [AddCommGroup G] [Module F G]
 
-/-! ## Independent setup and extractor coins -/
+/-! ## Independent setup and extractor coins
+
+The product lemmas below are monoidal laws of the `PMF` monad, stated concretely.
+`independentProductPMF` is the double strength `PMF A × PMF B → PMF (A × B)` of a
+commutative monad. `independentProductPMF_map_prodMap` is that transformation's
+naturality square, and `independentProductPMF_map_fst` its compatibility with the
+projections. The uniform lemmas say that `uniformOfFintype` is monoidal on nonempty
+finite types: invariant under equivalences (`uniformOfFintype_map_equiv`), sending
+products to products (`independentProductPMF_uniform`), and marginalizing along
+coordinate evaluation (`uniformOfFintype_pi_map_eval`). Naming the structure says
+which further lemmas come free —associativity, symmetry, marginals along
+reindexings— without hand-rolling each. It is the sampling-side twin of the event
+algebra: there the event lift is a monotone join-homomorphism and the measure an
+oplax map into `([0, ∞], ≤, +)`; here the laws compose monoidally before any
+measure is taken.
+-/
 
 /-- Draw from two PMFs independently. -/
 noncomputable def independentProductPMF {A B : Type*} (p : PMF A) (q : PMF B) : PMF (A × B) :=
@@ -32,6 +47,27 @@ theorem independentProductPMF_map_left {A B C : Type*} (p : PMF A) (q : PMF B)
   funext a
   rw [PMF.map_comp]
   congr 1
+
+/-- Mapping the components commutes with an independent product. -/
+theorem independentProductPMF_map_prodMap {A B C D : Type*} (p : PMF A) (q : PMF B)
+    (f : A → C) (g : B → D) :
+    (independentProductPMF p q).map (Prod.map f g) =
+      independentProductPMF (p.map f) (q.map g) := by
+  rw [independentProductPMF, PMF.map_bind, independentProductPMF, PMF.bind_map]
+  congr 1
+  funext a
+  simp only [Function.comp_apply]
+  rw [PMF.map_comp, PMF.map_comp]
+  congr 1
+
+/-- The first marginal of an independent product is its first factor. -/
+theorem independentProductPMF_map_fst {A B : Type*} (p : PMF A) (q : PMF B) :
+    (independentProductPMF p q).map Prod.fst = p := by
+  rw [independentProductPMF, PMF.map_bind]
+  simp only [PMF.map_comp,
+    show ∀ a : A, Prod.fst ∘ Prod.mk a = Function.const B a from fun _ => rfl,
+    PMF.map_const]
+  exact PMF.bind_pure p
 
 /-- Independent uniform draws are the uniform draw on the product type. -/
 theorem independentProductPMF_uniform {A B : Type*} [Fintype A] [Fintype B]
@@ -57,6 +93,28 @@ theorem independentProductPMF_uniform {A B : Type*} [Fintype A] [Fintype B]
       exact fun h => ha' (Prod.mk.inj h).1.symm
     rw [hzero, mul_zero]
   · simp
+
+/-- A uniform draw transports along an equivalence of finite types. -/
+theorem uniformOfFintype_map_equiv {A B : Type*} [Fintype A] [Nonempty A]
+    [Fintype B] [Nonempty B] (e : A ≃ B) :
+    (PMF.uniformOfFintype A).map e = PMF.uniformOfFintype B := by
+  apply PMF.ext
+  intro b
+  rw [PMF.map_apply, tsum_eq_single (e.symm b)
+    (fun a ha => if_neg fun h => ha (by rw [h, Equiv.symm_apply_apply]))]
+  rw [if_pos (by simp), PMF.uniformOfFintype_apply, PMF.uniformOfFintype_apply,
+    Fintype.card_congr e]
+
+/-- Evaluating one coordinate of a uniform function draw is a uniform draw on that
+coordinate's type. -/
+theorem uniformOfFintype_pi_map_eval {I : Type*} [DecidableEq I] [Fintype I]
+    {β : I → Type*} [∀ i, Fintype (β i)] [∀ i, Nonempty (β i)] (i : I) :
+    (PMF.uniformOfFintype (∀ j, β j)).map (fun f => f i) =
+      PMF.uniformOfFintype (β i) := by
+  have hsplit : (fun f : ∀ j, β j => f i) =
+      Prod.fst ∘ (Equiv.piSplitAt i β) := rfl
+  rw [hsplit, ← PMF.map_comp, uniformOfFintype_map_equiv (Equiv.piSplitAt i β),
+    ← independentProductPMF_uniform, independentProductPMF_map_fst]
 
 section Reduction
 
