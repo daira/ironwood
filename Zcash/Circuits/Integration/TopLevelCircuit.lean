@@ -39,7 +39,7 @@ end FullCircuitSatisfaction
 
 /-- Type-valued semantic evidence for a top-level circuit: the private witness as
 executable data, together with its specification proof — `Zcash.Common.Satisfying`
-at the circuit's own specification.  Unlike `TopLevelCircuit.Statement`, nothing is
+at the circuit's own specification. Unlike `TopLevelCircuit.Statement`, nothing is
 truncated. -/
 abbrev TopLevelSemanticWitness
     {Config : Type} {PublicInput : TypeMap}

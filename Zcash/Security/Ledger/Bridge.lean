@@ -290,7 +290,7 @@ abbrev merkleQuery (wit : ActionData) (i : Fin 32) : List ℕ :=
 
 /-! The per-site hash abbreviations pin the deployed generator table and the site's
 domain point once, so the definedness facts and success predicates below spell each
-hash the same way.  `extractP` and the two `sinsemillaCommit…` steps name the
+hash the same way. `extractP` and the two `sinsemillaCommit…` steps name the
 spec-level operations the statements would otherwise spell out. -/
 
 /-- The `Commit^ivk` hash of the witness's exact query (`SinsemillaHashToPoint`,
@@ -313,15 +313,15 @@ abbrev noteNewHash (wit : ActionData) : Option (Point Fp) :=
 abbrev merkleHash (wit : ActionData) (i : Fin 32) : Option (Point Fp) :=
   hashToPoint orchardGenerators.S orchardBases.merkleQ (merkleQuery wit i)
 
-/-- `Extract_ℙ` (§5.4.9.7).  Not definitionally the `x`-projection: the spec maps
-`𝒪` to `0` and any other point to its affine `x`-coordinate.  It can be implemented
+/-- `Extract_ℙ` (§5.4.9.7). Not definitionally the `x`-projection: the spec maps
+`𝒪` to `0` and any other point to its affine `x`-coordinate. It can be implemented
 as `.x` here because this development represents `𝒪` as the off-curve coordinate
 pair `(0, 0)`. -/
 abbrev extractP (p : Point Fp) : Fp := p.x
 
 /-- The blinding step shared by the Sinsemilla commitments (§5.4.8.4): add the
-randomness term to the hash point.  Statements use this name so they do not depend
-on how `SinsemillaCommit` spells the blinding.  Generic over the point or group
+randomness term to the hash point. Statements use this name so they do not depend
+on how `SinsemillaCommit` spells the blinding. Generic over the point or group
 representation and the scalar type, so the circuit-level `Point` form and the
 ledger-level group form spell their blinding the same way. -/
 def sinsemillaCommitBlind {G R : Type*} [Add G] [SMul R G] (hp : G) (r : R)
@@ -519,7 +519,7 @@ theorem classify_none_defined {wit : ActionData} (h : classifyAction wit = none)
           classifyMerkle_none_defined h⟩
 
 /-- **The Prop-level break and the computed classifier cannot diverge**: an exhibited
-`ActionBreak` holds exactly when the classifier reports an escape.  This is what lets
+`ActionBreak` holds exactly when the classifier reports an escape. This is what lets
 the data bridge's success branch (`ActionLedgerSuccess.ofSpec`) turn the classifier's
 `none` verdict into the absence of every Prop-level break: forward, each break
 constructor's `hashToPointB … = .inr` equation contradicts the defined hashes of a
@@ -558,7 +558,7 @@ def commitIvkOf (wit : ActionData) (hdef : (ivkHash wit).isSome) : Fp :=
     Ecc.MulFixed.Certs.commitIvkR.point
 
 /-- Successful `Commit^ivk` information: the defined branch of the guarded
-`Commit^ivk` clause, on the witness's exact query.  The computed key
+`Commit^ivk` clause, on the witness's exact query. The computed key
 (`commitIvkOf`) opens the witnessed address equation. -/
 structure CommitIvkSuccess (wit : ActionData) : Prop where
   defined : (ivkHash wit).isSome
@@ -659,7 +659,7 @@ structure NoteCommitNewSuccess (wit : ActionData) : Prop where
     wit.rcmNew.2.val Ecc.MulFixed.Certs.noteCommitR.point
 
 /-- A successful output-note opening makes the ledger's own commitment primitive
-defined on the witnessed new note.  Unlike the circuit public input, the ledger
+defined on the witnessed new note. Unlike the circuit public input, the ledger
 keeps the full commitment point; the defined value is that point. -/
 theorem NoteCommitNewSuccess.commit_isSome {wit : ActionData}
     (hgd : wit.gdNew.OnCurve) (hpkd : wit.pkdNew.OnCurve)
@@ -731,7 +731,7 @@ def merkleRootOf (wit : ActionData) (hdef : (merkleHash wit 31).isSome) : Fp :=
 
 /-- The successful Merkle outcome as consumed by the ledger refinement: every layer's
 hash lands in its defined branch, the exact raw-encoding chain reaches the computed
-root (`merkleRootOf`), and the dummy-spend anchor gate holds at that root.  The raw
+root (`merkleRootOf`), and the dummy-spend anchor gate holds at that root. The raw
 child encodings are tied to these defined hashes before any `Merkle.Path` is
 constructed. -/
 structure MerkleSuccess (wit : ActionData) : Prop where
@@ -878,13 +878,13 @@ theorem merkle_path_of_exact {wit : ActionData} {root : Fp}
 
 /-- The refined ledger action retained as data: the concrete instance and witness that
 annotate an accepted Action, together with the proofs that they satisfy the
-games-facing statement.  The structure is indexed by the full circuit witness, so no
+games-facing statement. The structure is indexed by the full circuit witness, so no
 component of the extracted data is projected away: the Balance games consume
 `satisfied`, and other games may consume the index directly.
 
 The circuit witness is the chain's one genuinely free value; everything below it —
 the hash points, the computed viewing key, the Merkle root, and `inst`/`w`
-themselves — is computed from it.  That is why the per-site success predicates carry
+themselves — is computed from it. That is why the per-site success predicates carry
 only definedness facts (`isSome` fields, with `Option.get` recovering the values),
 and why `inst` and `w` are carried here as fields for the consumers' convenience
 rather than as free choices: `ofSpec` computes them. -/
@@ -908,7 +908,7 @@ structure ActionLedgerSuccess
   enableFlags : EnableFlagsSatisfied wit w
 
 /-- Build the ledger success data for a satisfied Action statement all of whose
-Sinsemilla queries land in their defined branches.  The instance and witness are
+Sinsemilla queries land in their defined branches. The instance and witness are
 computed from the circuit witness through the ledger's own primitives
 (`commitIvkWitness`, `Pool.noteCommit`); the classifier's `none` verdict supplies
 the definedness each guarded clause needs. -/
