@@ -1861,9 +1861,9 @@ combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the
 package that as a `NontrivialRelationOne` at the escaped site's domain point.
 
 `relationOfBreakData` and `classifyRelation` are asserted computable, per the
-breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve certificates
-carried in their erased `Prop` fields; `+choice` is the same erased-positions tier the classifier
-itself sits at.
+breaks-as-computed-data convention. `+native` is the Pallas point-count witness that reaches
+their erased `Prop` fields through the group structure; `+choice` is the same erased-positions
+tier that the classifier itself sits at.
 
 `ofPoint_hashToPoint` and `breakCoeffs_nontrivial` stay at the standard tier: the chain
 combination reasons in `ℕ`-multiples of the lifted table, and nontriviality only in the scalar
