@@ -1,6 +1,5 @@
 import Zcash.Circuits.Action.PlannerTrace
 import Zcash.Circuits.Integration.TopLevelGates
-import Mathlib.Util.AssertNoSorry
 
 /-!
 # Action polynomial bounds
@@ -38,10 +37,6 @@ theorem constraintBounds :
     TopLevelConstraintBounds actionCircuit where
   domainExponent_lt := domainExponent_lt
   selectorDegree := selectorDegree
-
-assert_no_sorry constraintBounds
-assert_no_sorry selectorDegree
-assert_no_sorry domainExponent_lt
 
 end ActionConstraintBounds
 

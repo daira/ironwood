@@ -130,6 +130,15 @@ dependent, which would vanish the moment that dependent is refactored.
 public endpoint must either belong to one of the listed protocol families or end in the semantic
 suffix `_error_bound`, `_finite_security`, `_measure_le`, `_probability_bound`, or `_capstone`; the
 last keeps new protocol families covered without another prefix-specific regex edit.
+
+The reusable census in this file reaches seven native owners. Six come from CompElliptic: the
+Pallas and Vesta base-field root data (`Fields.Pasta.pallasBase`, `Fields.Pasta.vestaBase`), the
+two curve point-count witnesses (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`), and the two
+isogenous-curve point-count witnesses (`Pallas.q_nsmul_isoGpt`, `Vesta.p_nsmul_isoGpt`). The
+seventh is Ironwood's closed NU6.3 cross-address separation check. The four dedicated fixture
+censuses separately permit Ironwood-owned closed checks of captured data, cross-capture
+provenance, and the keygen/deployment seam. Each `+native(...)` list names precisely which
+certificates its entry rests on.
 -/
 
 /-! ## Common oracle layer
@@ -790,13 +799,6 @@ key-binding and ledger sections above, expresses them through the `Zcash.Meta.Ax
   have been conjured from mere propositional existence. Vesta-instantiated producers additionally
   inherit CompElliptic's `native_decide` curve point-count axiom (`+native`).
 
-  The reusable census in this file reaches four native owners. Three come from CompElliptic: the
-  two curve point-count witnesses (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`) and the Pallas
-  Tonelli–Shanks root-of-unity data (`Fields.Pasta.pallasBase`, whose certificate sits in a
-  structure-field auto-param). The fourth is Ironwood's closed NU6.3 cross-address separation
-  check. The four dedicated fixture censuses separately permit Ironwood-owned closed checks of
-  captured data, cross-capture provenance, and the keygen/deployment seam. Each `+native(...)`
-  list names precisely which certificates its entry rests on.
 * **Theorems** — the probability-layer bounds, the knowledge-soundness and binding endpoints across
   all adversary models, the DL capstones, and the run-time/query-charge lemmas — get
   `assert_axioms`, bounding the trusted base at the standard tier (`propext` / `Classical.choice` /
@@ -1811,12 +1813,19 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineDirec
 The generic and instantiated circuit-layer soundness theorems carry *different* trust budgets —
 the assertions below are the authority, not this prose:
 
+* The Action constraint-bound facts reach only the Pallas point-count witness.
 * The generic theorems (`Circuit.soundness`, `Circuit.soundnessPost`) reach only the Pallas
   point-count witness `Pallas.q_nsmul_Gpt`.
 Note `pallas_natCard` is a *theorem* here (`Specs/Pallas.lean`), not an axiom owner: it delegates
 to CompElliptic's `card_eq`, whose compiler-trust leaf is `q_nsmul_Gpt`. A `sorry` or any further
 axiom reached anywhere in the Action stack fails the build here. -/
 
+assert_axioms Zcash.Snark.ActionConstraintBounds.constraintBounds +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_axioms Zcash.Snark.ActionConstraintBounds.selectorDegree +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_axioms Zcash.Snark.ActionConstraintBounds.domainExponent_lt +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Circuits.Action.Circuit.soundness +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native(

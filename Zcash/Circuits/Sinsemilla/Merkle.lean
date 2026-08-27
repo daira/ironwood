@@ -2342,8 +2342,7 @@ def MerkleRoot (G : Generators) (Q : Point Fp) : ℕ → Fp → ℕ → Fp → P
 
 /-- One escape-free Merkle step. Unlike `MerkleStep`, this records that the
 Sinsemilla hash is defined, so the parent is its actual `x`-coordinate. Together
-with `MerkleBreakAt`, this is the Merkle-path breaks-as-data refinement requested
-by zcash/ironwood#45. -/
+with `MerkleBreakAt`, this gives the Merkle-path breaks-as-data refinement. -/
 def MerkleStepStrict (G : Generators) (Q : Point Fp) (l : ℕ)
     (node node' : Fp) : Prop :=
   ∃ lv rv : ℕ, lv < 2 ^ 255 ∧ rv < 2 ^ 255 ∧
@@ -2351,7 +2350,7 @@ def MerkleStepStrict (G : Generators) (Q : Point Fp) (l : ℕ)
     ∃ B, hashToPoint G.S Q (merkleChunks l lv rv) = some B ∧ node' = B.x
 
 /-- An escape-free Merkle root chain. This is the defined-hash branch of the
-Merkle-path breaks-as-data refinement requested by zcash/ironwood#45. -/
+Merkle-path breaks-as-data refinement. -/
 def MerkleRootStrict (G : Generators) (Q : Point Fp) : ℕ → Fp → ℕ → Fp → Prop
   | _, node, 0, root => root = node
   | l, node, k + 1, root =>
@@ -2359,8 +2358,7 @@ def MerkleRootStrict (G : Generators) (Q : Point Fp) : ℕ → Fp → ℕ → Fp
       MerkleRootStrict G Q (l + 1) mid k root
 
 /-- A valid Sinsemilla escape exhibited at layer `l + j` of a `k`-layer Merkle
-window. The layer index is retained as part of the breaks-as-data witness requested
-by zcash/ironwood#45. -/
+window. The layer index is retained as part of the breaks-as-data witness. -/
 def MerkleBreakAt (G : Generators) (Q : Point Fp) (l k : ℕ) : Prop :=
   ∃ j, j < k ∧ ∃ br : BreakData, ValidBreak G.S Q br ∧
     ∃ lv rv : ℕ, lv < 2 ^ 255 ∧ rv < 2 ^ 255 ∧

@@ -1,6 +1,7 @@
 import Zcash.Snark.Fixtures.SingleAction.Honest.Fixture
 import Zcash.Snark.Fixtures.SingleAction.Honest.FiatShamir
 import Zcash.Snark.Fixtures.SingleAction.Honest.StaticChecks
+import Zcash.Snark.Fixtures.SingleAction.Honest.VkMatch
 import Zcash.Snark.Fixtures.SingleAction.Honest.Negative
 import Zcash.Snark.Fixtures.SingleAction.Honest.Negative.Sweep
 import Zcash.Snark.Fixtures.SingleAction.Honest.Boundary
@@ -53,6 +54,9 @@ assert_axioms Zcash.Snark.Fixture.vk_omega_order +native(
   Zcash.Snark.Keygen.certificate,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture.vk_n_cast_ne_zero
+assert_axioms Zcash.Snark.Fixture.capturedPinnedView_eq_derived +native(
+  Zcash.Snark.Fixture.capturedPinnedView_eq_derived,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Snark.Fixture.vk_gates_degree_le +native(Zcash.Snark.Fixture.vk_gates_degree_le)
 assert_axioms Zcash.Snark.Fixture.vk_chunk_width_le +native(Zcash.Snark.Fixture.vk_chunk_width_le)
 assert_axioms Zcash.Snark.Fixture.vk_lookup_input_degree_le +native(
