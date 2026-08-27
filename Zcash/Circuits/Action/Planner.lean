@@ -29,19 +29,6 @@ def actionSortedPlannerSummaries : List RegionShapeSummary :=
   (V1.sortedSummaryOrder actionCircuit.operations).map
     RegionShapeSummary.withoutSelectors
 
-theorem actionPlannerSummaries_wellFormed :
-    actionPlannerSummaries.Forall RegionShapeSummary.WellFormed := by
-  unfold actionPlannerSummaries
-  rw [List.forall_iff_forall_mem]
-  intro physical hphysical
-  obtain ⟨summary, hsummary, rfl⟩ := List.mem_map.mp hphysical
-  apply V1.RegionShapeSummary.withoutSelectors_wellFormed
-  have hall : actionCircuit.synthesisSummary.regionShapes.Forall
-      RegionShapeSummary.WellFormed := by
-    rw [actionCircuit.synthesisSummary_eq_operations]
-    exact synthesisSummary_regionShapes_wellFormed actionCircuit.operations
-  exact List.forall_iff_forall_mem.mp hall summary hsummary
-
 private theorem actionConfig_advice0 : (actionConfig.advices 0).index = 0 := by rfl
 private theorem actionConfig_advice5 : (actionConfig.advices 5).index = 5 := by rfl
 private theorem actionConfig_advice6 : (actionConfig.advices 6).index = 6 := by rfl
