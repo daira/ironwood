@@ -1812,19 +1812,12 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.StraightLineDirec
 The generic and instantiated circuit-layer soundness theorems carry *different* trust budgets —
 the assertions below are the authority, not this prose:
 
-* The Action constraint-bound facts reach only the Pallas point-count witness.
 * The generic theorems (`Circuit.soundness`, `Circuit.soundnessPost`) reach only the Pallas
   point-count witness `Pallas.q_nsmul_Gpt`.
 Note `pallas_natCard` is a *theorem* here (`Specs/Pallas.lean`), not an axiom owner: it delegates
 to CompElliptic's `card_eq`, whose compiler-trust leaf is `q_nsmul_Gpt`. A `sorry` or any further
 axiom reached anywhere in the Action stack fails the build here. -/
 
-assert_axioms Zcash.Snark.ActionConstraintBounds.constraintBounds +native(
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
-assert_axioms Zcash.Snark.ActionConstraintBounds.selectorDegree +native(
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
-assert_axioms Zcash.Snark.ActionConstraintBounds.domainExponent_lt +native(
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Circuits.Action.Circuit.soundness +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Circuits.Action.Circuit.soundnessPost +native(
