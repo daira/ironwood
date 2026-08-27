@@ -2370,6 +2370,8 @@ private theorem merkleChunks_mem_lt {l lv rv m : ℕ}
   obtain ⟨j, -, rfl⟩ := h
   exact Nat.mod_lt _ (Nat.two_pow_pos K)
 
+/-- Forgets the exhibited defined hash result from a strict Merkle step, yielding the guarded
+Merkle-step contract. -/
 theorem MerkleStepStrict.toMerkleStep (G : Generators) (Q : Point Fp)
     {l : ℕ} {node node' : Fp} (h : MerkleStepStrict G Q l node node') :
     MerkleStep G Q l node node' := by
@@ -2400,6 +2402,8 @@ theorem MerkleStep.strictOrBreak (G : Generators) (Q : Point Fp) (hQ : Q.OnCurve
       rw [Nat.add_zero]
       exact hsplit.symm⟩
 
+/-- Forgets the exhibited defined hash results throughout a strict Merkle path, yielding the
+guarded Merkle-root contract. -/
 theorem MerkleRootStrict.toMerkleRoot (G : Generators) (Q : Point Fp)
     {l : ℕ} {node : Fp} {k : ℕ} {root : Fp}
     (h : MerkleRootStrict G Q l node k root) : MerkleRoot G Q l node k root := by

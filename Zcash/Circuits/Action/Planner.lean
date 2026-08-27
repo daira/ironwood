@@ -51,6 +51,8 @@ private theorem actionConfig_mulAddXP :
     actionConfig.eccConfig.mul.addConfig.xP.index = 0 := by rfl
 private theorem actionConfig_qOrchard : actionConfig.qOrchard.index = 0 := by rfl
 
+/-- Maps each Action selector to the advice column whose assignments determine that selector's
+physical V1 placement. -/
 def selectorAnchor (cfg : Circuit.Config) (selector : ℕ) : RegionColumn :=
   if selector = 2 ∨ selector = 3 ∨ selector = 4 then
     .column .advice (cfg.advices 9).index
@@ -1738,12 +1740,16 @@ private theorem actionMainPost_selectorAnchored :
       actionSynthNotes_selectorAnchored
   · exact actionCrossAddress_selectorAnchored
 
+/-- Every selector in the reduced Action synthesis summary is anchored to the column selected by
+`selectorAnchor`. -/
 theorem actionCircuit_selectorAnchored :
     V1.SelectorAnchoredBy actionCircuit.synthesisSummary.regionShapes
       (selectorAnchor actionConfig) := by
   rw [actionCircuit_synthesisSummary_eq]
   exact actionMainPost_selectorAnchored
 
+/-- Reduces the Action circuit's physical V1 placement endpoint to the endpoint computed from its
+selector-free, consensus-sorted region summaries. -/
 theorem actionCircuit_placementEnd_eq :
     V1.placementEnd actionCircuit.operations =
       V1.slotSummaryEndFrom actionSortedPlannerSummaries ∅ := by

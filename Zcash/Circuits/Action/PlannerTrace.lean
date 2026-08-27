@@ -1238,6 +1238,7 @@ def actionPlannerTrace : List V1.PlannedSummaryBlock :=
    { count := 6, summary := plannerShape [0] 1, start := 1768 },
    { count := 56, summary := plannerShape [7] 1, start := 274 }]
 
+/-- Expands the compact Action planner trace into the selector-free summary stream it represents. -/
 def actionPlannerTraceSummaries : List RegionShapeSummary :=
   V1.PlannedSummaryBlock.summaries actionPlannerTrace
 
@@ -1616,6 +1617,7 @@ private theorem PlannerKey4Order.finalView
     | (apply V1.AllocationView.insert_comm_of_ne
        decide)
 set_option maxRecDepth 10000 in
+/-- The compact Action planner trace ends at row 1779 when replayed from row zero. -/
 theorem actionPlannerTrace_endpoint :
     V1.PlannedSummaryBlock.endpointFrom 0 actionPlannerTrace = 1779 := by
   decide
@@ -1717,6 +1719,8 @@ private theorem actionPlannerTrace_chunk8 :
   planner_trace_step [plannerShape, planner4Narrow, planner4Wide]
   trivial
 
+/-- Every block in the compact Action planner trace starts from the allocation state produced by
+the preceding blocks. -/
 theorem actionPlannerTrace_traceLawful :
     V1.PlannedSummaryBlock.TraceLawfulAfter [] actionPlannerTrace := by
   rw [show actionPlannerTrace = ((actionPlannerTrace.drop 0).take 5) ++ (((actionPlannerTrace.drop 5).take 5) ++ (((actionPlannerTrace.drop 10).take 5) ++ (((actionPlannerTrace.drop 15).take 5) ++ (((actionPlannerTrace.drop 20).take 5) ++ (((actionPlannerTrace.drop 25).take 5) ++ (((actionPlannerTrace.drop 30).take 5) ++ (((actionPlannerTrace.drop 35).take 6)))))))) by
@@ -1744,6 +1748,8 @@ theorem actionPlannerTrace_traceLawful :
   · simpa [actionPlannerTrace] using actionPlannerTrace_chunk7
   simpa [actionPlannerTrace] using actionPlannerTrace_chunk8
 
+/-- The compact Action planner trace faithfully represents V1 allocation transitions from the
+empty allocation state. -/
 theorem actionPlannerTrace_lawful :
     V1.PlannedSummaryBlock.Lawful V1.AllocationView.empty actionPlannerTrace := by
   exact V1.PlannedSummaryBlock.lawful_of_traceLawfulAfter [] actionPlannerTrace
@@ -2180,6 +2186,7 @@ private theorem actionSortedPlannerSummaries_equivalent :
   repeat' rw [V1.slotSummaryStateFromWith_append]
   exact hbelow
 
+/-- Executing the lawful compact trace through the block-state planner also yields endpoint 1779. -/
 theorem actionPlannerTrace_blocks_endpoint :
     (V1.slotSummaryBlocksState
       (V1.PlannedSummaryBlock.blocks actionPlannerTrace) 0
@@ -2192,6 +2199,8 @@ theorem actionPlannerTrace_blocks_endpoint :
   exact hresult.1.trans actionPlannerTrace_endpoint
 
 set_option maxRecDepth 10000 in
+/-- The canonical Action planner summary stream is exactly the compact trace expansion followed by
+the two zero-row summaries omitted from the trace. -/
 theorem actionCanonicalPlannerSummaries_eq_trace :
     actionCanonicalPlannerSummaries =
       actionPlannerTraceSummaries ++
@@ -2229,6 +2238,7 @@ theorem actionCanonicalPlannerSummaries_eq_trace :
   simp only [List.append_assoc, List.append_nil]
 
 set_option maxRecDepth 10000 in
+/-- The canonical Action planner summary stream ends at row 1779. -/
 theorem actionCanonicalPlannerSummaries_endpoint :
     (V1.slotSummaryStateFromWith 0 actionCanonicalPlannerSummaries
       (∅ : CircuitAllocations)).1 = 1779 := by
