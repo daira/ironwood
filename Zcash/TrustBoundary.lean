@@ -2,6 +2,7 @@ import Zcash.Circuits.Action.RealBases
 import Zcash.Circuits.Action.Separation
 import Zcash.Security.Ledger.Bridge
 import Zcash.Security.Ledger.SinsemillaDLR
+import Zcash.Security.Ledger.ActionBundleBridge
 import Zcash.Arithmetic.FastMsm
 import Zcash.Security.KeyBinding.Instance
 import Zcash.Security.KeyBinding.Probability
@@ -635,7 +636,8 @@ takes `εdlr + κ` in place of the opaque `ε_bindsig`. `+choice` is the erased-
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
 assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
-assert_axioms Zcash.Security.Ledger.Model.extractFailEvent_failure
+assert_computable Zcash.Security.Ledger.Model.extractFailureOf +choice
+assert_axioms Zcash.Security.Ledger.Model.extractFailureOf_isSome
 assert_axioms Zcash.Security.Ledger.Model.txBalanceBreakEvent_fallible_subset
 assert_axioms Zcash.Security.Ledger.Model.balanceConservation_measure_le_kerr
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCap_measure_le_kerr
@@ -1827,19 +1829,21 @@ assert_axioms Zcash.Circuits.Action.orchardActionCircuit +native(
 
 /-! ## The circuit → ledger bridge — exported refinement theorems
 
-The refinement from the Action circuit's postcondition to the games-facing ledger statement
-(`ActionBreak … ∨ ∃ inst w, …`), together with the two correctness directions of the
-break classifier `classifyAction`: an escape it returns is a break of the witness's own hash
-query, and a `none` return — no escape at any of the four sites — means every Sinsemilla query
-of the witness is defined. `actionBreak_iff_classify_isSome` packages both directions as the
-consumer-boundary equivalence. Same budget as the circuit layer above: standard tier plus only
+The refinement from the Action circuit's postcondition to the games-facing ledger statement,
+together with the two correctness directions of the break classifier `classifyAction`: an
+escape it returns is a break of the witness's own hash query, and a `none` return — no escape
+at any of the four sites — means every Sinsemilla query of the witness is defined.
+`actionBreak_iff_classify_isSome` packages both directions as the consumer-boundary
+equivalence. Same budget as the circuit layer above: standard tier plus only
 CompElliptic's Pallas point-count witness.
 
-`actionSpec_to_ledger` is the bridge's whole consumer surface: composition with circuit
-satisfaction lives on the Circuits side, where the `Constraints` predicate it would consume
-is actually produced. -/
+`actionSpecToLedgerData` is the bridge's whole consumer surface, and it returns data: the
+refined ledger action (`ActionLedgerSuccess`, carrying the instance and witness) or the
+computed discrete-log relation of the first Sinsemilla escape (`ActionDLBreak`). Composition
+with circuit satisfaction lives on the Circuits side, where the `Constraints` predicate it
+would consume is actually produced. -/
 
-assert_axioms Zcash.Security.Ledger.Bridge.actionSpec_to_ledger +native(
+assert_axioms Zcash.Security.Ledger.Bridge.actionSpecToLedgerData +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.actionBreak_of_classify +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
@@ -1857,9 +1861,9 @@ combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the
 package that as a `NontrivialRelationOne` at the escaped site's domain point.
 
 `relationOfBreakData` and `classifyRelation` are asserted computable, per the
-breaks-as-computed-data convention. `+native` covers the deployed bases' on-curve certificates
-carried in their erased `Prop` fields; `+choice` is the same erased-positions tier the classifier
-itself sits at.
+breaks-as-computed-data convention. `+native` is the Pallas point-count witness that reaches
+their erased `Prop` fields through the group structure; `+choice` is the same erased-positions
+tier that the classifier itself sits at.
 
 `ofPoint_hashToPoint` and `breakCoeffs_nontrivial` stay at the standard tier: the chain
 combination reasons in `ℕ`-multiples of the lifted table, and nontriviality only in the scalar
@@ -1873,6 +1877,38 @@ assert_computable Zcash.Security.Ledger.Bridge.relationOfBreakData +choice +nati
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_computable Zcash.Security.Ledger.Bridge.classifyRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+
+/-! ## The bundle-level Action-to-ledger bridge
+
+Every accepted bundle member's extracted witness refines to its ledger data —the full
+private witness together with its refined ledger action— or the computed discrete-log
+relation of its first Sinsemilla escape (`memberLedgerData`); the bundle traversal
+returns every member's data or the first escape (`bundleLedgerData`).
+`memberSatisfying` transports the extracted witness across the circuit boundary as a
+satisfying witness of `ActionSpec`. Composed with the adaptive-statement knowledge
+outcome, one run yields every member's ledger data, a ledger Sinsemilla escape, or the
+circuit-side algebraic relation (`actionLedgerOutcome`), with `actionLedgerExtractor`
+its ledger projection and `actionLedgerEscapeFinder` its computed escape arm; the
+composition adds no new undefinedness. Data end to end. -/
+
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberSatisfying +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.memberLedgerData +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.bundleLedgerData +choice +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerOutcome +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerExtractor +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.ActionBundleBridge.actionLedgerEscapeFinder +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.ofPoint_hashToPoint
 assert_axioms Zcash.Security.Ledger.Bridge.breakCoeffs_relation +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)

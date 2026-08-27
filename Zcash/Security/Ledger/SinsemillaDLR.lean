@@ -473,14 +473,46 @@ theorem classifyRelation_isSome_iff (wit : ActionData) :
   unfold classifyRelation
   split <;> simp_all
 
+/-- The site of the classifier escape behind a successful reduction: the site of
+the computed `classifyAction` value, whose definedness is recovered through
+`classifyRelation_isSome_iff`. -/
+def classifierSiteOf (wit : ActionData) {dlb : ActionDLBreak}
+    (h : classifyRelation wit = some dlb) : BreakSite :=
+  ((classifyAction wit).get
+    ((classifyRelation_isSome_iff wit).mp
+      (Option.isSome_iff_exists.mpr ⟨dlb, h⟩))).site
+
 /-- The reduction reports the classifier's own site. -/
 theorem classifyRelation_site {wit : ActionData} {dlb : ActionDLBreak}
     (h : classifyRelation wit = some dlb) :
-    ∃ abr, classifyAction wit = some abr ∧ dlb.site = abr.site := by
-  unfold classifyRelation at h
-  split at h
-  · exact absurd h (by simp)
-  · next abr heq => exact ⟨abr, heq, by injection h with h'; rw [← h']⟩
+    dlb.site = classifierSiteOf wit h := by
+  obtain ⟨abr, heq, hsite⟩ :
+      ∃ abr, classifyAction wit = some abr ∧ dlb.site = abr.site := by
+    have h' := h
+    unfold classifyRelation at h'
+    split at h'
+    · exact absurd h' (by simp)
+    · next abr heq => exact ⟨abr, heq, by injection h' with h''; rw [← h'']⟩
+  rw [hsite]
+  simp [classifierSiteOf, heq]
+
+/-- **The computable Action-to-ledger bridge.**  Run the classifier on the combined
+circuit witness: an escape reduces onward to its computed discrete-log relation, and
+otherwise the refined ledger action — instance, witness, and the satisfaction
+proofs — is returned as data (`ActionLedgerSuccess.ofSpec`). -/
+def actionSpecToLedgerData {MSG SIG : Type*}
+    (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
+    (input : PublicInputs Fp) (wit : PrivateWitness)
+    (h : ActionSpec input wit) :
+    ActionLedgerSuccess spendAuthVerify bindingVerify (combine input wit) ⊕'
+      ActionDLBreak :=
+  match hcl : classifyRelation (combine input wit) with
+  | some dlb => .inr dlb
+  | none => .inl (ActionLedgerSuccess.ofSpec spendAuthVerify bindingVerify input wit h
+      (Option.not_isSome_iff_eq_none.mp fun hs => by
+        have hrel := (classifyRelation_isSome_iff (combine input wit)).mpr hs
+        rw [hcl] at hrel
+        simp at hrel))
 
 /-! ## The chain-collision reducer
 

@@ -109,11 +109,11 @@ def of_publicInputEncoding
       pp.numProofs proofIndex :=
     { polynomial := poly }
   refine
-    { privateWitness := (witness proofIndex).privateWitness
-      valid := ?_ }
+    { w := (witness proofIndex).w
+      satisfied := ?_ }
   rw [← assignment.extractPublicInput_eq
     (inputs proofIndex) (hencoding proofIndex)]
-  exact (witness proofIndex).valid
+  exact (witness proofIndex).satisfied
 
 /-- Forget the retained decoded witnesses and recover the ordinary bundle statement. -/
 theorem statement
