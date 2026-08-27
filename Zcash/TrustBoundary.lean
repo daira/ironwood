@@ -131,12 +131,11 @@ public endpoint must either belong to one of the listed protocol families or end
 suffix `_error_bound`, `_finite_security`, `_measure_le`, `_probability_bound`, or `_capstone`; the
 last keeps new protocol families covered without another prefix-specific regex edit.
 
-The reusable census in this file reaches seven native owners. Six come from CompElliptic: the
-Pallas and Vesta base-field root data (`Fields.Pasta.pallasBase`, `Fields.Pasta.vestaBase`), the
-two curve point-count witnesses (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`), and the two
-isogenous-curve point-count witnesses (`Pallas.q_nsmul_isoGpt`, `Vesta.p_nsmul_isoGpt`). The
-seventh is Ironwood's closed NU6.3 cross-address separation check. The four dedicated fixture
-censuses separately permit Ironwood-owned closed checks of captured data, cross-capture
+The reusable census in this file reaches six native owners, all from CompElliptic: the Pallas and
+Vesta base-field root data (`Fields.Pasta.pallasBase`, `Fields.Pasta.vestaBase`), the two curve
+point-count witnesses (`Pallas.q_nsmul_Gpt`, `Vesta.p_nsmul_Gpt`), and the two isogenous-curve
+point-count witnesses (`Pallas.q_nsmul_isoGpt`, `Vesta.p_nsmul_isoGpt`). The four dedicated
+fixture censuses separately permit Ironwood-owned closed checks of captured data, cross-capture
 provenance, and the keygen/deployment seam. Each `+native(...)` list names precisely which
 certificates its entry rests on.
 -/
@@ -2047,13 +2046,10 @@ assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatem
 `Zcash/Circuits/Action/Separation.lean` pins the structural fact that the NU6.3 upgrade
 adds exactly the cross-address clause to the Action statement. They are theorems, so they
 get `assert_axioms`. `preNU63_synthesize_eq_base` reaches the fixed-base construction and
-`crossAddressBinding_nontrivial` evaluates a deployed-base inequality, so both inherit the
-`native_decide` compiler-trust axioms; the other two stay at the standard tier. -/
+inherits the Pallas point-count certificate; the other three stay at the standard tier. -/
 
 assert_axioms Zcash.Circuits.Action.Separation.preNU63_synthesize_eq_base +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Circuits.Action.Separation.specPost_iff_base_and_crossAddress
 assert_axioms Zcash.Circuits.Action.Separation.preNU63_spec_omits_crossAddress
-assert_axioms Zcash.Circuits.Action.Separation.crossAddressBinding_nontrivial +native(
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
-  Zcash.Circuits.Action.Separation.crossAddressBinding_nontrivial)
+assert_axioms Zcash.Circuits.Action.Separation.crossAddressBinding_nontrivial
