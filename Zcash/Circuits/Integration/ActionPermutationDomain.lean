@@ -1,4 +1,4 @@
-import Zcash.Circuits.Integration.ActionPermutationDomainCompute
+import Zcash.Circuits.Integration.ActionConstraintBounds
 import Zcash.Circuits.Integration.PermutationCompiler
 import Zcash.Circuits.Integration.TopLevelAssignment
 import Zcash.Circuits.Integration.TopLevelConstraintModel
@@ -25,7 +25,10 @@ open Zcash.Arithmetic
 
 open CompPoly.CPolynomial
 open Halo2
-open Zcash.Circuits.Action (actionCircuit)
+open Zcash.Circuits.Action
+  (actionCircuit actionCircuit_numAdviceColumns_eq
+    actionCircuit_numFixedColumns_eq actionCircuit_numInstanceColumns_eq)
+open ActionConstraintBounds (domainExponent_lt)
 
 namespace ActionPermutationDomain
 
@@ -92,61 +95,6 @@ theorem resolverPairsLength_eq_min
     exact chunk.isLt
   exact verifierCS_permutationChunks_getD_length actionCircuit chunk hi
 
-set_option maxRecDepth 100000 in
-/-- Every chunk value reference selects an in-range rotation-zero query-layout
-entry, and every common-permutation index is in range. -/
-theorem routingCoherent_of_derived
-    (urs : URS G) :
-    PermutationChunkRoutingCoherent (actionCircuit.toVerifierKey urs) := by
-  have hadviceLayout :
-      (actionCircuit.toVerifierKey urs).adviceQueryLayout =
-        actionCircuit.adviceQueryLayout :=
-    actionCircuit.toVerifierKey_adviceQueryLayout urs
-  have hfixedLayout :
-      (actionCircuit.toVerifierKey urs).fixedQueryLayout =
-        actionCircuit.fixedQueryLayout :=
-    actionCircuit.toVerifierKey_fixedQueryLayout urs
-  have hinstanceLayout :
-      (actionCircuit.toVerifierKey urs).instanceQueryLayout =
-        actionCircuit.instanceQueryLayout :=
-    actionCircuit.toVerifierKey_instanceQueryLayout urs
-  rintro chunk hchunk ⟨ref, common⟩ href
-  have hroute := routingCoherent chunk hchunk (ref, common) href
-  rcases hroute with ⟨hrefCoherent, hcommon⟩
-  constructor
-  · cases ref with
-    | advice i =>
-        rcases hrefCoherent with ⟨hi, hrotation⟩
-        change PermutationColumnRef.Coherent
-          (actionCircuit.toVerifierKey urs) (.advice i)
-        simp only [PermutationColumnRef.Coherent]
-        refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionCircuit.shape_numAdviceQueries,
-            TopLevelCircuit.adviceQueryCount] using hi
-        · simpa only [hadviceLayout] using hi
-        · simpa only [hadviceLayout] using hrotation
-    | fixed i =>
-        rcases hrefCoherent with ⟨hi, hrotation⟩
-        change PermutationColumnRef.Coherent
-          (actionCircuit.toVerifierKey urs) (.fixed i)
-        simp only [PermutationColumnRef.Coherent]
-        refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionCircuit.shape_numFixedQueries,
-            TopLevelCircuit.fixedQueryCount] using hi
-        · simpa only [hfixedLayout] using hi
-        · simpa only [hfixedLayout] using hrotation
-    | «instance» i =>
-        rcases hrefCoherent with ⟨hi, hrotation⟩
-        change PermutationColumnRef.Coherent
-          (actionCircuit.toVerifierKey urs) (.instance i)
-        simp only [PermutationColumnRef.Coherent]
-        refine ⟨?_, ?_, ?_⟩
-        · simpa only [actionCircuit.shape_numInstanceQueries,
-            TopLevelCircuit.instanceQueryCount] using hi
-        · simpa only [hinstanceLayout] using hi
-        · simpa only [hinstanceLayout] using hrotation
-  · simpa only [actionCircuit.shape_numPermutationColumns] using hcommon
-
 /--
 Flattening the derived verifier chunks and decoding their query references
 recovers the compiler's original permutation-column order.
@@ -160,9 +108,7 @@ theorem permutationColumnAddresses_eq
         actionCircuit.constraintSystem).map
           Halo2.Layout.ColRef.toAny := by
   simpa only [actionCircuit.toVerifierKey_permutationChunks] using
-    topLevelPermutationColumnAddresses_eq
-      actionCircuit urs
-        (routingCoherent_of_derived urs)
+    topLevelPermutationColumnAddresses_eq actionCircuit urs
 
 /-! ## Pasta permutation-name cosets -/
 
@@ -221,7 +167,7 @@ theorem deltaFp_domainCosets
 /-! ## Derived evaluation-domain facts -/
 
 /-- The active permutation prefix ends at the last usable Action row. -/
-abbrev activeRows : ℕ :=
+def activeRows : ℕ :=
   actionCircuit.n - actionCircuit.blindingFactors - 1
 
 theorem activeRows_le :
@@ -229,27 +175,14 @@ theorem activeRows_le :
   unfold activeRows
   omega
 
-/-- Canonical selectors and the derived usable-row count form the complete
-generic permutation-domain record. In particular its `lastRotation` field is
-the verifier's `omega^(-(blindingFactors + 1))` rotation. -/
-theorem domain
-    (pp : ProofParams) (urs : URS G)
-    (ch : Challenges actionCircuit.domainExponent Fp)
-    (poly : CommitmentId → CPoly) :
-    let model :=
-      actionCircuit.constraintModel pp urs ch poly
-    ResolverPermutationDomain (actionCircuit.toVerifierKey urs)
-      model.l0 model.lLast model.lBlind
-      actionCircuit.n
-      activeRows := by
-  exact ResolverPermutationDomain.ofCanonicalConstraintModel
-    (actionCircuit.toVerifierKey urs) ch poly
-      (actionCircuit.toVerifierKey_blindingFactors_lt_n urs)
-      (TopLevelAssignment.domainRowsInjective
-        (top := actionCircuit) domainExponent_lt)
-      (TopLevelAssignment.domainRoot
-        (top := actionCircuit) domainExponent_lt)
-      chunkCount
+/-- The last usable Action row is exactly the verifier's negative rotation. -/
+theorem lastRowRotation (urs : URS G) :
+    (actionCircuit.toVerifierKey urs).omega ^
+        ((actionCircuit.toVerifierKey urs).n - (actionCircuit.toVerifierKey urs).blindingFactors - 1) =
+      (actionCircuit.toVerifierKey urs).omega ^
+        (-(((actionCircuit.toVerifierKey urs).blindingFactors : ℤ) + 1)) :=
+  actionCircuit.toVerifierKey_lastUsableRowRotation
+    urs domainExponent_lt
 
 set_option maxRecDepth 100000 in
 /-- Action chunk names are injective on any active prefix of the derived
@@ -314,12 +247,12 @@ theorem namesInjective
           (j'.1 : ℕ) * actionCircuit.chunkLen + (j'.2 : ℕ) <
             actionCircuit.permutationColumnCount := by
         omega
-      have hcolumns :
-          actionCircuit.permutationColumnCount = 15 :=
-        permutationColumnCount_eq
       have hsupported :
           actionCircuit.permutationColumnCount ≤ deltaFpOrder := by
-        rw [hcolumns]
+        apply actionCircuit.permutationColumnCount_le_configuredColumnCount |>.trans
+        rw [actionCircuit_numAdviceColumns_eq,
+          actionCircuit_numFixedColumns_eq,
+          actionCircuit_numInstanceColumns_eq]
         norm_num [deltaFpOrder, scalarFieldOrder,
           CompElliptic.Fields.Pasta.PALLAS_BASE_CARD]
       have hglobal :
@@ -401,7 +334,7 @@ theorem namesInjective
       exact (Fin.heq_ext_iff hwidth).mpr hcolumn
   intro c d hname
   have hwiden := widenPermutationChunkCell_injective
-    (nc := actionCircuit.permutationSetCount)
+    (nc := actionCircuit.shape.numPermutationSets)
     (width := fun i =>
       (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p i).length)
     hactive
@@ -436,7 +369,7 @@ def cycleOfKeygenColumnsAt
       (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         m))
     (hcolumns : ∀
-      (chunk : Fin actionCircuit.permutationSetCount)
+      (chunk : Fin actionCircuit.shape.numPermutationSets)
       (column : Fin
         (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p chunk).length),
       (ResolverPermutationPairs
@@ -450,17 +383,10 @@ def cycleOfKeygenColumnsAt
         fullSigma
           (widenPermutationChunkCell hactive c)) :
     ResolverPermutationCycle (actionCircuit.toVerifierKey urs) poly p m :=
-  by
-    simpa only [actionCircuit.toVerifierKey_n,
-      actionCircuit.toVerifierKey_omega,
-      actionCircuit.toVerifierKey_delta,
-      actionCircuit.toVerifierKey_chunkLen] using
-      ResolverPermutationCycle.ofKeygenColumns
-        (actionCircuit.toVerifierKey urs) poly p hactive fullSigma sigma
-          (TopLevelAssignment.domainRowsInjective
-            (top := actionCircuit) domainExponent_lt)
-          hcolumns hrestrict
-          (namesInjective pp urs poly p hactive)
+  actionCircuit.resolverPermutationCycleOfKeygenColumns
+    urs poly p hactive fullSigma sigma domainExponent_lt
+      hcolumns hrestrict
+      (namesInjective pp urs poly p hactive)
 
 /-- Assemble the semantic cycle at the verifier-derived active-row boundary. -/
 def cycleOfKeygenColumns
@@ -474,7 +400,7 @@ def cycleOfKeygenColumns
       (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p
         activeRows))
     (hcolumns : ∀
-      (chunk : Fin actionCircuit.permutationSetCount)
+      (chunk : Fin actionCircuit.shape.numPermutationSets)
       (column : Fin
         (ResolverPermutationPairs (actionCircuit.toVerifierKey urs) poly p chunk).length),
       (ResolverPermutationPairs
@@ -493,9 +419,7 @@ def cycleOfKeygenColumns
   cycleOfKeygenColumnsAt pp urs poly p activeRows_le
     fullSigma sigma hcolumns hrestrict
 
-assert_no_sorry routingCoherent_of_derived
 assert_no_sorry deltaFp_domainCosets
-assert_no_sorry domain
 assert_no_sorry namesInjective
 assert_no_sorry cycleOfKeygenColumnsAt
 assert_no_sorry cycleOfKeygenColumns

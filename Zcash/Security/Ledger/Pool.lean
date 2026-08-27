@@ -112,10 +112,8 @@ def extract (P : PallasGroup) : Fp := (PallasGroup.toPoint P).x
   simp [extract]
 
 /-- `13` is a quadratic non-residue in the Pallas base field, so it is not a square. -/
-theorem unc_thirteen_not_isSquare : ¬ IsSquare (13 : Fp) := by
-  have h : ¬ IsSquare ((13 : ℕ) : Fp) :=
-    Zcash.Circuits.Ecc.MulFixed.Cert.Chain.checkNonSquare_sound (by native_decide)
-  simpa using h
+theorem unc_thirteen_not_isSquare : ¬ IsSquare (13 : Fp) :=
+  Zcash.Circuits.Ecc.MulFixed.Cert.Chain.thirteen_not_isSquare
 
 /-- Protocol-spec Theorem 5.4.6 for the ledger pool: `Uncommitted^Orchard = 2` is not the
 extracted `x`-coordinate of any Pallas group element. -/

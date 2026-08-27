@@ -67,10 +67,10 @@ domain points, used here only as a convenient pair of unequal on-curve points.) 
 theorem crossAddressBinding_nontrivial :
     ∃ wit : ActionData, wit.disableCrossAddress ≠ 0 ∧ ¬ crossAddressBinding wit := by
   refine ⟨{ (default : ActionData) with
-      disableCrossAddress := 1, gdOld := orchardBases.merkleQ, gdNew := orchardBases.ivkQ },
+      disableCrossAddress := 1, gdOld := merkleQ, gdNew := ivkQ },
     one_ne_zero, ?_⟩
   intro hbind
-  have hne : orchardBases.merkleQ ≠ orchardBases.ivkQ := by native_decide
+  have hne : merkleQ ≠ ivkQ := by decide
   exact hne (hbind one_ne_zero).1
 
 end Zcash.Circuits.Action.Separation

@@ -82,8 +82,9 @@ variable (pp : ProofParams)
 def adaptiveStatementFixedCoherence :
     TopLevelFixedCoherence actionCircuit
       (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) :=
-  ActionFixedCoherence.ofDerived
+  TopLevelFixedCoherence.ofDerived actionCircuit
     (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis) rfl
+    ActionConstraintBounds.domainExponent_lt
 
 /-- Rewrite the derived Lagrange generators into the monomial form used by permutation
 commitments. -/
@@ -100,9 +101,9 @@ theorem adaptiveStatementLagrangePrefix :
               (omegaOf (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).k)
               (Pi.single i (1 : Fp)))) :=
   ofPrefix_setup_of_closed _
-    (Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt)
+    (Nat.le_of_lt_succ ActionConstraintBounds.domainExponent_lt)
     (derivedUrsGLagrange_generator_eq _
-      (Nat.le_of_lt_succ ActionPermutationDomain.domainExponent_lt))
+      (Nat.le_of_lt_succ ActionConstraintBounds.domainExponent_lt))
 
 /-- The canonical augmented-basis representation of a fixed-column commitment, using the dense
 keygen row and Halo2's default blind `1`. -/
@@ -120,11 +121,14 @@ def canonicalActionFixedRepresentation (column : Fin actionCircuit.fixedColumnCo
               (instanceCoefficients (2 ^ (AdaptiveActionStatementShape pp).k) actionCircuit.omega
                 (actionCircuit.fixedRows.getD (column : ℕ) [])) +
               (1 : Fp) • (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis).w =
-            hcoh.key.commitInstance (actionCircuit.fixedRows.getD (column : ℕ) []) 1 :=
+            (LagrangeCommitmentKey.canonical
+              (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)
+              actionCircuit.omega).commitInstance
+                (actionCircuit.fixedRows.getD (column : ℕ) []) 1 :=
           (LagrangeCommitmentKey.commitInstance_eq _ _ 1).symm
         _ = (actionCircuit.fixedCommitments
               (ursOfAugmentedBasis (AdaptiveActionStatementShape pp).k basis)).getD (column : ℕ) 0 :=
-          (hcoh.commitment (column : ℕ) column.isLt).symm
+          (hcoh (column : ℕ) column.isLt).symm
         _ = (adaptiveActionStatementVk pp basis).fixedCommitment (column : ℕ) :=
           (actionCircuit.toVerifierKey_fixedCommitment _ (column : ℕ)).symm)
 
@@ -227,7 +231,8 @@ theorem zeroAdaptiveFixedRepresentations_fixedRepresented (i : ℕ)
   obtain ⟨rotation, hmem⟩ := hi
   rw [actionCircuit.toVerifierKey_fixedQueryLayout] at hmem
   have hlt : i < actionCircuit.fixedColumnCount :=
-    (adaptiveStatementFixedCoherence pp basis).queryLayoutBounded i rotation hmem
+    List.forall_iff_forall_mem.mp
+      actionCircuit.fixedQueryLayout_columns_lt (i, rotation) hmem
   exact ⟨canonicalActionFixedRepresentation pp basis ⟨i, hlt⟩,
     canonicalActionFixedRepresentation_mem pp basis ⟨i, hlt⟩, rfl⟩
 
@@ -627,9 +632,10 @@ def zeroAdaptiveStatementOutput :
 end Adversary
 
 /-- The zero family's representation table holds the zero point, the blinding generator, and one
-entry per fixed and common-permutation column: 2 + 29 + 15 = 46 entries, far inside the `2^89`
-interface cap.  Discharging the invariant concretely is what stops the capstones' quantifier from
-ranging over a class no family is known to satisfy. -/
+entry per fixed and common-permutation column. Generic selector compression and configured-column
+bounds put its length at most 97, far inside the `2^89` interface cap. Discharging the invariant
+concretely is what stops the capstones' quantifier from ranging over a class no family is known to
+satisfy. -/
 theorem zeroAdaptiveFixedRepresentations_length_le (pp : ProofParams)
     (basis : AugmentedIndex (2 ^ (AdaptiveActionStatementShape pp).k) → VestaG) :
     (zeroAdaptiveFixedRepresentations pp basis).length ≤
@@ -637,10 +643,28 @@ theorem zeroAdaptiveFixedRepresentations_length_le (pp : ProofParams)
   simp only [zeroAdaptiveFixedRepresentations, List.length_cons, List.length_append,
     List.length_ofFn, AdaptiveActionStatementShape,
     CircuitShape.withProofParams_numPermutationColumns,
-    ActionFixedCoherence.fixedColumnCount_eq, adaptiveStatementFixedRepresentationLimit]
-  rw [Halo2.TopLevelCircuit.shape_numPermutationColumns,
-    ActionPermutationDomain.permutationColumnCount_eq]
-  norm_num
+    adaptiveStatementFixedRepresentationLimit]
+  rw [Halo2.TopLevelCircuit.shape_numPermutationColumns]
+  have hfixed : actionCircuit.fixedColumnCount ≤ 70 := by
+    calc
+      actionCircuit.fixedColumnCount ≤
+          actionCircuit.constraintSystem.numFixedColumns +
+            actionCircuit.selectorCount :=
+        actionCircuit.fixedColumnCount_le_numFixedColumns_add_selectorCount
+      _ = 14 + 56 := by
+        rw [actionCircuit_numFixedColumns_eq,
+          actionCircuit_selectorCount_eq]
+      _ = 70 := by norm_num
+  have hpermutation : actionCircuit.permutationColumnCount ≤ 25 := by
+    simpa only [actionCircuit_numAdviceColumns_eq,
+      actionCircuit_numFixedColumns_eq,
+      actionCircuit_numInstanceColumns_eq] using
+        actionCircuit.permutationColumnCount_le_configuredColumnCount
+  calc
+    actionCircuit.fixedColumnCount +
+        actionCircuit.permutationColumnCount + 1 + 1 ≤
+      70 + 25 + 1 + 1 := by omega
+    _ ≤ 2 ^ 89 := by norm_num
 
 /-- A zero-query family that returns an all-zero statement and proof and represents every
 derived-key commitment. It inhabits the interface but is not claimed to be accepted. -/

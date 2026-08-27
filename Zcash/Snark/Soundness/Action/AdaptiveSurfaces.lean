@@ -477,7 +477,8 @@ theorem adaptiveActionAdviceLayout_column_lt
     (column : ℕ) (rotation : ℤ)
     (hmem : (column, rotation) ∈ (ActionTerminal.vkAt basis).adviceQueryLayout) :
     column < actionCircuit.adviceColumnCount := by
-  apply ActionGateCoherence.adviceQueryColumnsAllocated (column, rotation)
+  apply List.forall_iff_forall_mem.mp
+    actionCircuit.adviceQueryLayout_columns_lt (column, rotation)
   simpa only [ActionTerminal.vkAt,
     actionCircuit.toVerifierKey_adviceQueryLayout] using hmem
 

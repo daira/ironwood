@@ -33,13 +33,19 @@ compressed-constraint `x` term, so it upper-bounds the bare-adaptive remainder.
 /-- The Action circuit enables at most `2^12` lookup activations. -/
 theorem actionLookupActivationCount_le :
     (operationEnabledLookups actionCircuit.operations 0).length ≤ 2 ^ 12 := by
-  native_decide
+  rw [operationEnabledLookups_length,
+    ← actionCircuit.synthesisSummary_eq_operations,
+    actionCircuit_lookupActivationCount_eq]
+  norm_num
 
 /-- Every enabled Action lookup has at most four inputs. -/
 theorem actionLookupInputArity_le :
     ∀ i : Fin (operationEnabledLookups actionCircuit.operations 0).length,
       ((operationEnabledLookups actionCircuit.operations 0).get i).argument.inputs.length ≤ 4 := by
-  native_decide
+  intro i
+  apply actionCircuit_lookupInputArity_le
+  apply OperationsKeygenCoherent.lookup actionCircuit.keygenCoherent
+  exact List.get_mem _ i
 
 /-- The exact per-Action permutation-cell count.  Unlike the old `2^16` envelope, this
 tight value keeps the consensus-maximum β budget below `2^46`. -/
@@ -50,16 +56,13 @@ theorem resolverPermutationCell_card_eq
     Fintype.card
         (ResolverPermutationCell (actionCircuit.toVerifierKey urs) poly p actionActiveRows) =
       30630 := by
-  rw [resolverPermutationCell_card]
-  rw [actionCircuit.shape_numPermutationSets]
-  rw [actionCircuit.toVerifierKey_permutationChunks,
-    derived_scalars.2.2.2.2.2.2]
-  rw [show actionCircuit.permutationSetCount = shape.numPermutationSets by
-    simpa only [actionCircuit.shape_numPermutationSets] using
-      congrArg CircuitShape.numPermutationSets
-        actionCircuitShape_eq_fixtureCircuitShape]
-  clear p poly urs pp
-  native_decide
+  rw [topLevelResolverPermutationCell_card,
+    actionCircuit_permutationColumnCount_eq,
+    actionActiveRows_eq,
+    actionCircuit.n_eq_two_pow_domainExponent,
+    action_domainExponent_eq,
+    actionCircuit_blindingFactors_eq]
+  norm_num
 
 /-- Each Action permutation-cell resolver has at most `2^16` entries. -/
 theorem resolverPermutationCell_card_le
@@ -575,7 +578,7 @@ theorem adaptiveActionXDegree_bound (numProofs : ℕ)
   have hrows : Function.Injective fun i : Fin actionCircuit.n =>
       actionCircuit.omega ^ (i : ℕ) :=
     TopLevelAssignment.domainRowsInjective
-      ActionPermutationDomain.domainExponent_lt
+      ActionConstraintBounds.domainExponent_lt
   have hblindingVk : avk.blindingFactors < avk.n :=
     actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis
@@ -1106,7 +1109,7 @@ private theorem adaptive_action_x_degree_of_le_for (numProofs : ℕ)
   have hrows : Function.Injective fun i : Fin actionCircuit.n =>
       actionCircuit.omega ^ (i : ℕ) :=
     TopLevelAssignment.domainRowsInjective
-      ActionPermutationDomain.domainExponent_lt
+      ActionConstraintBounds.domainExponent_lt
   have hblindingVk : avk.blindingFactors < avk.n :=
     actionCircuit.toVerifierKey_blindingFactors_lt_n
       (ursOfAugmentedBasis

@@ -25,21 +25,15 @@ written during circuit integration:
 * only code that genuinely translates between the two sides belongs here.
 
 The normative architecture rule and current migration guidance are in
-[`clean-boundary.md`](../../../book/src/formal-verification/clean-boundary.md). The next compiler-lawfulness arc is
-specified in
-[`clean-improvements.md`](../../../book/src/formal-verification/clean-improvements.md):
-it inventories the Action-specific computational certificates and the correctness
-obligations currently hidden by synthesis closure, then proposes the local laws and
-generic compiler proofs that should replace them.
+[`clean-boundary.md`](../../../book/src/formal-verification/clean-boundary.md).
 
 The lookup bridge is split deliberately:
 
 * `LookupProjection.lean` proves the query-erasure and selector-substitution
   compiler semantics for configured lookups;
 * `LookupSelectorRows.lean` derives exact expression-level selector projection from
-  singleton packed-selector cells and the shared fixed-row realization boundary;
-  `ActionLookupSelectorRows.lean` merely instantiates that generic boundary with
-  Action's fixed coherence;
+  singleton packed-selector cells and the generic fixed-row realization theorem;
+  `ActionEncoding.lean` supplies Action's compositionally proved selector anchor;
 * `TopLevelLookups.lean` routes synthesis-enabled lookups through the
   circuit-derived verifying key, derives selector coverage, table freedom, tuple
   arity, and activation-row fit from Clean's top-level keygen invariants, reduces

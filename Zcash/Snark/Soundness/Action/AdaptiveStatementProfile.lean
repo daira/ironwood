@@ -284,7 +284,7 @@ theorem AdaptiveStatementDirectDlogProfile.solverCost_le {pp : ProofParams}
   · unfold adaptiveStatementDlogRandomOracleQueries
     rw [adaptiveStatementDlogTraversalSlots_eq_four]
     rw [CircuitShape.withProofParams_k, actionCircuit.shape_k]
-    have hk := ActionPermutationDomain.domainExponent_lt
+    have hk := ActionConstraintBounds.domainExponent_lt
     have hT := profile.targetAtLeastSeventyTwo
     calc
       4 * family.Q + 4 * (11 + actionCircuit.domainExponent) ≤
@@ -324,7 +324,7 @@ theorem AdaptiveStatementDirectDlogProfile.knowledgeExtractorCost_le {pp : Proof
   · unfold adaptiveStatementKnowledgeExtractorRandomOracleQueries
       adaptiveStatementKnowledgeExtractorTraversalSlots
     rw [CircuitShape.withProofParams_k, actionCircuit.shape_k]
-    have hk := ActionPermutationDomain.domainExponent_lt
+    have hk := ActionConstraintBounds.domainExponent_lt
     have hT := profile.targetAtLeastSeventyTwo
     calc
       5 * family.Q + 5 * (11 + actionCircuit.domainExponent) ≤

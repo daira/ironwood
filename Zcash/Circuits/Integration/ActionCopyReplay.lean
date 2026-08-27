@@ -19,8 +19,6 @@ open Halo2 CompPoly.CPolynomial
 open ActionPermutationDomain
 open Zcash.Circuits.Action (actionCircuit)
 
-set_option maxHeartbeats 20000
-
 variable {G : Type} [AddCommGroup G] [Module Fp G]
   [DecidableEq G] [Inhabited G]
 
@@ -84,44 +82,54 @@ def actionCopyReplayWitness_or_relation
     actionCircuit.n_ne_zero
   have hsatisfaction :=
     relation.constraintSatisfaction hn hgoodY
+  have hmodel :
+      relation.model =
+        actionCircuit.constraintModel pp urs ch relation.polynomial := by
+    simp only [CanonicalMemberConstraintRelation.model]
+    exact
+      (actionCircuit.constraintModel_eq_toVerifierKey_constraintModel
+        pp urs ch relation.polynomial).symm
+  rw [hmodel] at hsatisfaction
   have hdomain : ResolverPermutationDomain
       (actionCircuit.toVerifierKey urs)
-      relation.model.l0 relation.model.lLast relation.model.lBlind
+      (actionCircuit.constraintModel pp urs ch relation.polynomial).l0
+      (actionCircuit.constraintModel pp urs ch relation.polynomial).lLast
+      (actionCircuit.constraintModel pp urs ch relation.polynomial).lBlind
       actionCircuit.n actionActiveRows := by
-    simpa only [actionActiveRows, TopLevelCircuit.usableRowsAt] using
-      ActionPermutationDomain.domain
-        pp urs ch relation.polynomial
+    simpa only [actionActiveRows] using
+      actionCircuit.resolverPermutationDomain
+        pp urs ch relation.polynomial ActionConstraintBounds.domainExponent_lt
   have hcycleResult :=
     actionResolverPermutationCycle_or_relation
       pp urs hk relation proofIndex
   rcases hcycleResult with hcycle | hbad
   swap
   · exact PSum.inr hbad
-  · let cycle := hcycle.1
-    have hcycleSigma := hcycle.2
+  · let cycle := hcycle.cycle
+    have hcycleSigma := hcycle.sigma_eq
     have hpairval :=
       actionCopyPairValue_of_resolverPermutation
         pp urs ch relation.polynomial
-        relation.model.l0 relation.model.lLast relation.model.lBlind
         proofIndex hsatisfaction hdomain cycle hcycleSigma
         (exclusions.good proofIndex)
     have hdomainSize :
         actionCircuit.n = 2 ^ urs.k := by
       rw [actionCircuit.n_eq_two_pow_domainExponent, hk]
-    have hfixedRead : ∀ {column row value : ℕ},
+    have hfixedRead : ∀ {column row : ℕ} {value : Fp},
         (column, row, value) ∈
             topLevelRequiredFixedEntries actionCircuit →
           (resolverEnvironment
             (actionCircuit.toVerifierKey urs) relation.polynomial proofIndex
               actionActiveRows).fixed
-              ⟨column⟩ (row : ℤ) = (value : Fp) ⊕'
+              ⟨column⟩ (row : ℤ) = value ⊕'
             NontrivialRelation (F := Fp) urs.g urs.u urs.w := by
       intro column row value hentry
       have source :=
         relation.topLevelFixedEntryRead_or_relation
-          rfl fixedCoherence
+          (top := actionCircuit) (pp := pp) (urs := urs)
+          fixedCoherence
           (TopLevelAssignment.domainRowsInjective_of_domainExponent_eq
-            ActionPermutationDomain.domainExponent_lt hk)
+            ActionConstraintBounds.domainExponent_lt hk)
           hdomainSize proofIndex hentry
       simpa only [actionActiveRows] using source
     exact

@@ -71,11 +71,11 @@ different trust standards.
 **General, quantified theorems** (the soundness statements and security reductions) rest, in
 their abstract form over an arbitrary `Fp`-module, only on the standard classical axioms
 `propext`, `Classical.choice`, and `Quot.sound` — no `sorry`, no additional axioms, no compiler
-trust. Instantiated at a concrete Pasta curve they additionally inherit the compiler-trust
-axioms of the closed computational facts they rest on, discharged by `native_decide` (below).
-The `+native` annotations on the corresponding build-time checks record exactly which
-endpoints carry them, and the resulting trusted set is stated in reader-facing form in the
-Guide's [What you are trusting](formal-verification/guide.md#what-you-are-trusting).
+trust. Instantiated at the concrete Pasta curves they may inherit CompElliptic's closed
+`native_decide` arithmetic facts: the Pallas or Vesta point-count witness and, where Pallas
+square-root data enters, its Tonelli–Shanks root-of-unity certificate. The reusable census also
+contains Ironwood's closed NU6.3 cross-address separation check. The `+native` flag on each
+build-time check names exactly which owners that endpoint reaches.
 
 **`@[csimp]` replacement lemmas** get their own `assert_axioms` entries in
 `Zcash/TrustBoundary.lean`, enforced by `scripts/check_csimp_census.sh` in CI: the compiler

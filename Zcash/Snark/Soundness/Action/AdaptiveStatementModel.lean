@@ -1,5 +1,4 @@
 import Zcash.Circuits.Integration.ActionCorrectness
-import Zcash.Circuits.Integration.ActionPermutationDomainCompute
 import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 import Zcash.Snark.Verifier.Deployed
 
@@ -58,7 +57,7 @@ theorem adaptiveActionStatement_numInstanceColumns (pp : ProofParams) :
     (AdaptiveActionStatementShape pp).numInstanceColumns = 1 := by
   rw [actionCircuit.shape.withProofParams_numInstanceColumns pp,
     actionCircuit.shape_numInstanceColumns]
-  exact ActionPermutationDomain.numInstanceColumns_eq
+  exact actionCircuit_numInstanceColumns_eq
 
 /-- A zero public-instance column commits only to its blinding generator, for any verifier URS. -/
 theorem adaptiveCommitInstance_of_rows_zero {G : Type*} [AddCommGroup G] [Module Fp G]

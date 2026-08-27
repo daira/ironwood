@@ -8,6 +8,3 @@ refactoring arcs complete rather than kept continuously current.
 
 * [The Clean Boundary](clean-boundary.md) is the normative rule for how Clean-originated
   concepts appear in ironwood.
-* [Clean Circuit Framework Improvements](clean-improvements.md)
-  specifies the arc that replaces whole-circuit computational certificates with
-  compositional lawfulness.
