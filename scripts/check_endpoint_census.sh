@@ -77,15 +77,17 @@ cd "$(dirname "$0")/.."
 # `bound_measure_le_for`, and `attack_prob_le_of_textbookDL` all carry a marker;
 # `attack_prob_lemma` does not. The marker used to be anchored at the end of the name, and that
 # anchor lost endpoints twice. A `_measure_le` endpoint disappeared from this check the moment it
-# was generalized over `numProofs` and gained a `_for` suffix, so `_for` was admitted. The anchor
-# then deliberately kept the `_prob_le_of_<premise>` spellings out, on the reasoning that a bound
-# conditional on a named premise is consumed by some unconditional capstone and is never itself a
-# leaf — which is false: the straight-line AGM binding and deployed-root capstones are stated
-# exactly in that form, as a probability bound *of* textbook-DL hardness, nothing consumes them,
-# and no census entry disclosed their `native_decide` base until they were pinned. Generalizing,
-# instantiating, or conditioning an endpoint must never retire its census obligation: a name that
-# carries a marker states a probability, error, or security claim, and its pin states that claim's
-# trusted base whatever qualifier follows.
+# was generalized over `numProofs` and gained a `_for` suffix, so `_for` was admitted (and later
+# `_experiment` and `_idealizedks`, the experiment-placement and idealization qualifiers, in the
+# same way). The anchor then deliberately kept the `_prob_le_of_<premise>` spellings out, on the
+# reasoning that a bound conditional on a named premise is consumed by some unconditional
+# capstone and is never itself a leaf — which is false: the straight-line AGM binding and
+# deployed-root capstones are stated exactly in that form, as a probability bound *of*
+# textbook-DL hardness, nothing consumes them, and no census entry disclosed their
+# `native_decide` base until they were pinned. Generalizing, instantiating, or conditioning an
+# endpoint must never retire its census obligation: a name that carries a marker states a
+# probability, error, or security claim, and its pin states that claim's trusted base whatever
+# qualifier follows.
 ENDPOINT_RE='(^orchard_(verifier|action|deployed)_)|(^competing_)|(^nonInteractiveFingerprint_matches_derived)|(bundleStatement_or_relation)|(workFactor)|(fingerprint_matches_positional)|(_(error_bound|finite_security|measure_le|probability_bound|prob_le|capstone)([^A-Za-z0-9]|$))'
 
 # Sources scanned for endpoint declarations. `Zcash/Meta/Tests/` is excluded: it holds forged
@@ -159,7 +161,12 @@ while IFS= read -r file; do
       fi
       continue
     fi
-    # A top-level declaration: column 0, optional modifiers, then the name.
+    # A top-level declaration: column 0, optional modifiers, then the name. The name class is
+    # ASCII-only, so a declaration whose name carries a Unicode character before its marker
+    # escapes this scan. A Unicode character after the marker instead truncates the extracted
+    # name, so the pin lookup fails loud on the truncated spelling. The elaborated
+    # `CensusCheck` sees the real names and remains the backstop that demands a name this
+    # scan misses.
     [[ $line =~ ^(private[[:space:]]+|protected[[:space:]]+)?(noncomputable[[:space:]]+|partial[[:space:]]+|unsafe[[:space:]]+)?(theorem|lemma|def|abbrev|instance|axiom|opaque|inductive|structure|class)[[:space:]]+([A-Za-z0-9_\']+) ]] || continue
     # A private helper is not a deliverable endpoint.
     if [[ ${BASH_REMATCH[1]} == private* ]]; then continue; fi

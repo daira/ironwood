@@ -1020,8 +1020,8 @@ assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
   CompElliptic.Fields.Pasta.pallasBase,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
--- The record's certified query ceiling at its profile's work limit; its proof adds no native
--- owners beyond the record's type.
+-- The record's certified query ceiling at its profile's work limit; it reaches the circuit
+-- certificates only through the record's type, as the record itself does.
 assert_axioms Zcash.Snark.ActionDeploymentInstantiation.challengeQueryBound_le_workLimit +native(
   CompElliptic.Fields.Pasta.pallasBase,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
