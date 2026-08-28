@@ -71,30 +71,30 @@ base. The reduction is hypothesis-free: the chunk-coefficient injectivity is
 chunk-encoding injectivity is `commitIvkChunks_inj`. -/
 def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
-    (b : KeyBinding.Pool.CommitIvkCollision extract commitIvkHash commitIvkRpt w₁ w₂)
+    (brk : KeyBinding.Pool.CommitIvkCollision extract commitIvkHash commitIvkRpt w₁ w₂)
  :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
-  let hs₁ := commitIvkHash_isSome b.kb₁.hash_eq
-  let hs₂ := commitIvkHash_isSome b.kb₂.hash_eq
+  let hs₁ := commitIvkHash_isSome brk.kb₁.hash_eq
+  let hs₂ := commitIvkHash_isSome brk.kb₂.hash_eq
   relationOfChainPmEq (Q := ivkQ) (Or.inl ivkQ_onCurve) (W := commitIvkRpt)
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)
     (by simp)
-    (Option.some_get hs₁).symm (commitIvkHash_get_valid b.kb₁.hash_eq)
-    (Option.some_get hs₂).symm (commitIvkHash_get_valid b.kb₂.hash_eq)
+    (Option.some_get hs₁).symm (commitIvkHash_get_valid brk.kb₁.hash_eq)
+    (Option.some_get hs₂).symm (commitIvkHash_get_valid brk.kb₂.hash_eq)
     (by
       have hx : extract (w₁.hashPoint + w₁.rivk • commitIvkRpt)
           = extract (w₂.hashPoint + w₂.rivk • commitIvkRpt) := by
-        rw [← b.kb₁.ivk_eq, ← b.kb₂.ivk_eq]
-        exact b.ivk_eq
+        rw [← brk.kb₁.ivk_eq, ← brk.kb₂.ivk_eq]
+        exact brk.ivk_eq
       have hpm := (PallasGroup.toPoint_x_eq_iff _ _).mp hx
-      rwa [commitIvkHash_get_eq b.kb₁.hash_eq,
-        commitIvkHash_get_eq b.kb₂.hash_eq] at hpm)
+      rwa [commitIvkHash_get_eq brk.kb₁.hash_eq,
+        commitIvkHash_get_eq brk.kb₂.hash_eq] at hpm)
     (by simp)
     (by
       rintro ⟨hl, hr⟩
       obtain ⟨hak, hnk⟩ := commitIvkChunks_inj
         (fp_val_lt _) (fp_val_lt _) (fp_val_lt _) (fp_val_lt _) hl
-      refine b.projection_ne ?_
+      refine brk.projection_ne ?_
       unfold KeyBinding.Pool.Witness.breakProjection
       rw [ZMod.val_injective _ hak, ZMod.val_injective _ hnk, hr])
 

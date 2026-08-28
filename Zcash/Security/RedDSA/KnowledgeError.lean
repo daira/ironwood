@@ -23,7 +23,7 @@ so presenting a different one later changes nothing — which closes the trivial
 trap (`R = S • ℛ − c · bvk`) structurally.
 
 The sample space is the challenge oracle's whole table (`Q → F`) times the basis logs
-(`Fin m → F`; the bases are presented as `scalarBasis gen s`, and the reference-string
+(`Fin m → F`; the bases are presented as `scalarBasis gen logs`, and the reference-string
 heuristic carries the bound to the deployed fixed bases — see the Security Definitions book
 page). The knowledge-error event splits along the replayed relation finder:
 
@@ -60,16 +60,17 @@ variable {Q F ι : Type*} [Fintype Q] [DecidableEq Q] [Fintype F] [Nonempty F]
   [Fintype ι] [DecidableEq ι]
 
 /-- **The κ bound: the two extraction arms combined.** The extraction-failure event sits in the
-bad-challenge event (`badFiber s`, on the challenge-table factor `Q → F`, per basis-log
-vector `s`) union the relation event (`relFiber O`, on the basis-log factor `ι → F`, per
-challenge table `O` — the extracted relation's coefficients read the challenge). Each arm is
+bad-challenge event (`badFiber logs`, on the challenge-table factor `Q → F`, per basis-log
+vector `logs`) union the relation event (`relFiber table`, on the basis-log factor `ι → F`, per
+challenge table `table` — the extracted relation's coefficients read the challenge). Each arm is
 bounded on its own factor, so a union bound gives `κ ≤ qH/|F| + (ε + 1/|F|)`. -/
 theorem kappa_le_of_arms
     {κEvent : Set ((Q → F) × (ι → F))}
     (badFiber : (ι → F) → Set (Q → F)) (relFiber : (Q → F) → Set (ι → F)) {qH ε : ℝ≥0∞}
     (hcontain : κEvent ⊆ {ω | ω.1 ∈ badFiber ω.2} ∪ {ω | ω.2 ∈ relFiber ω.1})
-    (hbad : ∀ s, (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber s) ≤ qH / Fintype.card F)
-    (hrel : ∀ O, (PMF.uniformOfFintype (ι → F)).toOuterMeasure (relFiber O)
+    (hbad : ∀ logs,
+      (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber logs) ≤ qH / Fintype.card F)
+    (hrel : ∀ table, (PMF.uniformOfFintype (ι → F)).toOuterMeasure (relFiber table)
       ≤ ε + 1 / Fintype.card F) :
     (PMF.uniformOfFintype ((Q → F) × (ι → F))).toOuterMeasure κEvent
       ≤ qH / Fintype.card F + (ε + 1 / Fintype.card F) := by
@@ -98,30 +99,30 @@ variable {Q F M : Type*} [Fintype Q] [DecidableEq Q] [Field F] [Fintype F] [None
 variable (gen : M) (r_idx : Fin m)
   (adv : (Fin m → M) → LabeledOracleComp Q F (fun _ => QueryRep F m) (KappaOutput F Q m))
 
-/-- The adversary's output at challenge table `O` and basis logs `s`. -/
-def dischargeOut (O : Q → F) (s : Fin m → F) : KappaOutput F Q m :=
-  (adv (scalarBasis gen s)).run O
+/-- The adversary's output at challenge table `table` and the basis discrete logarithms `logs`. -/
+def dischargeOut (table : Q → F) (logs : Fin m → F) : KappaOutput F Q m :=
+  (adv (scalarBasis gen logs)).run table
 
 /-- The run's challenge: the oracle's answer at the output's query point. -/
-def dischargeChallenge (O : Q → F) (s : Fin m → F) : F :=
-  O (dischargeOut m gen adv O s).queryPoint
+def dischargeChallenge (table : Q → F) (logs : Fin m → F) : F :=
+  table (dischargeOut m gen adv table logs).queryPoint
 
 /-- The representation in effect at the output's query point: the first query-time annotation
 when the run queried that point, and the announced output representation otherwise. The
 fallback plays the game's own final challenge query — the Fuchsbauer–Plouviez–Seurin
 `q_H + 1` accounting. -/
-def effectiveRep (O : Q → F) (s : Fin m → F) : QueryRep F m :=
-  ((adv (scalarBasis gen s)).findLabel O (dischargeOut m gen adv O s).queryPoint).getD
-    (dischargeOut m gen adv O s).announced
+def effectiveRep (table : Q → F) (logs : Fin m → F) : QueryRep F m :=
+  ((adv (scalarBasis gen logs)).findLabel table (dischargeOut m gen adv table logs).queryPoint).getD
+    (dischargeOut m gen adv table logs).announced
 
 /-- The Schnorr verification equation `S • ℛ = R + c • bvk`, with `R` and `bvk` read off the
 effective representation at the presented basis. -/
-def Verifies (O : Q → F) (s : Fin m → F) : Prop :=
-  letI b := scalarBasis gen s
-  letI t := effectiveRep m gen adv O s
-  (dischargeOut m gen adv O s).response • b r_idx
-    = representationEval b t.commitment
-      + (dischargeChallenge m gen adv O s) • representationEval b t.key
+def Verifies (table : Q → F) (logs : Fin m → F) : Prop :=
+  letI basis := scalarBasis gen logs
+  letI t := effectiveRep m gen adv table logs
+  (dischargeOut m gen adv table logs).response • basis r_idx
+    = representationEval basis t.commitment
+      + (dischargeChallenge m gen adv table logs) • representationEval basis t.key
 
 variable [DecidableEq F]
 
@@ -137,27 +138,28 @@ variable [DecidableEq M]
 /-- The relation finder the discrete-log reduction runs: replay the adversary at the presented
 basis, and when its output verifies with nonzero assembled coefficients, return the assembled
 relation. Computable — the branch conditions are equalities in `M` and in `Fin m → F`. -/
-def relFinder (O : Q → F) (b : Fin m → M) : Option (AlgebraicRelationWitness (F := F) b) :=
-  letI out := (adv b).run O
-  letI t := ((adv b).findLabel O out.queryPoint).getD out.announced
-  letI c := O out.queryPoint
-  if h : (out.response • b r_idx
-        = representationEval b t.commitment + c • representationEval b t.key)
+def relFinder (table : Q → F) (basis : Fin m → M) :
+    Option (AlgebraicRelationWitness (F := F) basis) :=
+  letI out := (adv basis).run table
+  letI t := ((adv basis).findLabel table out.queryPoint).getD out.announced
+  letI c := table out.queryPoint
+  if h : (out.response • basis r_idx
+        = representationEval basis t.commitment + c • representationEval basis t.key)
       ∧ t.assembled r_idx c out.response ≠ 0 then
-    some (bindingSig_relation_of_nontrivial b r_idx t c out.response h.1 h.2)
+    some (bindingSig_relation_of_nontrivial basis r_idx t c out.response h.1 h.2)
   else none
 
-/-- Bad-challenge arm (fibre over the basis logs `s`): the knowledge-error conditions hold and
-the replayed finder returns no relation. -/
-def badFiber (s : Fin m → F) : Set (Q → F) :=
-  {O | Verifies m gen r_idx adv O s
-    ∧ ((effectiveRep m gen adv O s).pivot r_idx).isSome
-    ∧ relFinder m r_idx adv O (scalarBasis gen s) = none}
+/-- Bad-challenge arm (fibre over the basis discrete logarithms `logs`): the knowledge-error
+conditions hold and the replayed finder returns no relation. -/
+def badFiber (logs : Fin m → F) : Set (Q → F) :=
+  {table | Verifies m gen r_idx adv table logs
+    ∧ ((effectiveRep m gen adv table logs).pivot r_idx).isSome
+    ∧ relFinder m r_idx adv table (scalarBasis gen logs) = none}
 
-/-- Relation arm (fibre over the challenge table `O`): the replayed finder returns a
+/-- Relation arm (fibre over the challenge table `table`): the replayed finder returns a
 relation. -/
-def relFiber (O : Q → F) : Set (Fin m → F) :=
-  {s | (relFinder m r_idx adv O (scalarBasis gen s)).isSome}
+def relFiber (table : Q → F) : Set (Fin m → F) :=
+  {logs | (relFinder m r_idx adv table (scalarBasis gen logs)).isSome}
 
 omit [Fintype Q] [Fintype F] [Nonempty F] in
 /-- **Deterministic containment.** On the knowledge-error event, either the replayed finder
@@ -165,36 +167,37 @@ found a relation (the relation arm) or it found none (the bad-challenge arm). -/
 theorem kappaEvent_subset :
     kappaEvent m gen r_idx adv
       ⊆ {ω | ω.1 ∈ badFiber m gen r_idx adv ω.2} ∪ {ω | ω.2 ∈ relFiber m gen r_idx adv ω.1} := by
-  rintro ⟨O, s⟩ ⟨hver, hpiv⟩
-  rcases hfind : relFinder m r_idx adv O (scalarBasis gen s) with _ | w
+  rintro ⟨table, logs⟩ ⟨hver, hpiv⟩
+  rcases hfind : relFinder m r_idx adv table (scalarBasis gen logs) with _ | w
   · exact Or.inl ⟨hver, hpiv, hfind⟩
   · exact Or.inr (by simp only [relFiber, Set.mem_setOf_eq, hfind, Option.isSome_some])
 
 /-- The knowledge-error conditions as a set of answers at the output's query point — the
 `finalBad` handed to the labeled squeeze: challenges satisfying the verification equation on
 the effective representation, when that representation has a pivot. -/
-def finalBadSet (b : Fin m → M) (out : KappaOutput F Q m) (O : Q → F) : Set F :=
-  letI eff := ((adv b).findLabel O out.queryPoint).getD out.announced
-  {x | out.response • b r_idx
-      = representationEval b eff.commitment + x • representationEval b eff.key
+def finalBadSet (basis : Fin m → M) (out : KappaOutput F Q m) (table : Q → F) : Set F :=
+  letI eff := ((adv basis).findLabel table out.queryPoint).getD out.announced
+  {x | out.response • basis r_idx
+      = representationEval basis eff.commitment + x • representationEval basis eff.key
     ∧ (eff.pivot r_idx).isSome}
 
-/-- **The bad-challenge arm discharged by the labeled squeeze.** At basis logs `s`, within
-query budget `qH`, the bad-challenge fibre has measure at most `(qH+1)/|F|`. On that fibre the
-oracle's answer at the output's query point equals the effective representation's one bad
-challenge: on the annotation branch a singleton fixed before the answer was drawn, and on the
-fallback branch a singleton computed from an output that reprogramming the point cannot
-change. The `+1` is the Fuchsbauer–Plouviez–Seurin `q_H + 1` accounting, with the game's own
-final challenge query played by the fallback branch. -/
-theorem badFiber_measure_le {s : Fin m → F} {qH : ℕ}
-    (hQ : (adv (scalarBasis gen s)).QueryBound qH) :
-    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber m gen r_idx adv s)
+/-- **The bad-challenge arm discharged by the labeled squeeze.** At the basis discrete
+logarithms `logs`, within query budget `qH`, the bad-challenge fibre has measure at most
+`(qH+1)/|F|`. On that fibre the oracle's answer at the output's query point equals the
+effective representation's one bad challenge: on the annotation branch a singleton fixed
+before the answer was drawn, and on the fallback branch a singleton computed from an output
+that reprogramming the point cannot change. The `+1` is the Fuchsbauer–Plouviez–Seurin
+`q_H + 1` accounting, with the game's own final challenge query played by the fallback
+branch. -/
+theorem badFiber_measure_le {logs : Fin m → F} {qH : ℕ}
+    (hQ : (adv (scalarBasis gen logs)).QueryBound qH) :
+    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber m gen r_idx adv logs)
       ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   refine le_trans (MeasureTheory.measure_mono ?_)
-    (le_trans (finalBadWithoutRelation_measure_le (adv (scalarBasis gen s))
+    (le_trans (finalBadWithoutRelation_measure_le (adv (scalarBasis gen logs))
       (fun out => out.queryPoint)
-      (fun out _ O => finalBadSet m r_idx adv (scalarBasis gen s) out O)
-      (fun O => relFinder m r_idx adv O (scalarBasis gen s))
+      (fun out _ table => finalBadSet m r_idx adv (scalarBasis gen logs) out table)
+      (fun table => relFinder m r_idx adv table (scalarBasis gen logs))
       (fun _ label _ => {label.badChallenge r_idx})
       (fun out _ _ => {out.announced.badChallenge r_idx})
       ?_ (fun _ _ _ _ => rfl) (fun _ _ _ _ => rfl)
@@ -203,47 +206,47 @@ theorem badFiber_measure_le {s : Fin m → F} {qH : ℕ}
       hQ)
     (le_of_eq (mul_one_div _ _)))
   · -- the bad-challenge fibre is the squeeze's event
-    rintro O ⟨hver, hpiv, hnone⟩
+    rintro table ⟨hver, hpiv, hnone⟩
     exact ⟨⟨hver, hpiv⟩, hnone⟩
   · -- hcover: with no relation found, the challenge is the effective bad challenge
-    intro O hfinal hnone
+    intro table hfinal hnone
     obtain ⟨hver, hpiv⟩ := hfinal
     obtain ⟨j, hj⟩ := Option.isSome_iff_exists.mp hpiv
-    have hc : O (((adv (scalarBasis gen s)).run O).queryPoint)
-        = (((adv (scalarBasis gen s)).findLabel O
-              ((adv (scalarBasis gen s)).run O).queryPoint).getD
-            ((adv (scalarBasis gen s)).run O).announced).badChallenge r_idx := by
+    have hc : table (((adv (scalarBasis gen logs)).run table).queryPoint)
+        = (((adv (scalarBasis gen logs)).findLabel table
+              ((adv (scalarBasis gen logs)).run table).queryPoint).getD
+            ((adv (scalarBasis gen logs)).run table).announced).badChallenge r_idx := by
       by_contra hne
       have hcond := And.intro hver
         (QueryRep.assembled_ne_zero_of_ne_badChallenge
-          (S := ((adv (scalarBasis gen s)).run O).response) hj hne)
-      have hnone' : relFinder m r_idx adv O (scalarBasis gen s) = none := hnone
+          (S := ((adv (scalarBasis gen logs)).run table).response) hj hne)
+      have hnone' : relFinder m r_idx adv table (scalarBasis gen logs) = none := hnone
       rw [relFinder, dif_pos hcond] at hnone'
       exact Option.some_ne_none _ hnone'
     unfold firstLabelOrFallbackBad
     rw [hc]
-    cases (adv (scalarBasis gen s)).findLabel O
-        (((adv (scalarBasis gen s)).run O).queryPoint) <;>
+    cases (adv (scalarBasis gen logs)).findLabel table
+        (((adv (scalarBasis gen logs)).run table).queryPoint) <;>
       rfl
 
 omit [Fintype Q] [Nonempty F] in
 /-- The relation arm is the relation-finding event of the replayed finder. -/
-theorem relFiber_subset_relSet (O : Q → F) :
-    relFiber m gen r_idx adv O ⊆ ↑(relSet gen (relFinder m r_idx adv O)) := by
-  intro s hs
+theorem relFiber_subset_relSet (table : Q → F) :
+    relFiber m gen r_idx adv table ⊆ ↑(relSet gen (relFinder m r_idx adv table)) := by
+  intro logs hs
   simpa only [relSet, Finset.coe_filter, Set.mem_setOf_eq, Finset.mem_univ, true_and] using hs
 
 omit [Fintype Q] in
 /-- **The relation arm discharged against textbook discrete log.** If the finder's textbook-DL
 advantage is at most `ε`, the relation fibre has measure at most `ε + 1/|F|` — the tight
 Jaeger–Tessaro accounting, with no multiplicative loss. -/
-theorem relFiber_measure_le {O : Q → F} {ε : ℝ≥0∞}
-    (hdl : TextbookDLAdvantageLE gen (relFinder m r_idx adv O) ε) :
-    (PMF.uniformOfFintype (Fin m → F)).toOuterMeasure (relFiber m gen r_idx adv O)
+theorem relFiber_measure_le {table : Q → F} {ε : ℝ≥0∞}
+    (hdl : TextbookDLAdvantageLE gen (relFinder m r_idx adv table) ε) :
+    (PMF.uniformOfFintype (Fin m → F)).toOuterMeasure (relFiber m gen r_idx adv table)
       ≤ ε + 1 / Fintype.card F :=
   haveI : Nonempty (Fin m) := ⟨r_idx⟩
-  le_trans (MeasureTheory.measure_mono (relFiber_subset_relSet m gen r_idx adv O))
-    (relation_prob_le_of_textbookDL gen (relFinder m r_idx adv O) hdl)
+  le_trans (MeasureTheory.measure_mono (relFiber_subset_relSet m gen r_idx adv table))
+    (relation_prob_le_of_textbookDL gen (relFinder m r_idx adv table) hdl)
 
 /-- **The knowledge error bounded: κ ≤ (qH+1)/|F| + (ε_DL + 1/|F|).** For a labeled algebraic
 adversary within query budget `qH`, if every replayed relation finder has textbook-DL
@@ -253,18 +256,18 @@ representation has a pivot is at most `(qH+1)/|F| + (ε + 1/|F|)`. The `qH + 1` 
 hypothesis that the adversary queries its output's point.
 
 The DL hypothesis is per challenge table — one `ε` bounding the finder's advantage for every
-`O`, a supremum over unbounded advice and so stronger than the advantage of any single
+`table`, a supremum over unbounded advice and so stronger than the advantage of any single
 reduction. That is an artefact of the fibre-wise composition; a joint experiment in which the
 reduction samples the table itself needs only the one composite reduction's advantage. -/
 theorem kappaEvent_measure_le {qH : ℕ} {ε : ℝ≥0∞}
-    (hQ : ∀ s : Fin m → F, (adv (scalarBasis gen s)).QueryBound qH)
-    (hdl : ∀ O : Q → F, TextbookDLAdvantageLE gen (relFinder m r_idx adv O) ε) :
+    (hQ : ∀ logs : Fin m → F, (adv (scalarBasis gen logs)).QueryBound qH)
+    (hdl : ∀ table : Q → F, TextbookDLAdvantageLE gen (relFinder m r_idx adv table) ε) :
     (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure (kappaEvent m gen r_idx adv)
       ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F + (ε + 1 / Fintype.card F) :=
   kappa_le_of_arms (badFiber m gen r_idx adv) (relFiber m gen r_idx adv)
     (kappaEvent_subset m gen r_idx adv)
-    (fun s => badFiber_measure_le m gen r_idx adv (hQ s))
-    (fun O => relFiber_measure_le m gen r_idx adv (hdl O))
+    (fun logs => badFiber_measure_le m gen r_idx adv (hQ logs))
+    (fun table => relFiber_measure_le m gen r_idx adv (hdl table))
 
 /-- **The knowledge error bounded, with a single randomized reduction:
 κ ≤ (qH+1)/#F + (ε_DL + 1/#F).** As `kappaEvent_measure_le`, with the per-table DL
@@ -272,15 +275,17 @@ hypothesis replaced by one bound for the coin-consuming finder — the reduction
 challenge table as its own coins (`TextbookDLWithCoinsAdvantageLE` at `ρ := Q → F`), so the
 supremum over tables disappears. -/
 theorem kappaEvent_measure_le_of_coins {qH : ℕ} {ε : ℝ≥0∞}
-    (hQ : ∀ s : Fin m → F, (adv (scalarBasis gen s)).QueryBound qH)
-    (hdl : TextbookDLWithCoinsAdvantageLE gen (fun b O => relFinder m r_idx adv O b) ε) :
+    (hQ : ∀ logs : Fin m → F, (adv (scalarBasis gen logs)).QueryBound qH)
+    (hdl : TextbookDLWithCoinsAdvantageLE gen
+        (fun basis table => relFinder m r_idx adv table basis) ε) :
     (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure (kappaEvent m gen r_idx adv)
       ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F + (ε + 1 / Fintype.card F) := by
   haveI : Nonempty (Fin m) := ⟨r_idx⟩
   have hsub : kappaEvent m gen r_idx adv
       ⊆ {ω | ω.1 ∈ badFiber m gen r_idx adv ω.2}
         ∪ {ω : (Q → F) × (Fin m → F) |
-            (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b))} := by
+            (ω.2, ω.1)
+              ∈ ↑(relSetWithCoins gen (fun basis table => relFinder m r_idx adv table basis))} := by
     intro ω hω
     rcases kappaEvent_subset m gen r_idx adv hω with h | h
     · exact Or.inl h
@@ -289,12 +294,13 @@ theorem kappaEvent_measure_le_of_coins {qH : ℕ} {ε : ℝ≥0∞}
   refine le_trans (MeasureTheory.measure_mono hsub) ?_
   refine le_trans (MeasureTheory.measure_union_le _ _) (add_le_add ?_ ?_)
   · exact uniformOfFintype_prod_fiber_bound (badFiber m gen r_idx adv)
-      (fun s => badFiber_measure_le m gen r_idx adv (hQ s))
+      (fun logs => badFiber_measure_le m gen r_idx adv (hQ logs))
   · have hswap : (PMF.uniformOfFintype ((Q → F) × (Fin m → F))).toOuterMeasure
         {ω : (Q → F) × (Fin m → F) |
-          (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b))}
+          (ω.2, ω.1)
+            ∈ ↑(relSetWithCoins gen (fun basis table => relFinder m r_idx adv table basis))}
         = (PMF.uniformOfFintype ((Fin m → F) × (Q → F))).toOuterMeasure
-          ↑(relSetWithCoins gen (fun b O => relFinder m r_idx adv O b)) := by
+          ↑(relSetWithCoins gen (fun basis table => relFinder m r_idx adv table basis)) := by
       rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → F) (Fin m → F)),
         PMF.toOuterMeasure_map_apply]
       congr 1
@@ -311,9 +317,9 @@ variable {F M ι : Type*} [Field F] [Fintype F] [Nonempty F] [DecidableEq F]
 
 /-- The relation finder for an all-zero basis: every coefficient vector is a relation there,
 so return the all-ones one. Returns nothing on any other basis. -/
-def zeroBasisRelationFinder : (b : ι → M) → Option (AlgebraicRelationWitness (F := F) b) :=
-  fun b =>
-    if h : ∀ i, b i = 0 then
+def zeroBasisRelationFinder : (basis : ι → M) → Option (AlgebraicRelationWitness (F := F) basis) :=
+  fun basis =>
+    if h : ∀ i, basis i = 0 then
       some { coeffs := fun _ => 1
              nontrivial := fun h1 => one_ne_zero (congrFun h1 (Classical.arbitrary ι))
              relation := by simp [representationEval, h] }
@@ -329,7 +335,7 @@ theorem textbookDLAdvantageLE_base_zero {ε : ℝ≥0∞}
     1 ≤ ε + 1 / Fintype.card F := by
   have hrel := relation_prob_le_of_textbookDL (0 : M) _ h
   have huniv : relSet (0 : M) (zeroBasisRelationFinder (F := F) (ι := ι)) = Finset.univ := by
-    ext s
+    ext logs
     simp [relSet, zeroBasisRelationFinder, scalarBasis]
   rw [huniv] at hrel
   calc (1 : ℝ≥0∞)

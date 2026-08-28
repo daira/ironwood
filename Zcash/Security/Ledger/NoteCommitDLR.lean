@@ -86,18 +86,18 @@ scalars and applies the chain-collision reducer at the `NoteCommit` domain point
 randomness base. -/
 def relationOfNoteCommitBreak {MSG SIG : Type*}
     (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
-    (b : NoteCommitBreak (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify)) :
+    (brk : NoteCommitBreak (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify)) :
     NontrivialRelation (F := Fq) pallasS noteQpt noteCommitRpt :=
   relationOfChainPmEq (Q := noteQ) (Or.inl noteQ_onCurve) (W := noteCommitRpt)
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)
     (by simp [Pool.noteScalars])
-    (Option.some_get (noteCommit_hash_isSome b.open₁)).symm
-    (noteCommit_get_valid b.open₁)
-    (Option.some_get (noteCommit_hash_isSome b.open₂)).symm
-    (noteCommit_get_valid b.open₂)
+    (Option.some_get (noteCommit_hash_isSome brk.open₁)).symm
+    (noteCommit_get_valid brk.open₁)
+    (Option.some_get (noteCommit_hash_isSome brk.open₂)).symm
+    (noteCommit_get_valid brk.open₂)
     (by
-      have hx : extract b.cm₁ = extract b.cm₂ := b.extract_eq
-      rw [noteCommit_get_eq b.open₁, noteCommit_get_eq b.open₂] at hx
+      have hx : extract brk.cm₁ = extract brk.cm₂ := brk.extract_eq
+      rw [noteCommit_get_eq brk.open₁, noteCommit_get_eq brk.open₂] at hx
       exact (PallasGroup.toPoint_x_eq_iff _ _).mp hx)
     (by simp [Pool.noteScalars])
     (by
@@ -107,27 +107,27 @@ def relationOfNoteCommitBreak {MSG SIG : Type*}
         (fp_val_lt _) (Nat.mod_lt _ (by norm_num)) (fp_val_lt _)
         (Nat.mod_lt _ (by norm_num))
         (by
-          rw [ZMod.val_natCast_of_lt (valueBound_lt_card b.v₁_lt)]
-          exact b.v₁_lt)
+          rw [ZMod.val_natCast_of_lt (valueBound_lt_card brk.v₁_lt)]
+          exact brk.v₁_lt)
         (fp_val_lt _) (fp_val_lt _)
         (fp_val_lt _) (Nat.mod_lt _ (by norm_num)) (fp_val_lt _)
         (Nat.mod_lt _ (by norm_num))
         (by
-          rw [ZMod.val_natCast_of_lt (valueBound_lt_card b.v₂_lt)]
-          exact b.v₂_lt)
+          rw [ZMod.val_natCast_of_lt (valueBound_lt_card brk.v₂_lt)]
+          exact brk.v₂_lt)
         (fp_val_lt _) (fp_val_lt _) hl
-      have hgd : b.n₁.gd = b.n₂.gd :=
+      have hgd : brk.n₁.gd = brk.n₂.gd :=
         PallasGroup.eq_of_toPoint_x_eq_of_y_parity_eq (ZMod.val_injective _ hgx) hgy
-      have hpkd : b.n₁.pkd = b.n₂.pkd :=
+      have hpkd : brk.n₁.pkd = brk.n₂.pkd :=
         PallasGroup.eq_of_toPoint_x_eq_of_y_parity_eq (ZMod.val_injective _ hpx) hpy
-      have hvv : b.n₁.v = b.n₂.v := by
-        rwa [ZMod.val_natCast_of_lt (valueBound_lt_card b.v₁_lt),
-          ZMod.val_natCast_of_lt (valueBound_lt_card b.v₂_lt)] at hv
-      have hrho' : b.n₁.ρ = b.n₂.ρ := ZMod.val_injective _ hrho
-      have hpsi' : b.n₁.ψ = b.n₂.ψ := ZMod.val_injective _ hpsi
-      refine b.ne ?_
-      have hn : b.n₁ = b.n₂ := by
-        rw [show b.n₁ = ⟨b.n₁.gd, b.n₁.pkd, b.n₁.v, b.n₁.ρ, b.n₁.ψ⟩ from rfl,
+      have hvv : brk.n₁.v = brk.n₂.v := by
+        rwa [ZMod.val_natCast_of_lt (valueBound_lt_card brk.v₁_lt),
+          ZMod.val_natCast_of_lt (valueBound_lt_card brk.v₂_lt)] at hv
+      have hrho' : brk.n₁.ρ = brk.n₂.ρ := ZMod.val_injective _ hrho
+      have hpsi' : brk.n₁.ψ = brk.n₂.ψ := ZMod.val_injective _ hpsi
+      refine brk.ne ?_
+      have hn : brk.n₁ = brk.n₂ := by
+        rw [show brk.n₁ = ⟨brk.n₁.gd, brk.n₁.pkd, brk.n₁.v, brk.n₁.ρ, brk.n₁.ψ⟩ from rfl,
           hgd, hpkd, hvv, hrho', hpsi']
       rw [hn, hr])
 

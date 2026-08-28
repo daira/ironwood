@@ -631,13 +631,13 @@ assert_axioms Zcash.Security.RedDSA.textbookDLAdvantageLE_base_zero
 
 The transaction-balance premiss discharge with a fallible extractor: the extractor is an
 arbitrary function, its failures are exhibited `RedDSA.ExtractionFailure` data, and the Balance
-capstones bound the violation by `εdlr + κ`, per prefix and at all prefixes with no factor of
+capstones bound the violation by `ε_dlr + κ`, per prefix and at all prefixes with no factor of
 `k`. The premiss lands in the binding-signature layer's nontrivial `(Vbase, Rbase)` relation
 via `ofBundleIntImbalance`, with the no-overflow bound discharged from the statement's value
 ranges, validity's action-count and `vBalance` range rules, and the named numeric hypothesis in
 the `vSum` shape, `maxActions * (valueBound - 1) + vBalanceBound < r`. The Orchard
 instantiation names the same bounds at the Orchard-protocol primitives; the integrity bound
-takes `εdlr + κ` in place of the opaque `ε_bindsig`. `+choice` is the erased-positions tier. -/
+takes `ε_dlr + κ` in place of the opaque `ε_bindsig`. `+choice` is the erased-positions tier. -/
 
 assert_computable Zcash.Security.Ledger.Model.ValueShape.premissOrBreakFallible +choice
 assert_computable Zcash.Security.Ledger.Model.txBalancePremissFallible +choice
