@@ -127,10 +127,13 @@ Both commands are built on `Lean.collectAxioms`, which walks a declaration's tra
 depends on is checked by nothing, however prominent it is. Deliverable endpoints are exactly the
 top-level leaves, so they must be pinned *directly* — never left to inherit coverage from some
 dependent, which would vanish the moment that dependent is refactored.
-`scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families. A new
-public endpoint must either belong to one of the listed protocol families or end in the semantic
-suffix `_error_bound`, `_finite_security`, `_measure_le`, `_probability_bound`, or `_capstone`; the
-last keeps new protocol families covered without another prefix-specific regex edit.
+`scripts/check_endpoint_census.sh` enforces this in CI for the capstone naming families, and
+`Zcash/CensusCheck.lean` enforces it a second time from the elaborated environment. A new public
+endpoint must either belong to one of the listed protocol families or carry one of the semantic
+markers `_error_bound`, `_finite_security`, `_prob_le` (or its older spellings `_measure_le` and
+`_probability_bound`), or `_capstone`; the last keeps new protocol families covered without another
+prefix-specific regex edit. A marker counts in any position, so qualifying a claim —
+`_prob_le_of_textbookDL`, `_prob_le_at_consensus_max`, `_measure_le_for` — never retires its pin.
 
 The reusable census in this file reaches six native owners, all from CompElliptic: the Pallas and
 Vesta base-field root data (`Fields.Pasta.pallasBase`, `Fields.Pasta.vestaBase`), the two curve
@@ -166,11 +169,13 @@ assert_axioms Zcash.Common.steeredCharge_context_sum_mul_le
 assert_axioms Zcash.Common.steeredCharge_context_sum_mul_le_table_budget
 assert_axioms Zcash.Common.steeredCharge_sum_mul_le
 assert_axioms Zcash.Common.escapesDuringC_measure_le
+assert_axioms Zcash.Common.escapesDuringC_measure_le'
 
 -- Model.lean: the one-sided bias interfaces
 assert_axioms Zcash.Common.PMFWeightedBiasLE
 assert_axioms Zcash.Common.PMFWeightedBiasLE.eventBiasLE
 assert_axioms Zcash.Common.PMFEventBiasLE.bind_same
+assert_axioms Zcash.Common.event_measure_le_of_bias
 
 -- Hybrid.lean: the adaptive fresh-answer hybrid
 assert_axioms Zcash.Common.OracleComp.runFreshPMF
@@ -1003,6 +1008,7 @@ assert_axioms Zcash.Snark.challenge255_eventBias_le
 assert_axioms Zcash.Snark.challenge255_weightedBias_le
 assert_axioms Zcash.Snark.challenge255_joint_eventBias_le
 assert_axioms Zcash.Snark.challenge255Bias_le
+assert_axioms Zcash.Snark.challenge255_joint_charge_le_at_2pow123
 assert_axioms Zcash.Snark.challenge255_badSet_le
 -- Zero-basis acceptance scaffolding (`Soundness.Composition.ZeroBasisAcceptance`): structural,
 -- computation-free steps toward an accepting run of the adaptive knowledge machinery.
@@ -1012,7 +1018,14 @@ assert_axioms Zcash.Snark.deployedAccepts_of_assembles_of_zeroBases
 -- bridge a deployment interpretation supplies, one identification field per model floor.
 assert_axioms Zcash.Snark.ActionDeploymentInstantiation +native(
   CompElliptic.Fields.Pasta.pallasBase,
-  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+-- The record's certified query ceiling at its profile's work limit; it reaches the circuit
+-- certificates only through the record's type, as the record itself does.
+assert_axioms Zcash.Snark.ActionDeploymentInstantiation.challengeQueryBound_le_workLimit +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 -- Deterministic verifier routing used by the rewind-free deployed constraint decoder.
 assert_axioms Zcash.Snark.vanishing_query_mem_assembleQueries
 assert_axioms Zcash.Snark.assembleQueries_vanishingH_unique
@@ -2004,8 +2017,11 @@ assert_axioms Zcash.Snark.adaptivePrefixBad_measure_le
 assert_axioms Zcash.Snark.deployedX1AllRootSet_measure_le
 assert_axioms Zcash.Snark.deployedX1RootSet_measure_le
 assert_axioms Zcash.Snark.deployedX2RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX2RootSet_measure_le_shape
 assert_axioms Zcash.Snark.deployedX3RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX3RootSet_measure_le_shape
 assert_axioms Zcash.Snark.deployedX4RootSet_measure_le
+assert_axioms Zcash.Snark.deployedX4RootSet_measure_le_shape
 
 -- AGM/ShiftRecovery.lean
 assert_axioms Zcash.Snark.ipaShiftXi_badSet_measure_le
@@ -2058,10 +2074,10 @@ assert_axioms Zcash.Snark.adaptiveRootSurfaceAt_measure_le +native(CompElliptic.
 /-! ## Probability bounds spelled `_prob_le`
 
 `scripts/check_endpoint_census.sh` matches `_prob_le` alongside the older `_measure_le` and
-`_probability_bound` spellings, and matches the consensus-generic `_for` forms of all three.
-These entries are the bounds that spelling newly reaches. Like the `_measure_le` surface and
-root-set measures above, they are pinned because the census pattern reaches them, not as
-independent claims: each is consumed by a capstone that carries its own pin. -/
+`_probability_bound` spellings. These entries are the bounds that spelling reaches when it ends the
+name. Like the `_measure_le` surface and root-set measures above, they are pinned because the
+census pattern reaches them, not as independent claims: each is consumed by a capstone that
+carries its own pin — for the straight-line ones, the qualified capstones of the next section. -/
 
 assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineBindingZero_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineRootZero_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
@@ -2069,6 +2085,57 @@ assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeplo
 assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintBadX_prob_le +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.statisticalSurfaceEvent_prob_le +native(CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le +native(CompElliptic.Fields.Pasta.pallasBase, CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt, CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+/-! ## Probability bounds qualified by a premise or an instance
+
+A semantic marker is matched in any position, so a bound whose name goes on to state the premise it
+is conditional on (`_prob_le_of_textbookDL`, `_probability_bound_of_dlogProfile`), the instance it
+is stated at (`_prob_le_at_consensus_max`), or a variant (`_measure_le'`, `_measure_le_shape`) is
+demanded like the unqualified form. The end-anchored pattern that preceded it deliberately left the
+`_of_<premise>` spellings out, on the reasoning that a conditional bound is always consumed by an
+unconditional capstone with its own pin. The straight-line capstones refuted that: they are stated
+exactly as probability bounds *of* textbook-DL hardness, nothing consumes them, and until these
+entries no census entry disclosed their `native_decide` base.
+
+Within each file group the independent claims are the capstones — the straight-line AGM binding
+capstone `straightLineBindingAttack_prob_le_of_textbookDL`, the straight-line deployed root
+capstone `straightLineRootDecodeFailure_prob_le_of_textbookDL`, and the profiled Action base-union
+bound `actionBaseUnion_probability_bound_of_dlogProfile`. The rest are rungs those capstones or an
+already-pinned endpoint consume, pinned because the pattern reaches them. The consensus-maximum
+compressed-identity bounds (`straightLineConstraintFailure_prob_le_at_consensus_max` and its
+generator-random-oracle form) are the same kind of leaf, but their module reaches a census only
+through `Capstones.Action`, so they are pinned beside the consensus-maximum work-factor package in
+`Zcash/Snark/Fixtures/MultiAction/Honest/TrustBoundary.lean`. -/
+
+-- AGM/StraightLinePinnedRoots.lean
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineIpaRelation_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineBindingAttackZ_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineIpaFSFamily.straightLineBindingAttack_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+-- Composition/StraightLineDeployed.lean
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineDeployedRelation_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineRootDecodeFailure_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+-- Composition/StraightLineConstraint.lean
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintRelation_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_textbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_fixedCallsTextbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_union_relation_prob_le_of_relationSupersetTextbookDL +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+-- AGM/StraightLineFiniteSecurity.lean
+assert_axioms Zcash.Snark.ComputedStraightLineDeployedFSFamily.straightLineConstraintFailure_prob_le_of_dlogProfile +native(CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+-- Action/StraightLineEvent.lean
+assert_axioms Zcash.Snark.ActionTerminal.actionBaseUnion_probability_bound_of_dlogProfile +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+
+-- Action/AdaptiveStatementEvent.lean
+assert_axioms Zcash.Snark.ComputedAdaptiveActionStatementFSFamily.relation_prob_le_of_textbookDL +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 /-! ## Pre- and post-NU6.3 circuit separation
 
