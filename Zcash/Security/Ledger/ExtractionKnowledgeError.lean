@@ -10,24 +10,28 @@ import Zcash.Security.KeyBinding.Probability
 # The extraction-failure arm's κ in the oracle model
 
 The capstone layer bounds the conservation reduction's extraction-failure arm by the named
-knowledge error κ. This module places that arm in the challenge-oracle model, at the
-reduction's own events: for any `qH`-query-bounded labeled algebraic ledger adversary, an
-extraction-failure sample lands in the knowledge-error event of the composite machine at an
-unchanged query count (`extractFail_mem_kappaEvent`). The knowledge-error layer splits that
-event into two fibres. The bad-challenge fibre is counted at `(qH+1)/#F`. The relation fibre
-is covered by the conservation experiment's combined finder, under one discrete-log bound. As
-with the key-binding arm, everything is joint with validity. The capstones' named κ ranges
-over an abstract `PMF (ValidAnnotated …)`; the conservation experiment is the
-joint-experiment composition, and bounds the challenge-oracle measure directly.
+knowledge error κ — the probability that a binding signature verifies while binding-key
+extraction fails (`Zcash.Security.RedDSA.KnowledgeError`). This module places that arm in
+the challenge-oracle model, at the reduction's own events: for any `qH`-query-bounded
+labeled algebraic ledger adversary, an extraction-failure sample lands in the knowledge-error
+event of the composite machine at an unchanged query count (`extractFail_mem_kappaEvent`).
+The knowledge-error layer splits that event into two fibres. The bad-challenge fibre is
+counted at `(qH+1)/#F`. The relation fibre is covered by the conservation experiment's
+combined finder, under one discrete-log bound. As with the key-binding arm, the bounds here
+are on the joint event that the ledger is valid and extraction fails, not on extraction
+failure alone. The capstones' named κ ranges over an abstract `PMF (ValidAnnotated …)`; the
+conservation experiment is the joint-experiment composition, and bounds the challenge-oracle
+measure directly.
 
 The sample is a challenge table `table` and the discrete logarithms `logs`, relative to
 the generator `gen`, of the `m` presented bases. The value commitment and the binding
 verification are instantiated at sampled slots, as a record update of the fixed primitives
 (`kappaPrimitivesAt`), so the ledger type does not depend on the sample; the other
 primitives deliberately stay fixed, and the value and signature fields are not separated
-out of `Primitives`. The challenge hash reads the table at `queryOf R bvk m`, intended to
-be an injective encoding — collisions only constrain the algebraic hypotheses, shrinking
-the covered adversary class.
+out of `Primitives`. The `kappa` prefix marks the sampled forms that the knowledge-error
+analysis consumes. The challenge hash reads the table at `queryOf R bvk m`, intended to be
+an injective encoding — collisions only constrain the algebraic hypotheses, shrinking the
+covered adversary class.
 
 The adversary outputs an annotated ledger: each transaction paired with the announced
 representation of its commitment and binding key. Being algebraic is the
@@ -78,7 +82,8 @@ def primitivesAtBasis (basis : Fin m → G) (table : Q → ZMod r) :
         = (toSig σ).R + table (queryOf (toSig σ).R vk m) • vk }
 
 /-- The primitives at a sampled challenge table `table` and the basis discrete logarithms `logs`:
-`primitivesAtBasis` at the sampled basis. -/
+`primitivesAtBasis` at the sampled basis. The `kappa` prefix marks the sampled forms that the
+knowledge-error (κ) analysis consumes — see `Zcash.Security.RedDSA.KnowledgeError`. -/
 def kappaPrimitivesAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
     Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG :=
   primitivesAtBasis m v_idx r_idx queryOf P₀ toSig (scalarBasis gen logs) table

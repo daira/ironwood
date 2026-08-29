@@ -17,10 +17,11 @@ capstone layer, but now over the challenge experiment's sample space.
 
 This is a programmed-basis reduction (see "what a reduction in these models says",
 <https://zcash.github.io/ironwood/formal-verification/security-models.html#what-a-reduction-in-these-models-says>):
-the sampling programs only the value and binding bases — `kappaPrimitivesAt` is a record update of
-the deployed primitives touching `valueCommit` and `bindingVerify` alone. The three non-negativity
-arms read only the note-commitment, key-binding, and Merkle structure, which the programming leaves
-fixed. A Balance-subset break at the sampled primitives is therefore the same data as at the
+the sampling programs only the value and binding bases — `kappaPrimitivesAt` (named for the
+knowledge-error κ analysis that consumes it) is a record update of the deployed primitives
+touching `valueCommit` and `bindingVerify` alone. The three non-negativity arms read only
+the note-commitment, key-binding, and Merkle structure, which the programming leaves fixed.
+A Balance-subset break at the sampled primitives is therefore the same data as at the
 deployed primitives, and the deterministic Orchard reducers (`relationOfKeyBindingBreak`,
 `relationOfNoteCommitBreak`, `relationOfMerkleCollision`) apply unchanged. This discharge needs no
 value/binding-side hypotheses, so it is independent of the conservation side, which the abstract

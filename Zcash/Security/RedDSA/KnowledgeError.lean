@@ -5,6 +5,11 @@ import Zcash.Snark.Soundness.AGM.AdaptiveOnline
 /-!
 # The binding-signature knowledge error: κ ≤ (qH+1)/|F| + (ε_DL + 1/|F|)
 
+Throughout, κ is the knowledge error: the probability that the adversary's output verifies
+while the extractor fails to produce the witness — here, a verifying binding signature whose
+announced representations do not yield the binding key. Definitions prefixed with `kappa` build
+this event and its bound.
+
 The κ-discharge for the extraction arm, composing the deterministic core
 (`bindingSig_relation_of_nontrivial`) with the labeled adaptive squeeze
 (`finalBadWithoutRelation_measure_le`) and the relation-to-discrete-log reduction
