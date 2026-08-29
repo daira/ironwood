@@ -360,29 +360,31 @@ theorem extractFail_mem_kappaEvent
     find?_take_eq_some_of_le hik hpr
   have hmem : (tx, rep) ∈ (LA (scalarBasis gen logs)).run table :=
     (List.take_sublist k _).subset (List.mem_of_find?_eq_some hfindAnnK)
-  have hout : dischargeOut m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table logs
+  have hout : dischargeOutAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+        (scalarBasis gen logs) table
       = ⟨(toSig tx.bindingSig).S,
           queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx)
             tx.sighash,
           rep⟩ := by
-    simp only [dischargeOut, kappaComposite, LabeledOracleComp.run_bind,
+    simp only [dischargeOutAt, kappaComposite, LabeledOracleComp.run_bind,
       LabeledOracleComp.run_pure, kappaOut]
     rw [hfindAnnK]
-  have heff : effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table logs
+  have heff : effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+        (scalarBasis gen logs) table
       = ((LA (scalarBasis gen logs)).findLabel table
           (queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx)
             tx.sighash)).getD rep := by
-    unfold effectiveRep
+    unfold effectiveRepAt
     rw [hout]
     simp only [kappaComposite, LabeledOracleComp.findLabel_bind_pure]
   have hRB : (toSig tx.bindingSig).R
         = representationEval (scalarBasis gen logs)
-            (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
-              table logs).commitment
+            (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+              (scalarBasis gen logs) table).commitment
       ∧ bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx
         = representationEval (scalarBasis gen logs)
-            (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
-              table logs).key := by
+            (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+              (scalarBasis gen logs) table).key := by
     rw [heff]
     cases hfound : (LA (scalarBasis gen logs)).findLabel table
         (queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx)
@@ -390,8 +392,8 @@ theorem extractFail_mem_kappaEvent
     | some ℓ => simpa using halgLabel table logs _ ℓ hfound (tx, rep) hmem rfl
     | none => simpa using halgOut table logs (tx, rep) hmem
   have hEval : kappaExtractor m gen r_idx queryOf P₀ k LA table logs failure.vk failure.m failure.σ
-      = (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table logs).key
-          r_idx := by
+      = (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+          (scalarBasis gen logs) table).key r_idx := by
     rw [hvk', hm, hσ', heff]
     unfold kappaExtractor
     cases (LA (scalarBasis gen logs)).findLabel table
@@ -401,7 +403,7 @@ theorem extractFail_mem_kappaEvent
     rfl
   constructor
   · -- the game's verification equation, from the ledger's, through the effective evaluations
-    unfold Verifies dischargeChallenge
+    unfold VerifiesAt dischargeChallengeAt
     rw [hout]
     dsimp only
     rw [← hRB.1, ← hRB.2]
@@ -409,11 +411,12 @@ theorem extractFail_mem_kappaEvent
     rw [hvk, hm, hσ] at hver
     exact hver
   · -- a pivot-free effective key would make the extractor succeed
-    rcases hpiv : (effectiveRep m gen
-        (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table logs).pivot r_idx with _ | j
+    rcases hpiv : (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+        (scalarBasis gen logs) table).pivot r_idx with _ | j
     · exfalso
       have hkey := QueryRep.representationEval_key_of_pivot_eq_none
-        (effectiveRep m gen (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table logs) r_idx
+        (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+          (scalarBasis gen logs) table) r_idx
         (scalarBasis gen logs) hpiv
       apply failure.ne
       rw [hEval, hvk', hRB.2, hkey]

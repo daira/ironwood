@@ -99,39 +99,63 @@ variable {Q F M : Type*} [Fintype Q] [DecidableEq Q] [Field F] [Fintype F] [None
 variable (gen : M) (r_idx : Fin m)
   (adv : (Fin m → M) → LabeledOracleComp Q F (fun _ => QueryRep F m) (KappaOutput F Q m))
 
+/-- The adversary's output at the presented `basis` and challenge table `table`. -/
+def dischargeOutAt (basis : Fin m → M) (table : Q → F) : KappaOutput F Q m :=
+  (adv basis).run table
+
+/-- The run's challenge at the presented `basis`: the oracle's answer at the output's query
+point. -/
+def dischargeChallengeAt (basis : Fin m → M) (table : Q → F) : F :=
+  table (dischargeOutAt m adv basis table).queryPoint
+
+/-- The representation in effect at the output's query point, at the presented `basis`: the
+first query-time annotation when the run queried that point, and the announced output
+representation otherwise. The fallback plays the game's own final challenge query — the
+Fuchsbauer–Plouviez–Seurin `q_H + 1` accounting. -/
+def effectiveRepAt (basis : Fin m → M) (table : Q → F) : QueryRep F m :=
+  ((adv basis).findLabel table (dischargeOutAt m adv basis table).queryPoint).getD
+    (dischargeOutAt m adv basis table).announced
+
+/-- The Schnorr verification equation `S • ℛ = R + c • bvk` at the presented `basis`, with `R`
+and `bvk` read off the effective representation. -/
+def VerifiesAt (basis : Fin m → M) (table : Q → F) : Prop :=
+  letI t := effectiveRepAt m adv basis table
+  (dischargeOutAt m adv basis table).response • basis r_idx
+    = representationEval basis t.commitment
+      + (dischargeChallengeAt m adv basis table) • representationEval basis t.key
+
 /-- The adversary's output at challenge table `table` and the basis discrete logarithms `logs`. -/
 def dischargeOut (table : Q → F) (logs : Fin m → F) : KappaOutput F Q m :=
-  (adv (scalarBasis gen logs)).run table
+  dischargeOutAt m adv (scalarBasis gen logs) table
 
 /-- The run's challenge: the oracle's answer at the output's query point. -/
 def dischargeChallenge (table : Q → F) (logs : Fin m → F) : F :=
-  table (dischargeOut m gen adv table logs).queryPoint
+  dischargeChallengeAt m adv (scalarBasis gen logs) table
 
-/-- The representation in effect at the output's query point: the first query-time annotation
-when the run queried that point, and the announced output representation otherwise. The
-fallback plays the game's own final challenge query — the Fuchsbauer–Plouviez–Seurin
-`q_H + 1` accounting. -/
+/-- The representation in effect at the output's query point: `effectiveRepAt` at the sampled
+basis. -/
 def effectiveRep (table : Q → F) (logs : Fin m → F) : QueryRep F m :=
-  ((adv (scalarBasis gen logs)).findLabel table (dischargeOut m gen adv table logs).queryPoint).getD
-    (dischargeOut m gen adv table logs).announced
+  effectiveRepAt m adv (scalarBasis gen logs) table
 
-/-- The Schnorr verification equation `S • ℛ = R + c • bvk`, with `R` and `bvk` read off the
-effective representation at the presented basis. -/
+/-- The Schnorr verification equation at the sampled basis: `VerifiesAt` at
+`scalarBasis gen logs`. -/
 def Verifies (table : Q → F) (logs : Fin m → F) : Prop :=
-  letI basis := scalarBasis gen logs
-  letI t := effectiveRep m gen adv table logs
-  (dischargeOut m gen adv table logs).response • basis r_idx
-    = representationEval basis t.commitment
-      + (dischargeChallenge m gen adv table logs) • representationEval basis t.key
+  VerifiesAt m r_idx adv (scalarBasis gen logs) table
 
 variable [DecidableEq F]
 
-/-- The knowledge-error event: the run produces a verifying binding signature whose effective
-representation has a pivot — a key coefficient off the ℛ slot. (A key represented on the ℛ
-slot alone needs no extraction: the extractor that reads `key r_idx` succeeds there.) -/
+/-- The knowledge-error event at the presented `basis`, over the challenge-table factor alone:
+the run produces a verifying binding signature whose effective representation has a pivot — a
+key coefficient off the ℛ slot. (A key represented on the ℛ slot alone needs no extraction:
+the extractor that reads `key r_idx` succeeds there.) -/
+def kappaEventAt (basis : Fin m → M) : Set (Q → F) :=
+  {table | VerifiesAt m r_idx adv basis table
+    ∧ ((effectiveRepAt m adv basis table).pivot r_idx).isSome}
+
+/-- The knowledge-error event over the sampled product space: `kappaEventAt` at the sampled
+basis of each sample's logs. -/
 def kappaEvent : Set ((Q → F) × (Fin m → F)) :=
-  {ω | Verifies m gen r_idx adv ω.1 ω.2
-    ∧ ((effectiveRep m gen adv ω.1 ω.2).pivot r_idx).isSome}
+  {ω | ω.1 ∈ kappaEventAt m r_idx adv (scalarBasis gen ω.2)}
 
 variable [DecidableEq M]
 
