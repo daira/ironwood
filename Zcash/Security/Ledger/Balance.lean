@@ -58,7 +58,7 @@ def findPair {α β : Type*} [DecidableEq β] (f : α → β) : List α → Opti
   | [] => none
   | a :: t =>
     match t.find? fun b => f b = f a with
-    | some b => some (a, b)
+    | some brk => some (a, brk)
     | none => findPair f t
 
 /-- A successful scan certifies its pair: equal images under `f`, and the two entries
@@ -70,9 +70,9 @@ theorem findPair_spec {α β : Type*} [DecidableEq β] (f : α → β) :
   | a :: t, a₁, a₂, h => by
     rw [findPair] at h
     cases hf : t.find? fun b => f b = f a with
-    | some b =>
+    | some brk =>
         rw [hf] at h
-        obtain ⟨rfl, rfl⟩ : a = a₁ ∧ b = a₂ := by simpa [eq_comm] using h
+        obtain ⟨rfl, rfl⟩ : a = a₁ ∧ brk = a₂ := by simpa [eq_comm] using h
         refine ⟨?_, ?_⟩
         · have := List.find?_some hf
           simpa [eq_comm] using this
@@ -89,16 +89,16 @@ theorem findPair_none {α β : Type*} [DecidableEq β] (f : α → β) :
   | a :: t, h => by
     rw [findPair] at h
     cases hf : t.find? fun b => f b = f a with
-    | some b => rw [hf] at h; exact absurd h (by simp)
+    | some brk => rw [hf] at h; exact absurd h (by simp)
     | none =>
         rw [hf] at h
-        have hnot : ∀ b ∈ t, ¬ f b = f a := by
+        have hnot : ∀ brk ∈ t, ¬ f brk = f a := by
           have := List.find?_eq_none.mp hf
           simpa using this
         simp only [List.map_cons, List.nodup_cons]
         refine ⟨fun hmem => ?_, findPair_none f h⟩
-        obtain ⟨b, hb, hfb⟩ := List.mem_map.mp hmem
-        exact hnot b hb hfb
+        obtain ⟨brk, hb, hfb⟩ := List.mem_map.mp hmem
+        exact hnot brk hb hfb
 
 /-! ## List plumbing: sublists and prefixes through the ledger's flat maps -/
 
@@ -182,7 +182,7 @@ witnesses. -/
 inductive BalanceBreak (P : Primitives F G IVK NK RHO PSI MHASH MENC MSG SIG)
     (kv : KeyBindingInterface KW G IVK NK) where
   | merkle (c : Merkle.Collision P.merkle)
-  | noteCommit (b : NoteCommitBreak P)
+  | noteCommit (brk : NoteCommitBreak P)
   | keyBinding (w₁ w₂ : KW) (h : kv.Break w₁ w₂)
 
 /-- A spend whose commitment `extract`-matches an output's, with a different opening,
@@ -284,10 +284,10 @@ def allPinnedOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
   | [], _ => .inl (by simp)
   | a :: t, hL =>
     match spendPinnedOrBreak hval (hL a (by simp)) with
-    | .inr b => .inr b
+    | .inr brk => .inr brk
     | .inl hmem =>
       match allPinnedOrBreak hval t (fun x hx => hL x (by simp [hx])) with
-      | .inr b => .inr b
+      | .inr brk => .inr brk
       | .inl hall => .inl (by
           intro x hx
           rcases List.mem_cons.mp hx with rfl | hx'
@@ -333,7 +333,7 @@ def balanceSubsetOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
       have hnodup : ((spendActions ledger (i + 1)).map spendRecord).Nodup :=
         findPair_none spendRecord hfp
       match allPinnedOrBreak hval (spendActions ledger (i + 1)) (fun _ h => h) with
-      | .inr b => .inr b
+      | .inr brk => .inr brk
       | .inl hall =>
           .inl (by
             rw [nonZeroSpends]
@@ -363,11 +363,11 @@ theorem spendPinnedOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq R
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
     (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ}
     {a : Action KW F G RHO PSI MHASH MENC SIG P.depth}
-    (ha : a ∈ spendActions ledger (i + 1)) {b : BalanceBreak P kv} :
-    spendPinnedOrBreak hval ha = .inr b → b.kbPair = none := by
-  revert b
+    (ha : a ∈ spendActions ledger (i + 1)) {brk : BalanceBreak P kv} :
+    spendPinnedOrBreak hval ha = .inr brk → brk.kbPair = none := by
+  revert brk
   fun_cases spendPinnedOrBreak hval ha <;>
-    intro b hb <;>
+    intro brk hb <;>
     (try simp_all only [reduceCtorEq, PSum.inr.injEq, BalanceBreak.kbPair]) <;>
     (subst hb; rfl)
 
@@ -377,20 +377,20 @@ theorem allPinnedOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq RHO
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC]
     (hval : ValidLedger P kv issuance maxActions ledger) {i : ℕ} :
     ∀ (L : List (Action KW F G RHO PSI MHASH MENC SIG P.depth))
-      (hL : ∀ a ∈ L, a ∈ spendActions ledger (i + 1)) {b : BalanceBreak P kv},
-      allPinnedOrBreak hval L hL = .inr b → b.kbPair = none := by
+      (hL : ∀ a ∈ L, a ∈ spendActions ledger (i + 1)) {brk : BalanceBreak P kv},
+      allPinnedOrBreak hval L hL = .inr brk → brk.kbPair = none := by
   intro L
   induction L with
-  | nil => intro hL b hb; simp only [allPinnedOrBreak, reduceCtorEq] at hb
+  | nil => intro hL brk hb; simp only [allPinnedOrBreak, reduceCtorEq] at hb
   | cons a t ih =>
-      intro hL b hb
+      intro hL brk hb
       rw [allPinnedOrBreak] at hb
       split at hb
-      · rename_i b' hsp
+      · rename_i brk' hsp
         rw [PSum.inr.injEq] at hb; subst hb
         exact spendPinnedOrBreak_kbPair hval _ hsp
       · split at hb
-        · rename_i b' hall
+        · rename_i brk' hall
           rw [PSum.inr.injEq] at hb; subst hb
           exact ih (fun x hx => hL x (by simp [hx])) hall
         · simp only [reduceCtorEq] at hb
@@ -402,10 +402,10 @@ what lets an oracle machine output the arm's pair without running the reduction.
 theorem balanceSubsetOrBreak_kbPair [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
     [DecidableEq PSI] [DecidableEq MHASH] [DecidableEq MENC] [DecidableEq NK]
     [NoZeroSMulDivisors F G]
-    (hval : ValidLedger P kv issuance maxActions ledger) (i : ℕ) {b : BalanceBreak P kv} :
-    balanceSubsetOrBreak hval i = .inr b → b.kbPair = kbPairOf ledger i := by
-  revert b
-  fun_cases balanceSubsetOrBreak hval i <;> intro b hb <;>
+    (hval : ValidLedger P kv issuance maxActions ledger) (i : ℕ) {brk : BalanceBreak P kv} :
+    balanceSubsetOrBreak hval i = .inr brk → brk.kbPair = kbPairOf ledger i := by
+  revert brk
+  fun_cases balanceSubsetOrBreak hval i <;> intro brk hb <;>
     (try (rw [PSum.inr.injEq] at hb; subst hb)) <;>
     (try simp_all only [reduceCtorEq])
   · -- key-binding break from a `findPair` duplicate: its pair is `kbPairOf`
@@ -566,10 +566,10 @@ def allConservedOrBreak {VB : Type*}
   | [], _ => .inl (by simp)
   | tx :: t, hL =>
     match perTx tx (hL tx (by simp)) with
-    | .inr b => .inr b
+    | .inr brk => .inr brk
     | .inl heq =>
       match allConservedOrBreak perTx t (fun x hx => hL x (by simp [hx])) with
-      | .inr b => .inr b
+      | .inr brk => .inr brk
       | .inl hall => .inl (by
           intro x hx
           rcases List.mem_cons.mp hx with rfl | hx'
@@ -584,7 +584,7 @@ def balanceConservationOrBreak {VB : Type*}
         = issuanceTotal issuance ledger i) ⊕' VB :=
   match allConservedOrBreak perTx (ledger.take i)
       (fun _ h => (List.take_sublist i ledger).subset h) with
-  | .inr b => .inr b
+  | .inr brk => .inr brk
   | .inl hall => .inl (by
       have hsum : ((ledger.take i).map txNetValue).sum
           = ((ledger.take i).map fun tx => tx.vBalance).sum :=
@@ -601,7 +601,7 @@ def shieldedBalanceCapOrBreak {VB : Type*}
       (txNetValue tx = tx.vBalance) ⊕' VB) (i : ℕ) :
     (shieldedPoolBalance ledger i ≤ issuanceTotal issuance ledger i) ⊕' VB :=
   match balanceConservationOrBreak (issuance := issuance) perTx i with
-  | .inr b => .inr b
+  | .inr brk => .inr brk
   | .inl h => .inl (by
       have hnn := hval.transparent_nonneg i
       omega)
@@ -688,7 +688,7 @@ def balanceIntegrityOrBreak [DecidableEq F] [DecidableEq G] [DecidableEq RHO]
       ⊕' (BalanceBreak P kv ⊕' VB) :=
   match balanceSubsetOrBreak hval i,
       balanceConservationOrBreak (issuance := issuance) perTx (i + 1) with
-  | .inr b, _ => .inr (.inl b)
+  | .inr brk, _ => .inr (.inl brk)
   | _, .inr vb => .inr (.inr vb)
   | .inl hsub, .inl hcons =>
       .inl ⟨shieldedPoolBalance_nonneg ledger i hsub, hval.transparent_nonneg (i + 1), hcons⟩

@@ -275,7 +275,7 @@ and the shared relation finder fit a `2^126` random-oracle/group-work envelope a
 statistical remainder; the finder and the extractor consult the table only inside the certified
 read set.  Complete adversary and reduction group work are explicit profile premises; the
 separately costed assembly/basis component fits its derived formula at every table.  The final
-conjunct also records a generic whole-distribution `εBias` transport.  The deployed endpoint
+conjunct also records a generic whole-distribution `ε_bias` transport.  The deployed endpoint
 instead consumes the first conjunct and proves its dedicated joint Challenge255 observer hybrid
 below. -/
 theorem adaptiveStatementKnowledgeFailure_le_at_2pow123
@@ -312,15 +312,15 @@ theorem adaptiveStatementKnowledgeFailure_le_at_2pow123
           (family.adaptiveStatementKnowledgeExtractor
             (adaptiveStatement_pairCount_lt numProofs family) basis O).isSome) ∧
       ∀ (actual : PMF ((↥(Set.range query) → VestaG) × family.Coins))
-        (εBias : ENNReal),
+        (ε_bias : ENNReal),
         PMFEventBiasLE actual
           (independentProductPMF (orchardGeneratorROSetup query)
             (PMF.uniformOfFintype family.Coins))
-          εBias →
+          ε_bias →
         actual.toOuterMeasure
             ((fun p => (orchardGeneratorROBasis query p.1, p.2)) ⁻¹'
               family.adaptiveStatementKnowledgeFailureEvent (adaptiveStatement_pairCount_lt numProofs family)) ≤
-          (profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) + εBias := by
+          (profile.advantage (2 ^ 126) (2 ^ 126) + 1 / (2 ^ 83 : ENNReal)) + ε_bias := by
   have hcost := profile.knowledgeExtractorCost_le
   have hqueries : adaptiveStatementKnowledgeExtractorRandomOracleQueries family ≤
       2 ^ 126 := by
@@ -385,7 +385,7 @@ theorem adaptiveStatementKnowledgeFailure_le_at_2pow123
       ⟨family.relationFinder_eq_of_agree (adaptiveStatement_pairCount_lt numProofs family) h,
         family.adaptiveStatementKnowledgeExtractor_isSome_eq_of_agree
           (adaptiveStatement_pairCount_lt numProofs family) h⟩, ?_⟩
-  intro actual εBias hbias
+  intro actual ε_bias hbias
   exact event_measure_le_of_bias hbias _ hprob
 
 /-- The deployed knowledge-failure bound with the joint Challenge255 charge left symbolic.  A

@@ -38,7 +38,7 @@ binding signature. `ε_bindsig` is a named hypothesis on the conservation events
 extractor-plus-knowledge-error form replaces it with named bounds further down the
 reduction: with the binding-signature primitives pinned to a RedDSA shape,
 `orchardBalanceConservationBefore_measure_le_kerr` and
-`orchardBalanceIntegrity_measure_le_kerr` bound the same events by `εdlr + κ`, a
+`orchardBalanceIntegrity_measure_le_kerr` bound the same events by `ε_dlr + κ`, a
 `(Vbase, Rbase)` discrete-log-relation advantage plus the extractor's knowledge error;
 the conservation experiment discharges both in the challenge-oracle model, through one
 combined finder.
@@ -277,9 +277,9 @@ the `CommitIvkCollision` that `relationOfKeyBindingBreak` consumes, so the Spend
 Authority key-binding arm reaches the same discrete-log terminal as the Balance
 key-binding arm. The break is computed from the exhibited witness pair, and the
 reduction needs no oracle model. -/
-def relationOfSpendAuthorityKBBreak (b : KeyBindingBreakData keyBinding) :
+def relationOfSpendAuthorityKBBreak (brk : KeyBindingBreakData keyBinding) :
     NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
-  relationOfKeyBindingBreak b.h
+  relationOfKeyBindingBreak brk.h
 
 /-- The Orchard Spend Authority reduction with its key-binding arm routed to the
 discrete-log terminal: as `spendAuthorityOrBreak`, with a key-binding break converted
@@ -340,15 +340,16 @@ hypothesis is named on the relation event — every break-arm sample computes a 
 theorem orchardSpendAuthority_measure_le
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
     (wV : KeyBinding.Pool.Witness Fq PallasGroup Fp) (hKB : keyBinding.KB wV)
-    (Signed : MSG → Prop) {εf ε_sinsemilladlr : ℝ≥0∞}
+    (Signed : MSG → Prop) {ε_forge ε_sinsemilladlr : ℝ≥0∞}
     (hf : A.toOuterMeasure
-      (spendAuthorityForgeryEvent (P := primitives spendAuthVerify bindingVerify) wV hKB Signed) ≤ εf)
+      (spendAuthorityForgeryEvent (P := primitives spendAuthVerify bindingVerify) wV hKB Signed)
+        ≤ ε_forge)
     (hsin : A.toOuterMeasure
       (orchardSpendAuthorityRelationEvent spendAuthVerify bindingVerify issuance maxActions wV hKB
         Signed) ≤ ε_sinsemilladlr) :
     A.toOuterMeasure
       (spendAuthorityViolation (P := primitives spendAuthVerify bindingVerify) wV Signed)
-      ≤ εf + ε_sinsemilladlr :=
+      ≤ ε_forge + ε_sinsemilladlr :=
   spendAuthority_measure_le A wV hKB Signed hf
     (le_trans (MeasureTheory.measure_mono
       (spendAuthorityBreakEvent_subset_relation spendAuthVerify bindingVerify issuance maxActions wV
@@ -357,57 +358,60 @@ theorem orchardSpendAuthority_measure_le
 /-! ## The Orchard conservation arm in extractor-plus-knowledge-error form -/
 
 /-- **Orchard value conservation with a fallible extractor.** For any adversary, any
-Pedersen shape `S` and RedDSA shape `B` of the binding-signature primitives, and any
-candidate extractor `E`, the probability that the ledger fails to balance at some
-prefix `i < k` is at most `εdlr + κ`: the `(Vbase, Rbase)` discrete-log-relation advantage
+Pedersen `shape` and RedDSA shape `binding` of the binding-signature primitives, and any
+candidate `extractor`, the probability that the ledger fails to balance at some
+prefix `i < k` is at most `ε_dlr + κ`: the `(Vbase, Rbase)` discrete-log-relation advantage
 plus the knowledge error, with no factor of `k`. The no-overflow premiss bounds the
 net value against the Pallas scalar order `r_ℙ`. Nothing is assumed of the extractor:
 its failures are exhibited on the extraction-failure arm. -/
 theorem orchardBalanceConservationBefore_measure_le_kerr
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
-    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
-    (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
+    (shape : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
+    (binding : BindingSigShape (primitives spendAuthVerify bindingVerify) shape)
     (hr : maxActions
           * ((primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify).valueBound - 1)
         + (primitives spendAuthVerify bindingVerify).vBalanceBound
       < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
-    (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ) {εdlr κ : ℝ≥0∞}
-    (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
-    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
+    (extractor : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ) {ε_dlr κ : ℝ≥0∞}
+    (hdlr :
+      A.toOuterMeasure (valueRelationEventBefore keyBinding shape binding hr extractor k) ≤ ε_dlr)
+    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding shape binding hr extractor k) ≤ κ) :
     A.toOuterMeasure (balanceConservationViolationBefore
         (P := primitives spendAuthVerify bindingVerify) (kv := keyBinding) (issuance := issuance)
         (maxActions := maxActions) k)
-      ≤ εdlr + κ :=
-  balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ
+      ≤ ε_dlr + κ :=
+  balanceConservationBefore_measure_le_kerr A shape binding hr extractor k hdlr hκ
 
 /-- **Orchard Balance integrity in extractor-plus-knowledge-error form.** Balance
 integrity holds at every prefix `i < k`, except with probability at most
-`ε_sinsemilladlr + εdlr + κ`: the Sinsemilla discrete-log-relation advantage covers
+`ε_sinsemilladlr + ε_dlr + κ`: the Sinsemilla discrete-log-relation advantage covers
 the non-negativity side, and the conservation side is covered by the `(Vbase, Rbase)`
 discrete-log-relation advantage plus the extractor's knowledge error, in place of
 `orchardBalanceIntegrity_measure_le`'s named `ε_bindsig`. -/
 theorem orchardBalanceIntegrity_measure_le_kerr
     (A : PMF (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions))
-    (S : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
-    (B : BindingSigShape (primitives spendAuthVerify bindingVerify) S)
+    (shape : ValueShape (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify))
+    (binding : BindingSigShape (primitives spendAuthVerify bindingVerify) shape)
     (hr : maxActions
           * ((primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify).valueBound - 1)
         + (primitives spendAuthVerify bindingVerify).vBalanceBound
       < CompElliptic.Fields.Pasta.PALLAS_SCALAR_CARD)
-    (E : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ)
-    {ε_sinsemilladlr εdlr κ : ℝ≥0∞}
+    (extractor : RedDSA.Extractor Fq PallasGroup MSG) (k : ℕ)
+    {ε_sinsemilladlr ε_dlr κ : ℝ≥0∞}
     (hsin : A.toOuterMeasure
       (orchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions k) ≤ ε_sinsemilladlr)
-    (hdlr : A.toOuterMeasure (valueRelationEventBefore keyBinding S B hr E k) ≤ εdlr)
-    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding S B hr E k) ≤ κ) :
+    (hdlr :
+      A.toOuterMeasure (valueRelationEventBefore keyBinding shape binding hr extractor k) ≤ ε_dlr)
+    (hκ : A.toOuterMeasure (extractFailEventBefore keyBinding shape binding hr extractor k) ≤ κ) :
     A.toOuterMeasure (balanceIntegrityViolationBefore (P := primitives spendAuthVerify bindingVerify)
         (kv := keyBinding) (issuance := issuance) (maxActions := maxActions) k)
-      ≤ ε_sinsemilladlr + εdlr + κ := by
+      ≤ ε_sinsemilladlr + ε_dlr + κ := by
   rw [add_assoc]
   exact le_trans
     (toOuterMeasure_le_add₂ A
       (balanceIntegrityViolationBefore_subset_relation spendAuthVerify bindingVerify issuance
         maxActions k))
-    (add_le_add hsin (balanceConservationBefore_measure_le_kerr A S B hr E k hdlr hκ))
+    (add_le_add hsin
+      (balanceConservationBefore_measure_le_kerr A shape binding hr extractor k hdlr hκ))
 
 end Zcash.Security.Ledger.Bridge

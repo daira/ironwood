@@ -6,12 +6,12 @@ import Zcash.Security.Ledger.Capstone
 # The integrity experiment: the non-negativity and conservation arms in one sample space
 
 The `BalanceIntegrity` capstone bounds an integrity violation by
-`εm + εnc + εkb + ε_conservation`, over an abstract `PMF (ValidAnnotated …)`, with each arm's
-bound a named hypothesis (`balanceIntegrity_measure_le`). A violation is the shielded pool
-going negative, or the pools failing to sum to the minted issuance, at some prefix `i < k`.
-This module places that composition in the challenge-oracle model, over the *same* sample
-space as the conservation experiment: the adversary's coins, the challenge table, and the
-logs of the `m` presented bases.
+`ε_merkle + ε_nc + ε_kb + ε_conservation`, over an abstract `PMF (ValidAnnotated …)`, with
+each arm's bound a named hypothesis (`balanceIntegrity_measure_le`). A violation is the
+shielded pool going negative, or the pools failing to sum to the minted issuance, at some
+prefix `i < k`. This module places that composition in the challenge-oracle model, over the
+*same* sample space as the conservation experiment: the adversary's coins, the challenge
+table, and the logs of the `m` presented bases.
 
 The reduction layer is what lets the two sides share one sample space. The conservation side
 runs on the sampled value and binding bases (`kappaPrimitivesAt`) and is discharged wholesale by
@@ -99,7 +99,7 @@ theorem balanceIntegrityBefore_measure_le_experiment {ι : Type u} (p : PMF ι)
     {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
+    {qH : ℕ} (hQ : ∀ j basis, (LA j basis).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_nonneg ε_dl : ℝ≥0∞}
     (hnn : (challengeExperiment m p).toOuterMeasure
@@ -110,8 +110,8 @@ theorem balanceIntegrityBefore_measure_le_experiment {ι : Type u} (p : PMF ι)
               (maxActions := maxActions) k .noteCommit
             ∪ balanceSubsetBreakEventUpTo (P := P) (kv := kv) (issuance := issuance)
               (maxActions := maxActions) k .keyBinding)) ≤ ε_nonneg)
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
-      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_dl) :
+    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun basis table =>
+      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) table basis) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
           (fun P => balanceIntegrityViolationBefore (P := P) (kv := kv) (issuance := issuance)

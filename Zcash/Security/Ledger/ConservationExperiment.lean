@@ -4,7 +4,7 @@ import Zcash.Security.Ledger.ValueRelationArm
 /-!
 # The conservation experiment: both arms in one sample space
 
-The capstones bound the conservation and cap violations by `εdlr + κ`, over an abstract
+The capstones bound the conservation and cap violations by `ε_dlr + κ`, over an abstract
 `PMF (ValidAnnotated …)` with the two arms' bounds as named hypotheses. This module
 instantiates that composition in the challenge-oracle model, in one experiment: over the
 adversary's coins, the challenge table, and the logs of the `m` presented bases, the
@@ -105,22 +105,23 @@ bound covers both arms' relation slices. -/
 def conservationRelFinder (hne_idx : v_idx ≠ r_idx) (k : ℕ)
     (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
-    (O : Q → ZMod r) (b : Fin m → G) :
-    Option (AlgebraicRelationWitness (F := ZMod r) b) :=
-  valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b
-    <|> relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) O b
+    (table : Q → ZMod r) (basis : Fin m → G) :
+    Option (AlgebraicRelationWitness (F := ZMod r) basis) :=
+  valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis
+    <|> relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) table basis
 
 omit [Fintype Q] in
 /-- The combined finder returns a relation whenever either arm's finder does. -/
 theorem conservationRelFinder_isSome {hne_idx : v_idx ≠ r_idx} {k : ℕ}
     {LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
-    {O : Q → ZMod r} {b : Fin m → G}
-    (h : (valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b).isSome
-      ∨ (relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) O b).isSome) :
-    (conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b).isSome := by
+    {table : Q → ZMod r} {basis : Fin m → G}
+    (h : (valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis).isSome
+      ∨ (relFinder m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+          table basis).isSome) :
+    (conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis).isSome := by
   unfold conservationRelFinder
-  rcases hv : valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b with _ | w
+  rcases hv : valueRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis with _ | w
   · rcases h with h | h
     · exact absurd h (by simp [hv])
     · simpa using h
@@ -134,8 +135,8 @@ def conservationRelOrBadChallenge (hne_idx : v_idx ≠ r_idx) (k : ℕ)
     (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))) :
     Set ((Q → ZMod r) × (Fin m → ZMod r)) :=
-  {ω | (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O =>
-        conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b))}
+  {ω | (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun basis table =>
+        conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis))}
     ∪ {ω | ω.1 ∈ badFiber m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) ω.2}
 
 /-- **The per-coin discharge: one discrete-log bound covers both arms.** Within query budget
@@ -146,25 +147,25 @@ to the combined finder) and the bad-challenge fibre at `(qH+1)/#F`
 theorem conservationRelOrBadChallenge_measure_le (hne_idx : v_idx ≠ r_idx) (k : ℕ)
     {LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
-    {qH : ℕ} (hQ : ∀ b, (LA b).QueryBound qH) {ε_dl : ℝ≥0∞}
-    (hdl : TextbookDLWithCoinsAdvantageLE gen (fun b O =>
-      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b) ε_dl) :
+    {qH : ℕ} (hQ : ∀ basis, (LA basis).QueryBound qH) {ε_dl : ℝ≥0∞}
+    (hdl : TextbookDLWithCoinsAdvantageLE gen (fun basis table =>
+      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis) ε_dl) :
     (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).toOuterMeasure
         (conservationRelOrBadChallenge m gen v_idx r_idx queryOf P₀ toSig hne_idx k LA)
       ≤ ε_dl + ((qH + 2 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) := by
   haveI : Nonempty (Fin m) := ⟨r_idx⟩
   have hrel : (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).toOuterMeasure
       {ω : (Q → ZMod r) × (Fin m → ZMod r) |
-        (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O =>
-          conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b))}
+        (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun basis table =>
+          conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis))}
       ≤ ε_dl + 1 / Fintype.card (ZMod r) := by
     have hswap : (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).toOuterMeasure
         {ω : (Q → ZMod r) × (Fin m → ZMod r) |
-          (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun b O =>
-            conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b))}
+          (ω.2, ω.1) ∈ ↑(relSetWithCoins gen (fun basis table =>
+            conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis))}
         = (PMF.uniformOfFintype ((Fin m → ZMod r) × (Q → ZMod r))).toOuterMeasure
-          ↑(relSetWithCoins gen (fun b O =>
-            conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA O b)) := by
+          ↑(relSetWithCoins gen (fun basis table =>
+            conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis)) := by
       rw [← map_uniformOfFintype_equiv (Equiv.prodComm (Q → ZMod r) (Fin m → ZMod r)),
         PMF.toOuterMeasure_map_apply]
       congr 1
@@ -176,7 +177,7 @@ theorem conservationRelOrBadChallenge_measure_le (hne_idx : v_idx ≠ r_idx) (k 
       ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) :=
     uniformOfFintype_prod_fiber_bound
       (badFiber m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA))
-      (fun s => badFiber_measure_le m gen r_idx _
+      (fun logs => badFiber_measure_le m gen r_idx _
         (kappaComposite_queryBound m v_idx r_idx queryOf P₀ toSig (hQ _)))
   unfold conservationRelOrBadChallenge
   refine le_trans (MeasureTheory.measure_union_le _ _)
@@ -195,11 +196,11 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
     {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
+    {qH : ℕ} (hQ : ∀ j basis, (LA j basis).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_dl : ℝ≥0∞}
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
-      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_dl) :
+    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun basis table =>
+      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) table basis) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
           (fun P => balanceConservationViolationBefore (P := P) (kv := kv) (issuance := issuance)
@@ -210,20 +211,20 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
   refine le_trans (MeasureTheory.measure_mono ?_)
     (conservationRelOrBadChallenge_measure_le m gen v_idx r_idx queryOf P₀ toSig hne_idx k
       (hQ j) (hdl j))
-  rintro ⟨O, s⟩ ⟨hval, hviol⟩
+  rintro ⟨table, logs⟩ ⟨hval, hviol⟩
   dsimp only at hval hviol
   rcases balanceConservationViolationBefore_subset_fallible
-      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig O s)
-      (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig O s) hr
-      (kappaExtractor m gen r_idx queryOf P₀ k (LA j) O s) k hviol
-    with ⟨i, hik, w, hw⟩ | ⟨i, hik, e, he⟩
+      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig table logs)
+      (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig table logs) hr
+      (kappaExtractor m gen r_idx queryOf P₀ k (LA j) table logs) k hviol
+    with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
   · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
       conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
         (Or.inl (valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr
           (le_of_lt hik) hval hw))⟩))
   · rcases kappaEvent_subset m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
         (extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval he)
+          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval hfailure)
       with hbad | hrel
     · exact Or.inr hbad
     · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
@@ -235,11 +236,11 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
     (hne_idx : v_idx ≠ r_idx)
-    {qH : ℕ} (hQ : ∀ j b, (LA j b).QueryBound qH)
+    {qH : ℕ} (hQ : ∀ j basis, (LA j basis).QueryBound qH)
     (halg : ∀ j : ι, AlgebraicAtBindingPoints m gen v_idx r_idx queryOf P₀ toSig (LA j))
     (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ) {ε_dl : ℝ≥0∞}
-    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun b O =>
-      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) O b) ε_dl) :
+    (hdl : ∀ j : ι, TextbookDLWithCoinsAdvantageLE gen (fun basis table =>
+      conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) table basis) ε_dl) :
     (challengeExperiment m p).toOuterMeasure
         (sampledLedgerEvent m gen v_idx r_idx queryOf P₀ toSig LA
           (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := kv) (issuance := issuance)
@@ -250,20 +251,20 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
   refine le_trans (MeasureTheory.measure_mono ?_)
     (conservationRelOrBadChallenge_measure_le m gen v_idx r_idx queryOf P₀ toSig hne_idx k
       (hQ j) (hdl j))
-  rintro ⟨O, s⟩ ⟨hval, hviol⟩
+  rintro ⟨table, logs⟩ ⟨hval, hviol⟩
   dsimp only at hval hviol
   rcases shieldedBalanceCapViolationBefore_subset_fallible
-      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig O s)
-      (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig O s) hr
-      (kappaExtractor m gen r_idx queryOf P₀ k (LA j) O s) k hviol
-    with ⟨i, hik, w, hw⟩ | ⟨i, hik, e, he⟩
+      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig table logs)
+      (kappaBindingAt m gen v_idx r_idx queryOf P₀ toSig table logs) hr
+      (kappaExtractor m gen r_idx queryOf P₀ k (LA j) table logs) k hviol
+    with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
   · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
       conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
         (Or.inl (valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr
           (le_of_lt hik) hval hw))⟩))
   · rcases kappaEvent_subset m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
         (extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval he)
+          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval hfailure)
       with hbad | hrel
     · exact Or.inr hbad
     · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
