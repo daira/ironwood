@@ -619,6 +619,7 @@ assert_computable Zcash.Security.RedDSA.effectiveRep
 assert_computable Zcash.Security.RedDSA.relFinder +choice
 assert_axioms Zcash.Security.RedDSA.kappa_le_of_arms
 assert_axioms Zcash.Security.RedDSA.kappaEvent_subset
+assert_axioms Zcash.Security.RedDSA.badFiberAt_measure_le
 assert_axioms Zcash.Security.RedDSA.badFiber_measure_le
 assert_axioms Zcash.Security.RedDSA.relFiber_subset_relSet
 assert_axioms Zcash.Security.RedDSA.relFiber_measure_le

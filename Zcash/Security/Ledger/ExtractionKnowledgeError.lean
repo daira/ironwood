@@ -64,35 +64,52 @@ variable (gen : G) (v_idx r_idx : Fin m) (queryOf : G → G → MSG → Q)
   (P₀ : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG)
   (toSig : SIG → RedDSA.Sig (ZMod r) G)
 
-/-- The primitives at a sampled challenge table `table` and the basis discrete logarithms
-`logs`. The value commitment is the Pedersen commitment at the sampled slots
-`𝒱 = (logs v_idx) • gen`, `ℛ = (logs r_idx) • gen`. Binding verification is the Schnorr
-equation at base ℛ, with the challenge read off the table at the query point
-`queryOf R vk m`. A record update of `P₀`, so the tree depth — and with it the ledger
-type — does not depend on the sample. -/
-def kappaPrimitivesAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
+/-- The primitives at a presented `basis` and challenge table `table`. The value commitment
+is the Pedersen commitment at the slots `𝒱 = basis v_idx`, `ℛ = basis r_idx`. Binding verification
+is the Schnorr equation at base ℛ, with the challenge read off the table at the query point
+`queryOf R vk m`. A record update of `P₀`, so the tree depth —and with it the ledger
+type— depends on neither the basis nor the table. -/
+def primitivesAtBasis (basis : Fin m → G) (table : Q → ZMod r) :
     Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG :=
   { P₀ with
-    valueCommit := fun v rcv => (v : ZMod r) • (logs v_idx • gen) + rcv • (logs r_idx • gen)
+    valueCommit := fun v rcv => (v : ZMod r) • basis v_idx + rcv • basis r_idx
     bindingVerify := fun vk m σ =>
-      (toSig σ).S • (logs r_idx • gen)
+      (toSig σ).S • basis r_idx
         = (toSig σ).R + table (queryOf (toSig σ).R vk m) • vk }
 
-/-- The value-commitment shape at the sampled bases. -/
+/-- The primitives at a sampled challenge table `table` and the basis discrete logarithms `logs`:
+`primitivesAtBasis` at the sampled basis. -/
+def kappaPrimitivesAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
+    Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG :=
+  primitivesAtBasis m v_idx r_idx queryOf P₀ toSig (scalarBasis gen logs) table
+
+/-- The value-commitment shape at the presented basis. -/
+def shapeAtBasis (basis : Fin m → G) (table : Q → ZMod r) :
+    ValueShape (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis table) :=
+  ⟨basis v_idx, basis r_idx, fun _ _ => rfl⟩
+
+/-- The value-commitment shape at the sampled bases: `shapeAtBasis` at the sampled basis. -/
 def kappaShapeAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
     ValueShape (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig table logs) :=
-  ⟨logs v_idx • gen, logs r_idx • gen, fun _ _ => rfl⟩
+  shapeAtBasis m v_idx r_idx queryOf P₀ toSig (scalarBasis gen logs) table
 
-/-- The RedDSA shape at the sampled table and bases: the scheme based at ℛ whose challenge
+/-- The RedDSA shape at the presented basis and table: the scheme based at ℛ whose challenge
 hash reads the table at the query point. Its verification equation is definitionally what
-`kappaPrimitivesAt`'s `bindingVerify` states. -/
-def kappaBindingAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
-    BindingSigShape (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig table logs)
-      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig table logs) :=
-  { sch := ⟨logs r_idx • gen, fun R vk m => table (queryOf R vk m)⟩
+`primitivesAtBasis`'s `bindingVerify` states. -/
+def bindingAtBasis (basis : Fin m → G) (table : Q → ZMod r) :
+    BindingSigShape (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis table)
+      (shapeAtBasis m v_idx r_idx queryOf P₀ toSig basis table) :=
+  { sch := ⟨basis r_idx, fun R vk m => table (queryOf R vk m)⟩
     toSig := toSig
     base_eq := rfl
     verify_iff := fun _ _ _ => Iff.rfl }
+
+/-- The RedDSA shape at the sampled table and bases: `bindingAtBasis` at the sampled
+basis. -/
+def kappaBindingAt (table : Q → ZMod r) (logs : Fin m → ZMod r) :
+    BindingSigShape (kappaPrimitivesAt m gen v_idx r_idx queryOf P₀ toSig table logs)
+      (kappaShapeAt m gen v_idx r_idx queryOf P₀ toSig table logs) :=
+  bindingAtBasis m v_idx r_idx queryOf P₀ toSig (scalarBasis gen logs) table
 
 /-- A transaction's binding verification key, computed from the presented bases: the machine
 receives the bases, not their logs, so this is an oracle-free function of its inputs. At
@@ -278,21 +295,28 @@ theorem kappaComposite_queryBound {i : ℕ}
     (fun L => OracleComp.QueryBound.pure (kappaOut m v_idx r_idx queryOf P₀ toSig i basis L) 0)
   simpa [LabeledOracleComp.QueryBound, kappaComposite] using h'
 
-/-- The extractor at one sample: read the `key` coefficient at the ℛ slot off the
-representation in effect at the triple's query point — the run's first annotation there when
-one exists, and otherwise the announced representation of the prefix's first imbalanced
-transaction (the one transaction at which the conservation reduction consults the
+/-- The extractor at a presented basis and table: read the `key` coefficient at the ℛ slot
+off the representation in effect at the triple's query point — the run's first annotation
+there when one exists, and otherwise the announced representation of the prefix's first
+imbalanced transaction (the one transaction at which the conservation reduction consults the
 extractor). -/
+def extractorAtBasis (i : ℕ)
+    (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (basis : Fin m → G) (table : Q → ZMod r) : RedDSA.Extractor (ZMod r) G MSG :=
+  fun vk msg σ =>
+    match (LA basis).findLabel table (queryOf σ.R vk msg) with
+    | some ℓ => ℓ.key r_idx
+    | none =>
+        ((failTxOfAnn m P₀ ((LA basis).run table) i).map
+          fun tx_rep => tx_rep.2.key r_idx).getD 0
+
+/-- The extractor at one sample: `extractorAtBasis` at the sampled basis. -/
 def kappaExtractor (i : ℕ)
     (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
       (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
     (table : Q → ZMod r) (logs : Fin m → ZMod r) : RedDSA.Extractor (ZMod r) G MSG :=
-  fun vk msg σ =>
-    match (LA (scalarBasis gen logs)).findLabel table (queryOf σ.R vk msg) with
-    | some ℓ => ℓ.key r_idx
-    | none =>
-        ((failTxOfAnn m P₀ ((LA (scalarBasis gen logs)).run table) i).map
-          fun tx_rep => tx_rep.2.key r_idx).getD 0
+  extractorAtBasis m r_idx queryOf P₀ i LA (scalarBasis gen logs) table
 
 /-- `List.find?` over a prefix is stable under extending the prefix: the first match in
 `l.take i` is the first match in `l.take k` for any `k ≥ i`. -/
@@ -395,7 +419,7 @@ theorem extractFail_mem_kappaEvent
       = (effectiveRepAt m (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
           (scalarBasis gen logs) table).key r_idx := by
     rw [hvk', hm, hσ', heff]
-    unfold kappaExtractor
+    unfold kappaExtractor extractorAtBasis
     cases (LA (scalarBasis gen logs)).findLabel table
         (queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx)
           tx.sighash) <;>

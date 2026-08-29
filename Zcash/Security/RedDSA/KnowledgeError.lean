@@ -173,12 +173,17 @@ def relFinder (table : Q → F) (basis : Fin m → M) :
     some (bindingSig_relation_of_nontrivial basis r_idx t c out.response h.1 h.2)
   else none
 
-/-- Bad-challenge arm (fibre over the basis discrete logarithms `logs`): the knowledge-error
-conditions hold and the replayed finder returns no relation. -/
+/-- The bad-challenge event at the presented `basis`, over the challenge-table factor: the
+knowledge-error conditions hold and the replayed finder returns no relation. -/
+def badFiberAt (basis : Fin m → M) : Set (Q → F) :=
+  {table | VerifiesAt m r_idx adv basis table
+    ∧ ((effectiveRepAt m adv basis table).pivot r_idx).isSome
+    ∧ relFinder m r_idx adv table basis = none}
+
+/-- Bad-challenge arm (fibre over the basis discrete logarithms `logs`): `badFiberAt` at the
+sampled basis. -/
 def badFiber (logs : Fin m → F) : Set (Q → F) :=
-  {table | Verifies m gen r_idx adv table logs
-    ∧ ((effectiveRep m gen adv table logs).pivot r_idx).isSome
-    ∧ relFinder m r_idx adv table (scalarBasis gen logs) = none}
+  badFiberAt m r_idx adv (scalarBasis gen logs)
 
 /-- Relation arm (fibre over the challenge table `table`): the replayed finder returns a
 relation. -/
@@ -205,23 +210,22 @@ def finalBadSet (basis : Fin m → M) (out : KappaOutput F Q m) (table : Q → F
       = representationEval basis eff.commitment + x • representationEval basis eff.key
     ∧ (eff.pivot r_idx).isSome}
 
-/-- **The bad-challenge arm discharged by the labeled squeeze.** At the basis discrete
-logarithms `logs`, within query budget `qH`, the bad-challenge fibre has measure at most
-`(qH+1)/|F|`. On that fibre the oracle's answer at the output's query point equals the
-effective representation's one bad challenge: on the annotation branch a singleton fixed
-before the answer was drawn, and on the fallback branch a singleton computed from an output
-that reprogramming the point cannot change. The `+1` is the Fuchsbauer–Plouviez–Seurin
-`q_H + 1` accounting, with the game's own final challenge query played by the fallback
-branch. -/
-theorem badFiber_measure_le {logs : Fin m → F} {qH : ℕ}
-    (hQ : (adv (scalarBasis gen logs)).QueryBound qH) :
-    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber m gen r_idx adv logs)
+/-- **The bad-challenge event discharged by the labeled squeeze, at the presented `basis`.**
+Within query budget `qH`, the bad-challenge event has measure at most `(qH+1)/|F|`. On that
+event the oracle's answer at the output's query point equals the effective representation's
+one bad challenge: on the annotation branch a singleton fixed before the answer was drawn,
+and on the fallback branch a singleton computed from an output that reprogramming the point
+cannot change. The `+1` is the Fuchsbauer–Plouviez–Seurin `q_H + 1` accounting, with the
+game's own final challenge query played by the fallback branch. -/
+theorem badFiberAt_measure_le {basis : Fin m → M} {qH : ℕ}
+    (hQ : (adv basis).QueryBound qH) :
+    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiberAt m r_idx adv basis)
       ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F := by
   refine le_trans (MeasureTheory.measure_mono ?_)
-    (le_trans (finalBadWithoutRelation_measure_le (adv (scalarBasis gen logs))
+    (le_trans (finalBadWithoutRelation_measure_le (adv basis)
       (fun out => out.queryPoint)
-      (fun out _ table => finalBadSet m r_idx adv (scalarBasis gen logs) out table)
-      (fun table => relFinder m r_idx adv table (scalarBasis gen logs))
+      (fun out _ table => finalBadSet m r_idx adv basis out table)
+      (fun table => relFinder m r_idx adv table basis)
       (fun _ label _ => {label.badChallenge r_idx})
       (fun out _ _ => {out.announced.badChallenge r_idx})
       ?_ (fun _ _ _ _ => rfl) (fun _ _ _ _ => rfl)
@@ -229,29 +233,37 @@ theorem badFiber_measure_le {logs : Fin m → F} {qH : ℕ}
       (fun out _ _ => le_of_eq (uniformOfFintype_toOuterMeasure_singleton _))
       hQ)
     (le_of_eq (mul_one_div _ _)))
-  · -- the bad-challenge fibre is the squeeze's event
+  · -- the bad-challenge event is the squeeze's event
     rintro table ⟨hver, hpiv, hnone⟩
     exact ⟨⟨hver, hpiv⟩, hnone⟩
   · -- hcover: with no relation found, the challenge is the effective bad challenge
     intro table hfinal hnone
     obtain ⟨hver, hpiv⟩ := hfinal
     obtain ⟨j, hj⟩ := Option.isSome_iff_exists.mp hpiv
-    have hc : table (((adv (scalarBasis gen logs)).run table).queryPoint)
-        = (((adv (scalarBasis gen logs)).findLabel table
-              ((adv (scalarBasis gen logs)).run table).queryPoint).getD
-            ((adv (scalarBasis gen logs)).run table).announced).badChallenge r_idx := by
+    have hc : table (((adv basis).run table).queryPoint)
+        = (((adv basis).findLabel table
+              ((adv basis).run table).queryPoint).getD
+            ((adv basis).run table).announced).badChallenge r_idx := by
       by_contra hne
       have hcond := And.intro hver
         (QueryRep.assembled_ne_zero_of_ne_badChallenge
-          (S := ((adv (scalarBasis gen logs)).run table).response) hj hne)
-      have hnone' : relFinder m r_idx adv table (scalarBasis gen logs) = none := hnone
+          (S := ((adv basis).run table).response) hj hne)
+      have hnone' : relFinder m r_idx adv table basis = none := hnone
       rw [relFinder, dif_pos hcond] at hnone'
       exact Option.some_ne_none _ hnone'
     unfold firstLabelOrFallbackBad
     rw [hc]
-    cases (adv (scalarBasis gen logs)).findLabel table
-        (((adv (scalarBasis gen logs)).run table).queryPoint) <;>
+    cases (adv basis).findLabel table
+        (((adv basis).run table).queryPoint) <;>
       rfl
+
+/-- The bad-challenge fibre at the basis discrete logarithms `logs`:
+`badFiberAt_measure_le` at the sampled basis. -/
+theorem badFiber_measure_le {logs : Fin m → F} {qH : ℕ}
+    (hQ : (adv (scalarBasis gen logs)).QueryBound qH) :
+    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (badFiber m gen r_idx adv logs)
+      ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F :=
+  badFiberAt_measure_le m r_idx adv hQ
 
 omit [Fintype Q] [Nonempty F] in
 /-- The relation arm is the relation-finding event of the replayed finder. -/

@@ -212,7 +212,7 @@ theorem valueRelation_finder_isSome [DecidableEq (ZMod r)]
               (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx) tx.sighash) with
         | some ℓ => ℓ.key r_idx
         | none => rep.key r_idx) := by
-    unfold kappaExtractor
+    unfold kappaExtractor extractorAtBasis
     cases (LA (scalarBasis gen logs)).findLabel table
         (queryOf (toSig tx.bindingSig).R (bvkAt m v_idx r_idx P₀ (scalarBasis gen logs) tx)
           tx.sighash) <;>
