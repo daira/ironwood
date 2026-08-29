@@ -679,7 +679,7 @@ assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_l
 
 The conservation reduction's extraction-failure arm, placed in the challenge-oracle model:
 an extraction-failure sample lands in the knowledge-error event of the composite machine at
-an unchanged query count (`extractFail_mem_kappaEvent`), which the conservation experiment
+an unchanged query count (`extractFail_mem_kappaEventAt`), which the conservation experiment
 consumes through its combined finder. The extractor (`kappaExtractor`) reads the `key`
 coefficient at the ℛ slot off the representation in effect at the signature's query point.
 The composite machine recovers the failing transaction and its announced representation
@@ -699,12 +699,12 @@ assert_axioms Zcash.Security.Ledger.Model.bvkAt_eq
 assert_axioms Zcash.Security.Ledger.Model.kappaComposite_queryBound
 assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_extractFail +choice
 assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_extractFail +choice
-assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEvent
+assert_axioms Zcash.Security.Ledger.Model.extractFail_mem_kappaEventAt
 
 /-! ## The conservation relation arm in the oracle model
 
 The conservation reduction's relation arm, placed in the challenge-oracle model: on every
-relation-arm sample the finder returns a relation (`valueRelation_finder_isSome`), with no
+relation-arm sample the finder returns a relation (`valueRelation_finder_isSomeAt`), with no
 bad-challenge accounting — the arm's witness is oracle-free data. The finder
 (`valueRelFinder`) rebuilds the reduction's relation behind decidable guards and lands it
 in the generic AGM witness type at the two value-commitment slots
@@ -715,7 +715,7 @@ arm at every prefix. -/
 assert_computable Zcash.Security.Ledger.Model.valueRelFinder +choice
 assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_valueRelation +choice
 assert_computable Zcash.Security.Ledger.Model.balanceConservationOrBreak_valueRelation +choice
-assert_axioms Zcash.Security.Ledger.Model.valueRelation_finder_isSome
+assert_axioms Zcash.Security.Ledger.Model.valueRelation_finder_isSomeAt
 
 /-! ## The conservation experiment
 

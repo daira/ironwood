@@ -222,11 +222,12 @@ theorem balanceConservationBefore_measure_le_experiment {ι : Type u} (p : PMF �
     with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
   · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
       conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
-        (Or.inl (valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr
+        (Or.inl (valueRelation_finder_isSomeAt m v_idx r_idx queryOf P₀ toSig hne_idx hr
           (le_of_lt hik) hval hw))⟩))
   · rcases kappaEvent_subset m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
-        (extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval hfailure)
+        (mem_kappaEvent m gen r_idx _
+          (extractFail_mem_kappaEventAt m v_idx r_idx queryOf P₀ toSig
+            (halg j logs) hr (le_of_lt hik) hval hfailure))
       with hbad | hrel
     · exact Or.inr hbad
     · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
@@ -262,11 +263,12 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
   · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
       conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
-        (Or.inl (valueRelation_finder_isSome m gen v_idx r_idx queryOf P₀ toSig hne_idx hr
+        (Or.inl (valueRelation_finder_isSomeAt m v_idx r_idx queryOf P₀ toSig hne_idx hr
           (le_of_lt hik) hval hw))⟩))
   · rcases kappaEvent_subset m gen r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
-        (extractFail_mem_kappaEvent m gen v_idx r_idx queryOf P₀ toSig
-          ((halg j).atLabel) ((halg j).atOutput) hr (le_of_lt hik) hval hfailure)
+        (mem_kappaEvent m gen r_idx _
+          (extractFail_mem_kappaEventAt m v_idx r_idx queryOf P₀ toSig
+            (halg j logs) hr (le_of_lt hik) hval hfailure))
       with hbad | hrel
     · exact Or.inr hbad
     · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,

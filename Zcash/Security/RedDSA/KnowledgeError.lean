@@ -162,6 +162,13 @@ basis of each sample's logs. -/
 def kappaEvent : Set ((Q → F) × (Fin m → F)) :=
   {ω | ω.1 ∈ kappaEventAt m r_idx adv (scalarBasis gen ω.2)}
 
+omit [Fintype Q] [Fintype F] [Nonempty F] in
+/-- Membership in the sampled product-space event, from the per-basis event at the sample's
+own basis. -/
+theorem mem_kappaEvent {table : Q → F} {logs : Fin m → F}
+    (h : table ∈ kappaEventAt m r_idx adv (scalarBasis gen logs)) :
+    (table, logs) ∈ kappaEvent m gen r_idx adv := h
+
 variable [DecidableEq M]
 
 /-- The relation finder the discrete-log reduction runs: replay the adversary at the presented
