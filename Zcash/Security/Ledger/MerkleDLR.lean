@@ -75,7 +75,7 @@ The relation then converts to the one-generator form, because its randomness-bas
 coefficient is zero. -/
 def relationOfMerkleCollision {i : Fin 32}
     (c : Zcash.Security.RandomOracle.DefinedCollision (merkleCompress i)) :
-    NontrivialRelationOne (F := Fq) pallasS merkleQpt :=
+    NontrivialRelation (F := Fq) pallasS ![merkleQpt] :=
   let rel := relationOfChainPmEq (Q := merkleQ) (Or.inl merkleQ_onCurve)
     (W := (0 : PallasGroup))
     (fun _ hm => merkleChunks_mem_lt hm) (fun _ hm => merkleChunks_mem_lt hm)
@@ -102,9 +102,11 @@ def relationOfMerkleCollision {i : Fin 32}
         (lt_trans i.2 (by norm_num)) c.q₂.1.2 c.q₂.2.2 hl
       exact c.ne (Prod.ext (Subtype.ext hlv) (Subtype.ext hrv)))
   rel.toOne (by
-    rcases rel.nontrivial with ha | hα | hβ
-    · exact Or.inl ha
-    · exact Or.inr hα
-    · exact absurd (relationOfChainPmEq_zero_beta _ _ _ _ _ _ _ _ _ _ _) hβ)
+    obtain ⟨i, hi⟩ := Function.ne_iff.mp rel.nontrivial
+    rcases i with i | j
+    · exact Or.inl (Function.ne_iff.mpr ⟨i, hi⟩)
+    · fin_cases j
+      · exact Or.inr hi
+      · exact absurd (relationOfChainPmEq_zero_beta _ _ _ _ _ _ _ _ _ _ _) hi)
 
 end Zcash.Security.Ledger.Bridge

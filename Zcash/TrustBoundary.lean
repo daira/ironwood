@@ -861,7 +861,6 @@ pinned under their `Zcash.` names; the AGM restriction enters with the represent
 assert_computable Zcash.discreteLogOfBasis_of_relation +choice
 assert_computable Zcash.discreteLogOfChallenge_of_relation +choice
 assert_computable Zcash.programmedExtractOrMiss +choice
-assert_computable Zcash.AugmentedRelationWitness.toAlgebraicRelationWitness +choice
 assert_computable Zcash.Snark.relationWitnessOfCollision +choice
 assert_computable Zcash.discreteLogOfAugmentedRelationAtChallenge +choice
 assert_computable Zcash.Snark.separateOrRelationWitness +choice
@@ -903,7 +902,6 @@ assert_axioms Zcash.Snark.orchardGeneratorROSetup
 assert_axioms Zcash.Snark.orchardGeneratorROBasis
 assert_axioms Zcash.Snark.orchard_uniformURSIdentification_of_generatorRO +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
-assert_axioms Zcash.AlgebraicRelationWitness.augment
 assert_axioms Zcash.Snark.bindingWin_unbounded_measure_le +native(
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 assert_axioms Zcash.Snark.fsWinsFull_restrictSum_le
@@ -1873,7 +1871,7 @@ The onward step from a classified Action escape to the games-facing relation obj
 the census above stops short of: the escaped chain is turned into an explicit generator
 combination (`ofPoint_hashToPoint`), the coefficient vector is computed from the break data
 (`breakCoeffs`, with its relation and nontriviality facts), and the two headline reductions
-package that as a `NontrivialRelationOne` at the escaped site's domain point.
+package that as a one-point `NontrivialRelation` at the escaped site's domain point.
 
 `relationOfBreakData` and `classifyRelation` are asserted computable, per the
 breaks-as-computed-data convention. `+native` is the Pallas point-count witness that reaches

@@ -87,7 +87,7 @@ randomness base. -/
 def relationOfNoteCommitBreak {MSG SIG : Type*}
     (spendAuthVerify bindingVerify : PallasGroup → MSG → SIG → Prop)
     (brk : NoteCommitBreak (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify)) :
-    NontrivialRelation (F := Fq) pallasS noteQpt noteCommitRpt :=
+    NontrivialRelation (F := Fq) pallasS ![noteQpt, noteCommitRpt] :=
   relationOfChainPmEq (Q := noteQ) (Or.inl noteQ_onCurve) (W := noteCommitRpt)
     (fun _ hm => chunksOf_mem_lt hm) (fun _ hm => chunksOf_mem_lt hm)
     (by simp [Pool.noteScalars])

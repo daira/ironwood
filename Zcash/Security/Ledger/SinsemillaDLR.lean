@@ -6,7 +6,7 @@ import Zcash.Common.DiscreteLogRelation
 
 The onward reduction step for the classified Action escapes: a plain `def`
 converting an `ActionBreakData` — the site and escape datum computed by
-`classifyAction` — into a `NontrivialRelationOne`, the games-facing
+`classifyAction` — into a one-point `NontrivialRelation`, the games-facing
 discrete-log-relation break among the Orchard-protocol Sinsemilla generator table and
 the escaped site's domain point.  This is protocol-spec Theorem 5.4.4 made
 computational end to end: the coefficients of the relation are read off the break
@@ -333,17 +333,21 @@ theorem breakCoeffs_relation {Qpt : Point Fp} (hQ : Qpt.Valid) {br : BreakData}
     rw [pow_succ, mul_comm (2 ^ br.pre.length) 2, ← hKind0]
     abel
 
-/-- Package a valid bounded break as the games-facing relation object.  The data
-fields are the computed `breakCoeffs`; the `Prop` fields are discharged from the
-break's validity alone. -/
+/-- Package a valid bounded break as the games-facing relation object. The coefficients
+are the computed `breakCoeffs`; the `Prop` obligations are discharged from the break's
+validity alone. -/
 def relationOfValidBreak {Qpt : Point Fp} (hQ : Qpt.Valid) (br : BreakData)
     (hvb : ValidBreak orchardGenerators.S Qpt br)
     (hpre : ∀ m ∈ br.pre, m < 2 ^ K) (hchunk : br.chunk < 2 ^ K) :
-    NontrivialRelationOne (F := Fq) pallasS (PallasGroup.ofPoint Qpt hQ) where
-  a := (breakCoeffs br).1
-  α := (breakCoeffs br).2
-  nontrivial := breakCoeffs_nontrivial br
-  relation := breakCoeffs_relation hQ hvb hpre hchunk
+    NontrivialRelation (F := Fq) pallasS ![PallasGroup.ofPoint Qpt hQ] :=
+  NontrivialRelation.ofParts (breakCoeffs br).1 ![(breakCoeffs br).2]
+    (by
+      rcases breakCoeffs_nontrivial br with ha | hα
+      · exact Or.inl ha
+      · exact Or.inr (Function.ne_iff.mpr ⟨0, by simpa using hα⟩))
+    (by
+      have h := breakCoeffs_relation hQ hvb hpre hchunk
+      simpa [commitGen, Fin.sum_univ_one] using h)
 
 /-! ## Site dispatch
 
@@ -447,7 +451,7 @@ classifier's output. -/
 def relationOfBreakData (wit : ActionData) (abr : ActionBreakData)
     (h : hashToPointB orchardGenerators.S (siteQ abr.site) (siteQuery wit abr.site) =
       .inr abr.data) :
-    NontrivialRelationOne (F := Fq) pallasS (sitePoint abr.site) :=
+    NontrivialRelation (F := Fq) pallasS ![sitePoint abr.site] :=
   relationOfValidBreak (siteQ_valid abr.site) abr.data
     (validBreak_of_inr (siteQ_valid abr.site)
       (fun m hm => orchardGenerators.S_onCurve (siteQuery_bounded wit abr.site m hm)) h)
@@ -458,7 +462,7 @@ discrete-log relation among the Orchard-protocol generator table and that site's
 domain point. -/
 structure ActionDLBreak where
   site : BreakSite
-  rel : NontrivialRelationOne (F := Fq) pallasS (sitePoint site)
+  rel : NontrivialRelation (F := Fq) pallasS ![sitePoint site]
 
 /-- End-to-end computable reduction at the Action boundary: classify the witness's
 four query families and reduce the first escape to its discrete-log relation. -/
@@ -657,7 +661,7 @@ def relationOfChainPmEq {Q : Point Fp} (hQ : Q.Valid) {W : PallasGroup}
       PallasGroup.ofPoint p₁ hv₁ + r₁ • W = -(PallasGroup.ofPoint p₂ hv₂ + r₂ • W))
     (hn : l₁.length ≤ 253)
     (hne : ¬(l₁ = l₂ ∧ r₁ = r₂)) :
-    NontrivialRelation (F := Fq) pallasS (PallasGroup.ofPoint Q hQ) W :=
+    NontrivialRelation (F := Fq) pallasS ![PallasGroup.ofPoint Q hQ, W] :=
   if hplus : PallasGroup.ofPoint p₁ hv₁ + r₁ • W = PallasGroup.ofPoint p₂ hv₂ + r₂ • W then
     NontrivialRelation.ofCombinationCollision
       (a := preCoeffs l₁) (a' := preCoeffs l₂)
@@ -703,7 +707,9 @@ theorem relationOfChainPmEq_zero_beta {Q : Point Fp} (hQ : Q.Valid) {W : PallasG
     (hn : l₁.length ≤ 253) (hne : ¬(l₁ = l₂ ∧ (0 : Fq) = 0)) :
     (relationOfChainPmEq hQ hb₁ hb₂ hlen h₁ hv₁ h₂ hv₂ heq hn hne).β = 0 := by
   unfold relationOfChainPmEq
-  split <;> simp [Zcash.NontrivialRelation.ofCombinationCollision]
+  split <;> simp [Zcash.NontrivialRelation.β,
+    Zcash.NontrivialRelation.ofCombinationCollision,
+    Zcash.NontrivialRelation.ofParts, augmentedCoeffs, BasisIndex.w]
 
 
 end Zcash.Security.Ledger.Bridge

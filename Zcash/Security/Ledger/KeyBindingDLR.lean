@@ -73,7 +73,7 @@ def relationOfKeyBindingBreak
     {w₁ w₂ : KeyBinding.Pool.Witness Fq PallasGroup Fp}
     (brk : KeyBinding.Pool.CommitIvkCollision extract commitIvkHash commitIvkRpt w₁ w₂)
  :
-    NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
+    NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt] :=
   let hs₁ := commitIvkHash_isSome brk.kb₁.hash_eq
   let hs₂ := commitIvkHash_isSome brk.kb₂.hash_eq
   relationOfChainPmEq (Q := ivkQ) (Or.inl ivkQ_onCurve) (W := commitIvkRpt)

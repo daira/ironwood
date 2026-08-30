@@ -65,9 +65,9 @@ abbrev OrchardAnnotated :=
 note-commitment arms land in two-generator relations at their domain points, the
 Merkle arm in a one-generator relation. -/
 inductive OrchardBalanceRelation where
-  | keyBinding (r : NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt)
-  | noteCommit (r : NontrivialRelation (F := Fq) pallasS noteQpt noteCommitRpt)
-  | merkle (r : NontrivialRelationOne (F := Fq) pallasS merkleQpt)
+  | keyBinding (r : NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt])
+  | noteCommit (r : NontrivialRelation (F := Fq) pallasS ![noteQpt, noteCommitRpt])
+  | merkle (r : NontrivialRelation (F := Fq) pallasS ![merkleQpt])
 
 /-- **The Orchard Balance-subset reduction.** In a valid Orchard ledger, either the
 nonzero spends of the first `i + 1` transactions are covered by the positioned outputs
@@ -278,7 +278,7 @@ Authority key-binding arm reaches the same discrete-log terminal as the Balance
 key-binding arm. The break is computed from the exhibited witness pair, and the
 reduction needs no oracle model. -/
 def relationOfSpendAuthorityKBBreak (brk : KeyBindingBreakData keyBinding) :
-    NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
+    NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt] :=
   relationOfKeyBindingBreak brk.h
 
 /-- The Orchard Spend Authority reduction with its key-binding arm routed to the
@@ -295,7 +295,7 @@ def orchardSpendAuthorityOrRelation
       = (primitives spendAuthVerify bindingVerify).emb (keyBinding.ivk wV) • a.w.note_old.gd)
     {Signed : MSG → Prop} (hfresh : ¬ Signed tx.sighash) :
     SpendAuthForgery (primitives spendAuthVerify bindingVerify) (keyBinding.akP wV) Signed
-      ⊕' NontrivialRelation (F := Fq) pallasS ivkQpt commitIvkRpt :=
+      ⊕' NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt] :=
   match spendAuthorityOrBreak hval htx ha hKB hrecv hfresh with
   | .inl f => .inl f
   | .inr b => .inr (relationOfSpendAuthorityKBBreak b)

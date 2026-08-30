@@ -25,13 +25,13 @@ directory level, naming the notable modules as entry points.
 ## Top level — `Zcash/`
 
 - **`Common/`** — shared leaves that two tiers need and neither should import the other for.
-  `DiscreteLogRelation` carries a nontrivial `F`-linear (discrete-log) relation among a family of
-  generators as *computed data* — the coefficients — so the reduction-style security arguments can
-  produce a break rather than merely assert one exists (see *breaks as computed data* on the
-  [Formal Verification](../formal-verification.md) page). `AlgebraicRelation` carries the same
-  relation over an arbitrary indexed basis (`AlgebraicRelationWitness`) and turns one into a
-  discrete log, either against known slot logs or against a basis programmed from the DL challenge
-  (Jaeger–Tessaro, [Expected-Time Cryptography: Generic Techniques and Applications to Concrete
+  `DiscreteLogRelation` carries a nontrivial `F`-linear (discrete-log) relation over an arbitrary
+  indexed basis (`AlgebraicRelationWitness`) as *computed data* — the coefficients — so the
+  reduction-style security arguments can produce a break rather than merely assert one exists (see
+  *breaks as computed data* on the [Formal Verification](../formal-verification.md) page), and
+  turns one into a discrete log against known slot logs. `ProgrammedBasis` turns a relation into a
+  discrete log against a basis programmed from the DL challenge (Jaeger–Tessaro, [Expected-Time
+  Cryptography: Generic Techniques and Applications to Concrete
   Soundness](https://eprint.iacr.org/2020/1213), Lemma 3); `RelationProbability`
   and `RelationProbabilityCoins` price that reduction's single miss hyperplane at `1/|F|`, and
   `UniformMeasure` holds the distribution facts they count with. None of these restrict the
@@ -283,7 +283,8 @@ Six subtrees carry the heavier machinery:
 - **`AGM/`** — the algebraic-group-model layer: what it adds is the restriction on the *prover*,
   namely that it emits a representation alongside every group element (Fuchsbauer–Kiltz–Loss,
   [The Algebraic Group Model and its Applications](https://eprint.iacr.org/2017/620)). The
-  relation-to-discrete-log machinery itself is model-free and lives in `Common/AlgebraicRelation`;
+  known-log relation-to-discrete-log machinery is model-free and lives in
+  `Common/DiscreteLogRelation`, and the programmed-basis adapter in `Common/ProgrammedBasis`;
   `Adapter` supplies only the view of the deployed URS as an augmented basis `(g, U, W)`. This
   subtree adds the algebraic coefficients to the online prover interfaces (`OnlineMembers`,
   `OnlineMultiopen`), reifies erasable group-work events for adaptive programs (`CostedOracle`),
