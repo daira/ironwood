@@ -308,9 +308,10 @@ in the current development:
 * validity's `satisfied` conjunct idealizes knowledge soundness of the Action circuit, by
   reading the witness annotations that the adversary is required to provide.
 
-That is, the capstones using this event definition are not yet connected up to the Action
-circuit proof at all. This stands in for the not-yet-formalized knowledge-soundness
-composition, tracked as #147.
+The Action-circuit extractors exist (`ActionBundleWitness`, with acceptance bounded on
+extraction failure), and a proposition-level bridge (`Bridge.specPost_to_ledger`) forgets
+their output into an `∃`. The annotations stand in for the data-level composition that
+would feed the extracted witnesses into these events; that bridge is tracked as #147.
 
 The remaining idealizations are accepted as modelling trade-offs:
 
@@ -362,9 +363,11 @@ The experiment's idealizations live here. One of them must be called out as a **
 gap** in the current development:
 
 * validity's `satisfied` conjunct idealizes knowledge soundness of the Action circuit, by
-  reading the witness annotations that the adversary is required to provide. The capstones
-  using this event are not yet connected to the Action circuit proof at all; this stands in
-  for the not-yet-formalized knowledge-soundness composition, tracked as #147.
+  reading the witness annotations that the adversary is required to provide. The
+  Action-circuit extractors exist (`ActionBundleWitness`, with acceptance bounded on
+  extraction failure), and a proposition-level bridge (`Bridge.specPost_to_ledger`) forgets
+  their output into an `∃`. The annotations stand in for the data-level composition that
+  would feed the extracted witnesses into these events; that bridge is tracked as #147.
 
 The remaining idealizations are accepted as modelling trade-offs:
 
