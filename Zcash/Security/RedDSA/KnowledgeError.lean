@@ -43,6 +43,11 @@ page). The knowledge-error event splits along the replayed relation finder:
 The two arms live on independent factors of the product, so the fibre-wise Fubini bounds
 compose them with no cross term.
 
+The same split also composes at a single presented basis, with no log sampling. Both arms
+then live over the challenge-table factor, so a plain union bound composes them
+(`kappaEventAt_measure_le`). The relation arm is carried as a named hypothesis: the
+probability that the replayed finder returns a relation at that basis.
+
 Two idealizations are inherited by any instantiation. The challenge oracle is exactly uniform
 on `F`; the deployed challenge hash produces 512 bits reduced mod `r_ℙ`, at statistical
 distance about `2^{-257}` per query — an instantiation-level accounting item, as for
@@ -192,6 +197,11 @@ def badFiberAt (basis : Fin m → M) : Set (Q → F) :=
     ∧ ((effectiveRepAt m adv basis table).pivot r_idx).isSome
     ∧ relFinder m r_idx adv table basis = none}
 
+/-- The relation event at the presented `basis`, over the challenge-table factor: the
+replayed finder returns a relation. -/
+def relFiberAt (basis : Fin m → M) : Set (Q → F) :=
+  {table | (relFinder m r_idx adv table basis).isSome}
+
 /-- Bad-challenge arm (fibre over the basis discrete logarithms `logs`): `badFiberAt` at the
 sampled basis. -/
 def badFiber (logs : Fin m → F) : Set (Q → F) :=
@@ -201,6 +211,18 @@ def badFiber (logs : Fin m → F) : Set (Q → F) :=
 relation. -/
 def relFiber (table : Q → F) : Set (Fin m → F) :=
   {logs | (relFinder m r_idx adv table (scalarBasis gen logs)).isSome}
+
+omit [Fintype Q] [Fintype F] [Nonempty F] in
+/-- **Deterministic containment at a fixed basis.** On the knowledge-error event at the
+presented `basis`, either the replayed finder found no relation (the bad-challenge arm) or
+it found one (the relation arm). -/
+theorem kappaEventAt_subset (basis : Fin m → M) :
+    kappaEventAt m r_idx adv basis
+      ⊆ badFiberAt m r_idx adv basis ∪ relFiberAt m r_idx adv basis := by
+  rintro table ⟨hver, hpiv⟩
+  rcases hfind : relFinder m r_idx adv table basis with _ | w
+  · exact Or.inl ⟨hver, hpiv, hfind⟩
+  · exact Or.inr (by simp only [relFiberAt, Set.mem_setOf_eq, hfind, Option.isSome_some])
 
 omit [Fintype Q] [Fintype F] [Nonempty F] in
 /-- **Deterministic containment.** On the knowledge-error event, either the replayed finder
@@ -268,6 +290,24 @@ theorem badFiberAt_measure_le {basis : Fin m → M} {qH : ℕ}
     cases (adv basis).findLabel table
         (((adv basis).run table).queryPoint) <;>
       rfl
+
+/-- **The knowledge error at a fixed basis: κ ≤ (qH+1)/|F| + ε_rel.** For a labeled algebraic
+adversary within query budget `qH` at the presented `basis`, if the probability over the
+challenge table that the replayed finder returns a relation at this basis is at most `ε`,
+then the probability of a verifying binding signature whose effective representation has a
+pivot is at most `(qH+1)/|F| + ε`. No basis is sampled: both arms live over the
+challenge-table factor, and the composition is a plain union bound. The bound therefore
+holds at any fixed basis —in particular the deployed one— with the relation arm carried as
+a named hypothesis on that basis. -/
+theorem kappaEventAt_measure_le {basis : Fin m → M} {qH : ℕ} {ε : ℝ≥0∞}
+    (hQ : (adv basis).QueryBound qH)
+    (hrel : (PMF.uniformOfFintype (Q → F)).toOuterMeasure (relFiberAt m r_idx adv basis)
+      ≤ ε) :
+    (PMF.uniformOfFintype (Q → F)).toOuterMeasure (kappaEventAt m r_idx adv basis)
+      ≤ ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card F + ε :=
+  le_trans (MeasureTheory.measure_mono (kappaEventAt_subset m r_idx adv basis))
+    (le_trans (MeasureTheory.measure_union_le _ _)
+      (add_le_add (badFiberAt_measure_le m r_idx adv hQ) hrel))
 
 /-- The bad-challenge fibre at the basis discrete logarithms `logs`:
 `badFiberAt_measure_le` at the sampled basis. -/

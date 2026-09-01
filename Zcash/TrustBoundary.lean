@@ -605,9 +605,11 @@ table and the logs of the `m` presented bases, a labeled algebraic adversary wit
 budget `qH` produces a verifying binding signature. Its effective representation has a
 pivot only with a probability linear in the query budget, with a denominator of #F above
 the discrete-log advantage (`kappaEvent_measure_le`). This is the straight-line AGM+ROM
-extraction of Fuchsbauer–Plouviez–Seurin, in the key-only setting. Challenge queries carry
-the adversary's representations as labels the oracle never sees. The representation in
-effect at the output's query point is the first annotation there, or the announced output
+extraction of Fuchsbauer–Plouviez–Seurin, in the key-only setting. The same split
+composes at a single presented basis with no log sampling, with the relation arm as a
+named hypothesis at that basis (`kappaEventAt_measure_le`). Challenge queries carry the
+adversary's representations as labels the oracle never sees. The representation in effect
+at the output's query point is the first annotation there, or the announced output
 representation when the run never queried the point. That is the squeeze's fallback
 branch, which plays the game's own final challenge query. The relation finder replaying
 the adversary is computable, and is the discrete-log adversary that the named `ε_DL`
@@ -619,8 +621,10 @@ assert_computable Zcash.Security.RedDSA.dischargeChallenge
 assert_computable Zcash.Security.RedDSA.effectiveRep
 assert_computable Zcash.Security.RedDSA.relFinder +choice
 assert_axioms Zcash.Security.RedDSA.kappa_le_of_arms
+assert_axioms Zcash.Security.RedDSA.kappaEventAt_subset
 assert_axioms Zcash.Security.RedDSA.kappaEvent_subset
 assert_axioms Zcash.Security.RedDSA.badFiberAt_measure_le
+assert_axioms Zcash.Security.RedDSA.kappaEventAt_measure_le
 assert_axioms Zcash.Security.RedDSA.badFiber_measure_le
 assert_axioms Zcash.Security.RedDSA.relFiber_subset_relSet
 assert_axioms Zcash.Security.RedDSA.relFiber_measure_le
