@@ -25,6 +25,13 @@ discrete-log hypothesis is stated for the coin-consuming form of the finder
 (`TextbookDLWithCoinsAdvantageLE`, with the challenge table as the coins). It is quantified
 only over the adversary's coins; no supremum over challenge tables remains anywhere in the
 experiment.
+
+The same composition also runs at a single presented basis, with no log sampling
+(`balanceConservationBefore_measure_le_experimentAt`). Both arms then live over the
+challenge-table factor. The relation arm is a named hypothesis: the probability that the
+combined finder returns a relation at that basis is at most `ε_valuedlr`. The bound is
+`ε_valuedlr + (qH+1)/#F` — one `1/#F` less than the sampled form, because the relation arm
+is assumed rather than discharged, so the Jaeger–Tessaro guessing loss does not arise.
 -/
 
 namespace Zcash.Security.Ledger.Model
@@ -52,6 +59,13 @@ challenge table `Q → ZMod r`, and uniform logs `Fin m → ZMod r` of the `m` p
 noncomputable def challengeExperiment {ι : Type u} (p : PMF ι) :
     PMF (ι × ((Q → ZMod r) × (Fin m → ZMod r))) :=
   p.bind fun j => (PMF.uniformOfFintype ((Q → ZMod r) × (Fin m → ZMod r))).map (Prod.mk j)
+
+/-- The fixed-basis experiment distribution: the adversary's coins `j` and a uniform
+challenge table `Q → ZMod r`. No basis logs are sampled; the basis is a parameter of the
+events run over this distribution. -/
+noncomputable def challengeTableExperiment {ι : Type u} (p : PMF ι) :
+    PMF (ι × (Q → ZMod r)) :=
+  p.bind fun j => (PMF.uniformOfFintype (Q → ZMod r)).map (Prod.mk j)
 
 /-- The sample-space lift of a per-primitives ledger event: the samples on which the
 adversary's output ledger, run at the sampled primitives `kappaPrimitivesAt`, is valid and
@@ -97,6 +111,22 @@ theorem sampledLedgerEvent_union {ι : Type u}
     exacts [Or.inl ⟨hval, hx⟩, Or.inr ⟨hval, hx⟩]
   · rintro (⟨hval, hx⟩ | ⟨hval, hx⟩)
     exacts [⟨hval, Or.inl hx⟩, ⟨hval, Or.inr hx⟩]
+
+/-- The lift of a per-primitives ledger event at the presented `basis`: the samples on which
+the adversary's output ledger, run at `primitivesAtBasis basis`, is valid and lands in
+`Event` at those primitives. -/
+def ledgerEventAt {ι : Type u} (basis : Fin m → G)
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (Event : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)) :
+    Set (ι × (Q → ZMod r)) :=
+  setOf fun x =>
+    ∃ hval : ValidLedger (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis x.2)
+        kv issuance maxActions (((LA x.1 basis).run x.2).map Prod.fst),
+      (⟨_, hval⟩ : ValidAnnotated (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis x.2)
+          kv issuance maxActions)
+        ∈ Event (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis x.2)
 
 /-- **The combined conservation relation finder.** Replay the labeled adversary at the
 presented basis and return whichever relation the sample yields: the relation arm's
@@ -188,6 +218,46 @@ theorem conservationRelOrBadChallenge_measure_le (hne_idx : v_idx ≠ r_idx) (k 
   push_cast
   ring_nf
 
+/-- The relation event of the combined finder at the presented `basis`, over the
+challenge-table factor: the event that the named value-DLR advantage bounds. -/
+def conservationRelFiberAt (hne_idx : v_idx ≠ r_idx) (k : ℕ)
+    (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (basis : Fin m → G) : Set (Q → ZMod r) :=
+  {table | (conservationRelFinder m v_idx r_idx queryOf P₀ toSig hne_idx k LA table basis).isSome}
+
+/-- **The per-coin discharge event at the presented `basis`.** The combined finder's relation
+event together with the knowledge-error bad-challenge event, both over the challenge-table
+factor. Every violation sample at this basis lands here, and its measure is
+`ε_valuedlr + (qH+1)/#F` (`conservationRelOrBadChallengeAt_measure_le`). -/
+def conservationRelOrBadChallengeAt (hne_idx : v_idx ≠ r_idx) (k : ℕ)
+    (LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (basis : Fin m → G) : Set (Q → ZMod r) :=
+  conservationRelFiberAt m v_idx r_idx queryOf P₀ toSig hne_idx k LA basis
+    ∪ badFiberAt m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA) basis
+
+/-- **The per-coin discharge at a fixed basis: a union bound.** Within query budget `qH`, if
+the combined finder returns a relation at the presented `basis` with probability at most
+`ε_valuedlr` over the challenge table, the discharge event has measure at most
+`ε_valuedlr + (qH+1)/#F`: the relation event is the named hypothesis, and the bad-challenge
+event is the per-basis squeeze (`badFiberAt_measure_le`). No Jaeger–Tessaro guessing loss
+arises, so the denominator term is `(qH+1)/#F` where the sampled form has `(qH+2)/#F`. -/
+theorem conservationRelOrBadChallengeAt_measure_le (hne_idx : v_idx ≠ r_idx) (k : ℕ)
+    {LA : (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
+    {basis : Fin m → G} {qH : ℕ} (hQ : (LA basis).QueryBound qH) {ε_valuedlr : ℝ≥0∞}
+    (hrel : (PMF.uniformOfFintype (Q → ZMod r)).toOuterMeasure
+        (conservationRelFiberAt m v_idx r_idx queryOf P₀ toSig hne_idx k LA basis)
+      ≤ ε_valuedlr) :
+    (PMF.uniformOfFintype (Q → ZMod r)).toOuterMeasure
+        (conservationRelOrBadChallengeAt m v_idx r_idx queryOf P₀ toSig hne_idx k LA basis)
+      ≤ ε_valuedlr + ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) :=
+  le_trans (MeasureTheory.measure_union_le _ _)
+    (add_le_add hrel
+      (badFiberAt_measure_le m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k LA)
+        (kappaComposite_queryBound m v_idx r_idx queryOf P₀ toSig hQ)))
+
 /-- **The conservation experiment.** Over the adversary's coins, the challenge table, and the
 basis logs, the probability that the output ledger is valid and violates balance conservation
 at some prefix `i < k` — the capstone's `balanceConservationViolationBefore`, at the sampled
@@ -273,5 +343,92 @@ theorem shieldedBalanceCapBefore_measure_le_experiment {ι : Type u} (p : PMF ι
     · exact Or.inr hbad
     · exact Or.inl (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _,
         conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig (Or.inr hrel)⟩))
+
+/-- **The conservation experiment at a fixed basis.** Over the adversary's coins and the
+challenge table alone, at the presented `basis`, the probability that the output ledger is
+valid and violates balance conservation at some prefix `i < k` is at most
+`ε_valuedlr + (qH+1)/#F`. The relation arm is the named per-coin hypothesis `hrel`: the
+combined finder returns a relation at this basis with probability at most `ε_valuedlr`.
+The algebraicity hypothesis is likewise needed only at this basis. -/
+theorem balanceConservationBefore_measure_le_experimentAt {ι : Type u} (p : PMF ι)
+    {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
+    {basis : Fin m → G} (hne_idx : v_idx ≠ r_idx)
+    {qH : ℕ} (hQ : ∀ j, (LA j basis).QueryBound qH)
+    (halg : ∀ j : ι, AlgebraicAtBindingPointsAt m v_idx r_idx queryOf P₀ toSig basis (LA j))
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ)
+    {ε_valuedlr : ℝ≥0∞}
+    (hrel : ∀ j : ι, (PMF.uniformOfFintype (Q → ZMod r)).toOuterMeasure
+        (conservationRelFiberAt m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) basis)
+      ≤ ε_valuedlr) :
+    (challengeTableExperiment p).toOuterMeasure
+        (ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA
+          (fun P => balanceConservationViolationBefore (P := P) (kv := kv) (issuance := issuance)
+            (maxActions := maxActions) k))
+      ≤ ε_valuedlr + ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) := by
+  refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
+  rw [PMF.toOuterMeasure_map_apply]
+  refine le_trans (MeasureTheory.measure_mono ?_)
+    (conservationRelOrBadChallengeAt_measure_le m v_idx r_idx queryOf P₀ toSig hne_idx k
+      (hQ j) (hrel j))
+  rintro table ⟨hval, hviol⟩
+  dsimp only at hval hviol
+  rcases balanceConservationViolationBefore_subset_fallible
+      (shapeAtBasis m v_idx r_idx queryOf P₀ toSig basis table)
+      (bindingAtBasis m v_idx r_idx queryOf P₀ toSig basis table) hr
+      (extractorAtBasis m r_idx queryOf P₀ k (LA j) basis table) k hviol
+    with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
+  · exact Or.inl (conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
+      (Or.inl (valueRelation_finder_isSomeAt m v_idx r_idx queryOf P₀ toSig hne_idx hr
+        (le_of_lt hik) hval hw)))
+  · rcases kappaEventAt_subset m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
+        basis
+        (extractFail_mem_kappaEventAt m v_idx r_idx queryOf P₀ toSig
+          (halg j) hr (le_of_lt hik) hval hfailure)
+      with hbad | hrel'
+    · exact Or.inr hbad
+    · exact Or.inl (conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig (Or.inr hrel'))
+
+/-- **The cap experiment at a fixed basis.** As
+`balanceConservationBefore_measure_le_experimentAt`, for the shielded pool exceeding the
+minted issuance at some prefix `i < k`. -/
+theorem shieldedBalanceCapBefore_measure_le_experimentAt {ι : Type u} (p : PMF ι)
+    {LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m))}
+    {basis : Fin m → G} (hne_idx : v_idx ≠ r_idx)
+    {qH : ℕ} (hQ : ∀ j, (LA j basis).QueryBound qH)
+    (halg : ∀ j : ι, AlgebraicAtBindingPointsAt m v_idx r_idx queryOf P₀ toSig basis (LA j))
+    (hr : maxActions * (P₀.valueBound - 1) + P₀.vBalanceBound < r) (k : ℕ)
+    {ε_valuedlr : ℝ≥0∞}
+    (hrel : ∀ j : ι, (PMF.uniformOfFintype (Q → ZMod r)).toOuterMeasure
+        (conservationRelFiberAt m v_idx r_idx queryOf P₀ toSig hne_idx k (LA j) basis)
+      ≤ ε_valuedlr) :
+    (challengeTableExperiment p).toOuterMeasure
+        (ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA
+          (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := kv) (issuance := issuance)
+            (maxActions := maxActions) k))
+      ≤ ε_valuedlr + ((qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card (ZMod r) := by
+  refine Zcash.Security.KeyBinding.toOuterMeasure_bind_le _ _ _ fun j => ?_
+  rw [PMF.toOuterMeasure_map_apply]
+  refine le_trans (MeasureTheory.measure_mono ?_)
+    (conservationRelOrBadChallengeAt_measure_le m v_idx r_idx queryOf P₀ toSig hne_idx k
+      (hQ j) (hrel j))
+  rintro table ⟨hval, hviol⟩
+  dsimp only at hval hviol
+  rcases shieldedBalanceCapViolationBefore_subset_fallible
+      (shapeAtBasis m v_idx r_idx queryOf P₀ toSig basis table)
+      (bindingAtBasis m v_idx r_idx queryOf P₀ toSig basis table) hr
+      (extractorAtBasis m r_idx queryOf P₀ k (LA j) basis table) k hviol
+    with ⟨i, hik, w, hw⟩ | ⟨i, hik, failure, hfailure⟩
+  · exact Or.inl (conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig
+      (Or.inl (valueRelation_finder_isSomeAt m v_idx r_idx queryOf P₀ toSig hne_idx hr
+        (le_of_lt hik) hval hw)))
+  · rcases kappaEventAt_subset m r_idx (kappaComposite m v_idx r_idx queryOf P₀ toSig k (LA j))
+        basis
+        (extractFail_mem_kappaEventAt m v_idx r_idx queryOf P₀ toSig
+          (halg j) hr (le_of_lt hik) hval hfailure)
+      with hbad | hrel'
+    · exact Or.inr hbad
+    · exact Or.inl (conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig (Or.inr hrel'))
 
 end Zcash.Security.Ledger.Model

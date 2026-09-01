@@ -72,6 +72,27 @@ theorem AlgebraicRelationWitness.exists_nonzero_coeff {ι : Type*} [Fintype ι] 
   funext i
   exact not_not.mp (not_exists.mp h i)
 
+/-- Reindex a relation witness along an index equivalence: the coefficients compose with the
+equivalence, and nontriviality and the relation sum transport across it. `basis'` is the same
+family under the other index type (`hcompat`), so an instantiation can present its basis
+under a named slot type in place of a `Fin`-indexed one. -/
+def AlgebraicRelationWitness.reindex {ι κ : Type*} [Fintype ι] [Fintype κ] {basis : ι → G}
+    (w : AlgebraicRelationWitness (F := F) basis) (e : κ ≃ ι) {basis' : κ → G}
+    (hcompat : ∀ j, basis' j = basis (e j)) :
+    AlgebraicRelationWitness (F := F) basis' where
+  coeffs := w.coeffs ∘ e
+  nontrivial := by
+    obtain ⟨i, hi⟩ := Function.ne_iff.mp w.nontrivial
+    exact Function.ne_iff.mpr ⟨e.symm i, by simpa using hi⟩
+  relation := by
+    have hrel := w.relation
+    rw [representationEval] at hrel ⊢
+    calc ∑ j, (w.coeffs ∘ e) j • basis' j
+        = ∑ j, w.coeffs (e j) • basis (e j) :=
+          Finset.sum_congr rfl fun j _ => by rw [Function.comp_apply, hcompat]
+      _ = ∑ i, w.coeffs i • basis i := Equiv.sum_comp e fun i => w.coeffs i • basis i
+      _ = 0 := hrel
+
 /-- Coefficients over `basis` whose MSM equals `target`.
 
 Every group element output by an algebraic prover carries this data. -/

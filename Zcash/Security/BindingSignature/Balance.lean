@@ -96,6 +96,37 @@ lets us *compute* one (breaks as computed data — see `Zcash.Security.RandomOra
 abbrev NontrivialRelation (Vbase Rbase : M) : Type _ :=
   Zcash.NontrivialRelation (F := F) (Fin.elim0 : Fin 0 → M) ![Vbase, Rbase]
 
+/-- The named two-element index for the value-commitment bases: the value base `𝒱` and the
+randomness base `ℛ`. Deployed statements name their distinguished bases with this type
+rather than by `Fin 2` positions. -/
+inductive ValueBaseIndex : Type where
+  /-- The value base `𝒱`. -/
+  | value
+  /-- The randomness base `ℛ`. -/
+  | randomness
+  deriving DecidableEq
+
+instance : Fintype ValueBaseIndex :=
+  ⟨{.value, .randomness}, fun x => by cases x <;> decide⟩
+
+/-- The two value-commitment bases as a family over the named index type. -/
+def valueBases (Vbase Rbase : M) : ValueBaseIndex → M
+  | .value => Vbase
+  | .randomness => Rbase
+
+/-- The named slots, as the augmented index of the one relation type at an empty generator
+family, are the two positions of the `![Vbase, Rbase]` spelling. -/
+def valueBaseSlotEquiv : BasisIndex 0 ValueBaseIndex ≃ Fin 2 where
+  toFun := Sum.elim Fin.elim0 fun s => match s with | .value => 0 | .randomness => 1
+  invFun := ![.inr .value, .inr .randomness]
+  left_inv := by
+    rintro (x | s)
+    · exact x.elim0
+    · cases s <;> rfl
+  right_inv := by
+    intro i
+    fin_cases i <;> rfl
+
 /-- **Balance reduction (field level), as a computed relation.** From RedDSA extractability
 (`bvk = bsk • Rbase`), the binding-key decomposition (`bvk = A • Vbase + B • Rbase`), and imbalance
 (`A ≠ 0`), compute the explicit nontrivial relation with coefficients `(A, B − bsk)`. Such a

@@ -731,13 +731,19 @@ an additive loss linear in the query budget with a denominator of #F
 (`balanceConservationBefore_measure_le_experiment`,
 `shieldedBalanceCapBefore_measure_le_experiment`). The discrete-log hypothesis is a single
 bound for the combined coin-consuming finder, per adversary coin — no supremum over
-challenge tables remains in the experiment. -/
+challenge tables remains in the experiment. The `At` forms run the same composition at a
+single presented basis, over the coins and the table alone, with the relation arm as a
+named per-basis hypothesis (`balanceConservationBefore_measure_le_experimentAt` and the
+cap sibling). -/
 
 assert_computable Zcash.Security.Ledger.Model.conservationRelFinder +choice
 assert_axioms Zcash.Security.Ledger.Model.conservationRelFinder_isSome
 assert_axioms Zcash.Security.Ledger.Model.conservationRelOrBadChallenge_measure_le
+assert_axioms Zcash.Security.Ledger.Model.conservationRelOrBadChallengeAt_measure_le
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experiment
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experiment
+assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experimentAt
+assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experimentAt
 
 /-! ## The integrity experiment
 
@@ -767,7 +773,10 @@ free parameters the adversary, an action cap giving no-overflow, and one named a
 per side. Its names carry `idealizedks` because knowledge soundness of the Action circuit
 is idealized by the witness annotations — a formalization gap tracked as #147, not an
 accepted modelling trade-off. The conservation and cap experiments are pinned at the same
-choices. -/
+choices. The `deployed` forms run at the deployed value bases (`orchardValueBases`):
+validity is at the deployed value commitment, only the binding challenge hash is idealized
+as the table, and the named `ε_valuedlr` bounds the deployed finder's relation event over
+the named 𝒱/ℛ slots. -/
 
 assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
@@ -782,6 +791,10 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_id
 assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservation_measure_le_idealizedks +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_idealizedks +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservation_measure_le_idealizedks_deployed +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_idealizedks_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 
 /-! ## Binding-signature relation reductions
