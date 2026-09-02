@@ -48,6 +48,7 @@ import Zcash.Security.Ledger.NoteCommitDLR
 import Zcash.Security.Ledger.MerkleDLR
 import Zcash.Security.Ledger.OrchardCapstone
 import Zcash.Security.Ledger.OrchardIntegrityExperiment
+import Zcash.Security.Ledger.OrchardExtractionExperiment
 import Zcash.Snark.Soundness.Pricing.DegreeWalk
 import Zcash.Snark.Soundness.Composition.ScheduleBudget
 import Zcash.Snark.Soundness.AGM.PinnedRootWitness
@@ -734,7 +735,10 @@ bound for the combined coin-consuming finder, per adversary coin — no supremum
 challenge tables remains in the experiment. The `At` forms run the same composition at a
 single presented basis, over the coins and the table alone, with the relation arm as a
 named per-basis hypothesis (`balanceConservationBefore_measure_le_experimentAt` and the
-cap sibling). -/
+cap sibling). What that named advantage costs against textbook discrete log is stated once,
+on the standalone programmed relation game, as the isolated Jaeger–Tessaro terminal step
+(`valueRelationWithCoins_prob_le_of_textbookDL`); the deployed experiments do not take that
+step. -/
 
 assert_computable Zcash.Security.Ledger.Model.conservationRelFinder +choice
 assert_axioms Zcash.Security.Ledger.Model.conservationRelFinder_isSome
@@ -744,6 +748,7 @@ assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_e
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experiment
 assert_axioms Zcash.Security.Ledger.Model.balanceConservationBefore_measure_le_experimentAt
 assert_axioms Zcash.Security.Ledger.Model.shieldedBalanceCapBefore_measure_le_experimentAt
+assert_axioms Zcash.Security.Ledger.Model.valueRelationWithCoins_prob_le_of_textbookDL
 
 /-! ## The integrity experiment
 
@@ -804,6 +809,43 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_idealizedks_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+
+/-! ## The Orchard extraction experiment
+
+The composed adversary model, with its data chain computable end to end: the ledger
+machine's requests are assembled with the extracted ledger data into the annotated
+chain (`assembleTx`, `assembleChain`), and the constructed annotated adversary runs
+the ledger machine and assembles its output (`toLA`). The laws (`runsLaw`,
+`toIdealizedKS`) are noncomputable measures over that chain. -/
+
+assert_computable Zcash.Security.Ledger.OrchardExtractionExperiment.ExtractionBalanceAdversary.assembleTx +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.OrchardExtractionExperiment.ExtractionBalanceAdversary.assembleChain +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_computable Zcash.Security.Ledger.OrchardExtractionExperiment.ExtractionBalanceAdversary.toLA +choice +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.ExtractionBalanceAdversary.extractionFailureEvent_measure_le +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.orchardBalanceIntegrityExtraction_measure_le +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.orchardBalanceConservationExtraction_measure_le +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.orchardShieldedBalanceCapExtraction_measure_le +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
 
 /-! ## Binding-signature relation reductions
 

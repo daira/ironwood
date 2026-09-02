@@ -359,34 +359,33 @@ variable {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
   {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
   {H_bind : PallasGroup → PallasGroup → MSG → Fq}
 
-/-- The deployed KS-idealized experiment's distribution: the adversary's coins, a uniform
+/-- The sampled KS-idealized experiment's distribution: the adversary's coins, a uniform
 challenge table, and uniform logs of the two presented bases. -/
 noncomputable def experiment (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind) :
     PMF (A.ι × ((OrchardQuery MSG → Fq) × (Fin 2 → Fq))) :=
   challengeExperiment 2 A.coins
 
-/-- **The deployed KS-idealized violation event.** The samples on which the adversary's
+/-- **The sampled KS-idealized violation event.** The samples on which the adversary's
 output ledger is valid at the sampled primitives and lands in the per-primitives event `E`.
 
-The experiment's idealizations live here. One of them must be called out as a **critical gap**
-in the current development:
+The experiment's idealizations live here:
 
-* validity's `satisfied` conjunct idealizes knowledge soundness of the Action circuit, by
-  reading the witness annotations that the adversary is required to provide.
-
-The Action-circuit extractors exist (`ActionBundleWitness`, with acceptance bounded on
-extraction failure), and a proposition-level bridge (`Bridge.specPost_to_ledger`) forgets
-their output into an `∃`. The annotations stand in for the data-level composition that
-would feed the extracted witnesses into these events; that bridge is tracked as #147.
+* Validity's `satisfied` conjunct reads the witness annotations that the adversary is
+  required to provide. On the composed route this is discharged as data:
+  `OrchardExtractionExperiment` builds the annotated adversary from a proof-emitting one,
+  with the annotations computed by the Action-circuit extractors from the sampled runs,
+  and its endpoints bound the deployed form of this event at the constructed adversary
+  together with the extraction-failure arm. At a directly supplied adversary the
+  annotations remain a modelling input.
 
 The remaining idealizations are accepted as modelling trade-offs:
 
-* the uniform challenge table is `H_bind` — the RedPallas binding challenge hash — modelled
-  as a random oracle;
-* validity is at the sampled value and binding bases (`kappaPrimitivesAt`): the presented
+* The uniform challenge table is `H_bind` —the RedPallas binding challenge hash— modeled
+  as a random oracle.
+* Validity is at the sampled value and binding bases (`kappaPrimitivesAt`): the presented
   bases are random multiples of `pallasGen`, and the reference-string heuristic carries them
-  to the deployed `𝒱^Orchard`, `ℛ^Orchard`;
-* byte encodings are elided, as at the RedDSA abstraction boundary. -/
+  to the deployed `𝒱^Orchard`, `ℛ^Orchard`.
+* Byte encodings are elided, as at the RedDSA abstraction boundary. -/
 def violationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
     (issuance : ℕ → ℕ) (maxActions : ℕ)
     (E : ∀ P : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG
@@ -435,27 +434,18 @@ noncomputable def deployedExperiment
 adversary's output ledger is valid at `primitivesAtBasis … orchardValueBases` and lands in
 the per-primitives event `E`.
 
-The experiment's idealizations live here. One of them must be called out as a **critical
-gap** in the current development:
+This is the form of the event that the composed extraction endpoints bound.
 
-* validity's `satisfied` conjunct idealizes knowledge soundness of the Action circuit, by
-  reading the witness annotations that the adversary is required to provide. The
-  Action-circuit extractors exist (`ActionBundleWitness`, with acceptance bounded on
-  extraction failure), and a proposition-level bridge (`Bridge.specPost_to_ledger`) forgets
-  their output into an `∃`. The annotations stand in for the data-level composition that
-  would feed the extracted witnesses into these events; that bridge is tracked as #147.
+The idealizations are the sampled `violationEvent`'s, with two differences:
 
-The remaining idealizations are accepted as modelling trade-offs:
-
-* the uniform challenge table is `H_bind` — the RedPallas binding challenge hash — modelled
-  as a random oracle;
-* byte encodings are elided, as at the RedDSA abstraction boundary.
-
-Unlike the sampled `violationEvent`, no reference-string heuristic is involved: validity is
-at the deployed value bases. The value commitment at `orchardValueBases` is definitionally
-the deployed one (`primitivesAtBasis_orchardValueBases_valueCommit`), and only
-`bindingVerify` is replaced — the Schnorr equation with the challenge read from the table
-instead of computed by `H_bind`. -/
+* No reference-string heuristic is involved: validity is at the deployed value bases.
+  The value commitment at `orchardValueBases` is definitionally the deployed one
+  (`primitivesAtBasis_orchardValueBases_valueCommit`), and only `bindingVerify` is
+  replaced — the Schnorr equation with the challenge read from the table instead of
+  computed by `H_bind`.
+* On the composed route, the Fiat–Shamir transcript oracle is presented finitely, one
+  independent table per bundle size (the `OrchardExtractionExperiment` module doc states
+  why that presentation is sound). -/
 def deployedViolationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
     (issuance : ℕ → ℕ) (maxActions : ℕ)
     (E : ∀ P : Primitives Fq PallasGroup Fp Fp Fp Fp Fp Encoding MSG

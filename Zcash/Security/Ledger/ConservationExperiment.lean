@@ -67,6 +67,17 @@ noncomputable def challengeTableExperiment {ι : Type u} (p : PMF ι) :
     PMF (ι × (Q → ZMod r)) :=
   p.bind fun j => (PMF.uniformOfFintype (Q → ZMod r)).map (Prod.mk j)
 
+omit [Inhabited Q] in
+/-- The coins marginal of the fixed-basis experiment: mapping to the coin component
+recovers the coin distribution. -/
+theorem challengeTableExperiment_map_fst {ι : Type u} (p : PMF ι) :
+    (challengeTableExperiment (Q := Q) (r := r) p).map Prod.fst = p := by
+  rw [challengeTableExperiment, PMF.map_bind]
+  simp only [PMF.map_comp,
+    show ∀ j : ι, Prod.fst ∘ Prod.mk j = Function.const (Q → ZMod r) j from fun _ => rfl,
+    PMF.map_const]
+  exact PMF.bind_pure p
+
 /-- The sample-space lift of a per-primitives ledger event: the samples on which the
 adversary's output ledger, run at the sampled primitives `kappaPrimitivesAt`, is valid and
 lands in `Event` at those primitives. -/
@@ -459,5 +470,24 @@ theorem shieldedBalanceCapBefore_measure_le_experimentAt {ι : Type u} (p : PMF 
       with hbad | hrel'
     · exact Or.inr hbad
     · exact Or.inl (conservationRelFinder_isSome m v_idx r_idx queryOf P₀ toSig (Or.inr hrel'))
+
+omit [DecidableEq G] in
+/-- **The standalone value-DLR game priced at textbook discrete log — the isolated
+Jaeger–Tessaro terminal step.** At the named value-base slots (the index of
+`NontrivialRelation Fin.elim0 (valueBases 𝒱 ℛ)`), a finder's probability of returning a
+nontrivial relation over bases programmed from the DL challenge is at most `ε + 1/#F`.
+This states what the named `ε_valuedlr` costs against textbook discrete log. The deployed
+experiments deliberately do not take this step: a programmed basis is inconsistent with the
+deployed one, so they carry `ε_valuedlr` as the named advantage at the deployed bases, and
+this pricing stands alone on the programmed relation game. -/
+theorem valueRelationWithCoins_prob_le_of_textbookDL {ρ : Type*}
+    [Fintype ρ] [Nonempty ρ] [DecidableEq ρ] (B : G)
+    (finder : (b : BasisIndex 0 ValueBaseIndex → G) → ρ →
+      Option (AlgebraicRelationWitness (F := ZMod r) b))
+    {ε : ℝ≥0∞} (hdl : TextbookDLWithCoinsAdvantageLE B finder ε) :
+    (PMF.uniformOfFintype ((BasisIndex 0 ValueBaseIndex → ZMod r) × ρ)).toOuterMeasure
+        (relSetWithCoins B finder)
+      ≤ ε + 1 / Fintype.card (ZMod r) :=
+  relationWithCoins_prob_le_of_textbookDL B finder hdl
 
 end Zcash.Security.Ledger.Model

@@ -109,6 +109,10 @@ inductive ValueBaseIndex : Type where
 instance : Fintype ValueBaseIndex :=
   ⟨{.value, .randomness}, fun x => by cases x <;> decide⟩
 
+instance : Inhabited ValueBaseIndex := ⟨.value⟩
+
+instance : Nonempty (BasisIndex 0 ValueBaseIndex) := ⟨.inr .value⟩
+
 /-- The two value-commitment bases as a family over the named index type. -/
 def valueBases (Vbase Rbase : M) : ValueBaseIndex → M
   | .value => Vbase
