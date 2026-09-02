@@ -527,3 +527,9 @@ computed data.
   against the binding-signature layer, `KeyBindingArm` discharges the key-binding ε in the oracle
   model, `Capstone` lifts the deterministic layer to a distribution over valid annotated ledgers,
   and `Completeness` checks the other direction — that an honest wallet's spend actually verifies.
+  The experiment lane places those capstones in the challenge-oracle model.
+  `ConservationExperiment` and `IntegrityExperiment` compose the arms in one sample space
+  —at the sampled bases and, in their `At` forms, at the deployed value bases— and
+  `OrchardIntegrityExperiment` instantiates them at the deployed choices.
+  `OrchardExtractionExperiment` builds the annotated adversary from a proof-emitting one,
+  annotating its chain with the Action circuit's extracted witnesses.

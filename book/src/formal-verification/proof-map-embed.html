@@ -266,7 +266,7 @@ const territories = [
   { id:'sz',   label:'Schwartz–Zippel', cells:[[6,6],[7,6]],                   h:'var(--c-incoming)' },
   { id:'agmBoundary', label:'Online AGM', cells:[[4,1],[4,2],[5,2],[4,3],[5,3],[4,4],[5,4]], h:'#a06fb0', labelSide:'right', headroom:32 },
   { id:'agm',  label:'DLOG reduction', cells:[[0,7],[1,7],[0,8],[1,8]], h:'#a06fb0', headroom:24, padRight:32, labelDx:112 },
-  { id:'floor',label:'Assumptions',    cells:[[2,8],[3,8],[4,8],[5,8],[6,8]], h:'var(--c-floor)', labelDx:336 },
+  { id:'floor',label:'Assumptions',    cells:[[2,8],[3,8],[5,8],[6,8]], h:'var(--c-floor)', labelDx:336 },
 ];
 
 const nodes = [
@@ -408,9 +408,9 @@ const nodes = [
   { id:'h2cRO', c:6,r:8, w:235, label:'Hash-to-Curve = RO', status:'floor',
     anchor:'AGM.ProbabilityVesta.orchardGeneratorROSetup · orchard_uniformURSIdentification_of_generatorRO',
     role:'The generator hash-to-curve treated as a uniform random oracle into the group. Lean proves the sampled basis has the right distribution inside that model; that halo2’s real deterministic derivation behaves like the oracle is the assumption, separate from the transcript oracle.' },
-  { id:'ledgerComposition', c:4,r:8, w:225, label:'bundle → ledger composition', status:'floor',
-    anchor:'ActionBundleWitness · Security.Ledger.Bridge.actionSpec_to_ledger',
-    role:'The output-side composition gap. actionSpec_to_ledger already refines one ActionSpec witness to the games-facing ledger statement or an exhibited Sinsemilla break, and actionCircuit_spec_iff links the extractor’s circuit spec to ActionSpec. What is not yet exported is the theorem mapping every entry of an extracted ActionBundleWitness through those bridges to the bundle-level ledger relation.' },
+  { id:'ledgerComposition', c:4,r:8, w:225, label:'bundle → ledger composition', status:'proven',
+    anchor:'ActionBundleWitness · Security.Ledger.Bridge.actionSpecToLedgerData · OrchardExtractionExperiment',
+    role:'The output-side composition, formalized for Balance: actionSpecToLedgerData refines each extracted witness to the games-facing ledger data or a computed Sinsemilla break, bundleLedgerData traverses the extracted bundle, and the composed extraction experiment assembles the annotated chain at the deployed value bases. No out-of-Lean assumption remains here: the composed bound carries per-slot-and-size knowledge-soundness hypotheses in Lean, at a k·maxActions factor — a suboptimality of the reduction, tracked as #214.' },
   { id:'deploymentProvenance', c:5,r:8, w:225, label:'deployment provenance', status:'floor',
     anchor:'Keygen.Pipeline · Fingerprint.Match',
     role:'The input-side deployment floor. Lean derives the verifying key and checks every field against the capture, but the ported configure/synthesize is not universally proven equal to the shipped Rust circuit, and the captured proof bytes, MSM, and oracle transcript remain empirical records rather than a byte-level refinement theorem.' },
