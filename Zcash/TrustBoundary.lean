@@ -752,9 +752,12 @@ valid output ledger violates balance integrity at some prefix — the shielded p
 negative, or the pools failing to sum to the minted issuance — except with a probability
 bounded by the non-negativity side plus the conservation side. The non-negativity side is one
 named bound on the combined Balance-subset arm event; the conservation side is the combined
-coin-consuming finder's discrete-log bound. -/
+coin-consuming finder's discrete-log bound. The `At` form runs the same composition at a
+single presented basis, over the coins and the table alone
+(`balanceIntegrityBefore_measure_le_experimentAt`). -/
 
 assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_experiment
+assert_axioms Zcash.Security.Ledger.Model.balanceIntegrityBefore_measure_le_experimentAt
 
 /-! ## The Orchard integrity experiment
 
@@ -776,7 +779,10 @@ accepted modelling trade-off. The conservation and cap experiments are pinned at
 choices. The `deployed` forms run at the deployed value bases (`orchardValueBases`):
 validity is at the deployed value commitment, only the binding challenge hash is idealized
 as the table, and the named `ε_valuedlr` bounds the deployed finder's relation event over
-the named 𝒱/ℛ slots. -/
+the named 𝒱/ℛ slots. In the deployed integrity form, `ε_sinsemilladlr` bounds the event
+that a valid ledger's Merkle, note-commitment, or key-binding break computes a nontrivial
+relation among the fixed Sinsemilla bases at some prefix, routed through the
+basis-parametric Orchard reducer (`deployedSinsemillaRelationEvent`). -/
 
 assert_computable Zcash.Security.Ledger.Bridge.kappaOrchardBalanceSubsetOrRelation +choice +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
@@ -795,6 +801,8 @@ assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_
 assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceConservation_measure_le_idealizedks_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 assert_axioms Zcash.Security.Ledger.Bridge.orchardShieldedBalanceCap_measure_le_idealizedks_deployed +native(
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.Bridge.orchardBalanceIntegrity_measure_le_idealizedks_deployed +native(
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt)
 
 /-! ## Binding-signature relation reductions

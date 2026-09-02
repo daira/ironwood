@@ -58,41 +58,81 @@ variable (m : ℕ) (gen : PallasGroup) (v_idx r_idx : Fin m)
   (queryOf : PallasGroup → PallasGroup → MSG → Q)
   (toSig : SIG → RedDSA.Sig Fq PallasGroup)
 
-/-- A note-commitment break at the sampled primitives is one at the deployed primitives. The break
-constrains only `noteCommit`, `extract`, and `valueBound`, and `kappaPrimitivesAt` — a record update
-touching only `valueCommit` and `bindingVerify` — leaves those three fields equal to the deployed
-ones, so every field transports by definitional equality. (`NoteCommitBreak` is indexed by the whole
-primitives record, which the sampling does change, so the two break types are not definitionally
-equal; rebuilding field-by-field is what carries the break across.) -/
-def noteCommitBreakOfKappa (table : Q → Fq) (logs : Fin m → Fq)
-    (nb : NoteCommitBreak (kappaPrimitivesAt m gen v_idx r_idx queryOf
-      (primitives spendAuthVerify bindingVerify) toSig table logs)) :
+/-- A note-commitment break at a presented basis's primitives is one at the deployed
+primitives. The break constrains only `noteCommit`, `extract`, and `valueBound`, and
+`primitivesAtBasis` — a record update touching only `valueCommit` and `bindingVerify` — leaves
+those three fields equal to the deployed ones, so every field transports by definitional
+equality. (`NoteCommitBreak` is indexed by the whole primitives record, which the update does
+change, so the two break types are not definitionally equal; rebuilding field-by-field is what
+carries the break across.) -/
+def noteCommitBreakAtBasis (basis : Fin m → PallasGroup) (table : Q → Fq)
+    (nb : NoteCommitBreak (primitivesAtBasis m v_idx r_idx queryOf
+      (primitives spendAuthVerify bindingVerify) toSig basis table)) :
     NoteCommitBreak (primitives spendAuthVerify bindingVerify) :=
   ⟨nb.rcm₁, nb.n₁, nb.rcm₂, nb.n₂, nb.cm₁, nb.cm₂, nb.ne, nb.open₁, nb.open₂, nb.extract_eq,
     nb.v₁_lt, nb.v₂_lt⟩
 
-/-- **The Orchard Balance-subset reduction at the sampled bases.** As
-`orchardBalanceSubsetOrRelation`, but at `kappaPrimitivesAt`'s primitives — the deployed Orchard
-primitives with the value and binding fields replaced by the sampled slots. Those replaced fields
-are not read by any Balance-subset arm, so the reduction routes each break through the same Orchard
-reducer and lands in the same `OrchardBalanceRelation`. -/
+/-- A note-commitment break at the sampled primitives: `noteCommitBreakAtBasis` at the sampled
+basis. -/
+def noteCommitBreakOfKappa (table : Q → Fq) (logs : Fin m → Fq)
+    (nb : NoteCommitBreak (kappaPrimitivesAt m gen v_idx r_idx queryOf
+      (primitives spendAuthVerify bindingVerify) toSig table logs)) :
+    NoteCommitBreak (primitives spendAuthVerify bindingVerify) :=
+  noteCommitBreakAtBasis spendAuthVerify bindingVerify m v_idx r_idx queryOf toSig
+    (scalarBasis gen logs) table nb
+
+/-- **The Orchard Balance-subset reduction at a presented basis.** As
+`orchardBalanceSubsetOrRelation`, but at `primitivesAtBasis`'s primitives — the deployed Orchard
+primitives with the value and binding fields replaced by the presented slots. Those replaced
+fields are not read by any Balance-subset arm, so the reduction routes each break through the
+same Orchard reducer and lands in the same `OrchardBalanceRelation`. -/
+def orchardBalanceSubsetOrRelationAtBasis (basis : Fin m → PallasGroup) (table : Q → Fq)
+    {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
+    (hval : ValidLedger (primitivesAtBasis m v_idx r_idx queryOf
+        (primitives spendAuthVerify bindingVerify) toSig basis table) keyBinding issuance
+        maxActions ledger) (i : ℕ) :
+    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' OrchardBalanceRelation :=
+  match balanceSubsetOrBreak hval i with
+  | .inl hsub => .inl hsub
+  | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
+  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify
+      (noteCommitBreakAtBasis spendAuthVerify bindingVerify m v_idx r_idx queryOf toSig
+        basis table nb)))
+  | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
+
+/-- The Orchard Balance-subset reduction at the sampled bases:
+`orchardBalanceSubsetOrRelationAtBasis` at the sampled basis. -/
 def kappaOrchardBalanceSubsetOrRelation (table : Q → Fq) (logs : Fin m → Fq)
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
         (primitives spendAuthVerify bindingVerify) toSig table logs) keyBinding issuance maxActions
         ledger) (i : ℕ) :
     (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' OrchardBalanceRelation :=
-  match balanceSubsetOrBreak hval i with
-  | .inl hsub => .inl hsub
-  | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
-  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify
-      (noteCommitBreakOfKappa spendAuthVerify bindingVerify m gen v_idx r_idx queryOf toSig
-        table logs nb)))
-  | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
+  orchardBalanceSubsetOrRelationAtBasis spendAuthVerify bindingVerify issuance maxActions m
+    v_idx r_idx queryOf toSig (scalarBasis gen logs) table hval i
 
 omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
-/-- A Balance-subset break at the sampled primitives computes an Orchard Sinsemilla relation: the
-total reduction cannot return the containment when handed a break, so it returns a relation. -/
+/-- A Balance-subset break at a presented basis's primitives computes an Orchard Sinsemilla
+relation: the total reduction cannot return the containment when handed a break, so it returns
+a relation. -/
+theorem orchardBalanceSubsetOrRelationAtBasis_inr_of_break (basis : Fin m → PallasGroup)
+    (table : Q → Fq)
+    {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
+    (hval : ValidLedger (primitivesAtBasis m v_idx r_idx queryOf
+        (primitives spendAuthVerify bindingVerify) toSig basis table) keyBinding issuance
+        maxActions ledger) (i : ℕ)
+    {brk : BalanceBreak (primitivesAtBasis m v_idx r_idx queryOf
+        (primitives spendAuthVerify bindingVerify) toSig basis table) keyBinding}
+    (hb : balanceSubsetOrBreak hval i = .inr brk) :
+    ∃ rel, orchardBalanceSubsetOrRelationAtBasis spendAuthVerify bindingVerify issuance
+      maxActions m v_idx r_idx queryOf toSig basis table hval i = .inr rel := by
+  unfold orchardBalanceSubsetOrRelationAtBasis
+  rw [hb]
+  cases brk <;> exact ⟨_, rfl⟩
+
+omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- A Balance-subset break at the sampled primitives computes an Orchard Sinsemilla relation:
+`orchardBalanceSubsetOrRelationAtBasis_inr_of_break` at the sampled basis. -/
 theorem kappaOrchardBalanceSubsetOrRelation_inr_of_break (table : Q → Fq) (logs : Fin m → Fq)
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
@@ -102,10 +142,9 @@ theorem kappaOrchardBalanceSubsetOrRelation_inr_of_break (table : Q → Fq) (log
         (primitives spendAuthVerify bindingVerify) toSig table logs) keyBinding}
     (hb : balanceSubsetOrBreak hval i = .inr brk) :
     ∃ rel, kappaOrchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx
-      queryOf toSig table logs hval i = .inr rel := by
-  unfold kappaOrchardBalanceSubsetOrRelation
-  rw [hb]
-  cases brk <;> exact ⟨_, rfl⟩
+      queryOf toSig table logs hval i = .inr rel :=
+  orchardBalanceSubsetOrRelationAtBasis_inr_of_break spendAuthVerify bindingVerify issuance
+    maxActions m v_idx r_idx queryOf toSig (scalarBasis gen logs) table hval i hb
 
 variable {ι : Type u}
   (LA : ι → (Fin m → PallasGroup) → LabeledOracleComp Q Fq (fun _ => QueryRep Fq m)
@@ -135,12 +174,8 @@ the abstract experiment's combined `ε_nonneg` by the single `ε_sinsemilladlr` 
 instantiation. -/
 theorem sampledBalanceSubsetArms_subset_orchardRelation (k : ℕ) :
     sampledLedgerEvent m gen v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify) toSig LA
-        (fun P => balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
-            (maxActions := maxActions) k .merkle
-          ∪ balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
-            (maxActions := maxActions) k .noteCommit
-          ∪ balanceSubsetBreakEventUpTo (P := P) (kv := keyBinding) (issuance := issuance)
-            (maxActions := maxActions) k .keyBinding)
+        (balanceSubsetArmsUpTo (kv := keyBinding) (issuance := issuance)
+          (maxActions := maxActions) k)
       ⊆ sampledOrchardRelationEventUpTo spendAuthVerify bindingVerify issuance maxActions m gen v_idx r_idx
           queryOf toSig LA k := by
   rintro x ⟨hval, harm⟩
@@ -150,6 +185,37 @@ theorem sampledBalanceSubsetArms_subset_orchardRelation (k : ℕ) :
       exact ⟨i, hik, b, hb⟩
   exact ⟨i, hik, kappaOrchardBalanceSubsetOrRelation_inr_of_break spendAuthVerify bindingVerify issuance
     maxActions m gen v_idx r_idx queryOf toSig x.2.1 x.2.2 hval i hb⟩
+
+/-- **The Orchard Sinsemilla-relation event at a presented basis.** As
+`sampledOrchardRelationEventUpTo`, over the coins and the challenge table alone: the output
+ledger is valid at the presented basis's primitives and its data computes a nontrivial
+discrete-log relation among the fixed Sinsemilla bases at some step `i < k`. -/
+def orchardRelationEventUpToAt (basis : Fin m → PallasGroup) (k : ℕ) :
+    Set (ι × (Q → Fq)) :=
+  setOf fun x =>
+    ∃ hval : ValidLedger (primitivesAtBasis m v_idx r_idx queryOf
+        (primitives spendAuthVerify bindingVerify) toSig basis x.2) keyBinding issuance
+        maxActions (((LA x.1 basis).run x.2).map Prod.fst),
+      ∃ i, i < k ∧ ∃ rel, orchardBalanceSubsetOrRelationAtBasis spendAuthVerify bindingVerify
+        issuance maxActions m v_idx r_idx queryOf toSig basis x.2 hval i = .inr rel
+
+omit [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- **The three non-negativity arms collapse onto the Sinsemilla-relation event at a presented
+basis.** As `sampledBalanceSubsetArms_subset_orchardRelation`, with the arm's break routed
+through the basis-parametric Orchard reducer (`orchardBalanceSubsetOrRelationAtBasis`). -/
+theorem balanceSubsetArmsAt_subset_orchardRelation (basis : Fin m → PallasGroup) (k : ℕ) :
+    ledgerEventAt m v_idx r_idx queryOf (primitives spendAuthVerify bindingVerify) toSig basis LA
+        (balanceSubsetArmsUpTo (kv := keyBinding) (issuance := issuance)
+          (maxActions := maxActions) k)
+      ⊆ orchardRelationEventUpToAt spendAuthVerify bindingVerify issuance maxActions m v_idx
+          r_idx queryOf toSig LA basis k := by
+  rintro x ⟨hval, harm⟩
+  refine ⟨hval, ?_⟩
+  obtain ⟨i, hik, b, hb⟩ : ∃ i, i < k ∧ ∃ b, balanceSubsetOrBreak hval i = .inr b := by
+    rcases harm with (⟨i, hik, b, hb, -⟩ | ⟨i, hik, b, hb, -⟩) | ⟨i, hik, b, hb, -⟩ <;>
+      exact ⟨i, hik, b, hb⟩
+  exact ⟨i, hik, orchardBalanceSubsetOrRelationAtBasis_inr_of_break spendAuthVerify
+    bindingVerify issuance maxActions m v_idx r_idx queryOf toSig basis x.2 hval i hb⟩
 
 /-- **The Orchard integrity experiment for a KS-idealized adversary.** Over the idealized
 adversary's coins, the challenge table, and the basis logs, the probability that the output
@@ -338,6 +404,16 @@ def sinsemillaRelationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify
     Set (A.ι × ((OrchardQuery MSG → Fq) × (Fin 2 → Fq))) :=
   sampledOrchardRelationEventUpTo spendAuthVerify (redPallasBindingVerify H_bind) issuance
     maxActions 2 pallasGen 0 1 orchardQueryOf id A.LA k
+
+/-- The deployed Sinsemilla-relation event the non-negativity advantage is named on, at the
+deployed value bases: the deterministic reducer computes a nontrivial relation among the
+fixed Sinsemilla bases at some prefix `i < k`. -/
+def deployedSinsemillaRelationEvent
+    (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (k : ℕ) :
+    Set (A.ι × (OrchardQuery MSG → Fq)) :=
+  orchardRelationEventUpToAt spendAuthVerify (redPallasBindingVerify H_bind) issuance
+    maxActions 2 0 1 orchardQueryOf id A.LA orchardValueBases k
 
 /-- The combined conservation finder the discrete-log advantage is stated for: replay coin
 `j`'s machine once and return whichever arm's relation the sample yields. -/
@@ -556,6 +632,41 @@ theorem orchardShieldedBalanceCap_measure_le_idealizedks_deployed
     (kv := keyBinding) (issuance := issuance) (maxActions := maxActions)
     A.coins (basis := orchardValueBases) (by decide) (fun j => A.queryBound j _)
     (fun j => A.algebraic j orchardValueBases) (orchard_ledger_no_overflow hmax) k
+    (fun j => by
+      rw [A.conservationRelFiberAt_orchardValueBases k j]
+      exact hrel j)
+
+/-- **Balance integrity against a KS-idealized adversary, at the deployed value bases.**
+As the sampled endpoint (`orchardBalanceIntegrity_measure_le_idealizedks`), over the coins
+and the challenge table alone, at `ε_sinsemilladlr + (ε_valuedlr + (qH+1)/#F)`. No basis is
+sampled: validity is at the deployed value bases, the non-negativity side is the deployed
+Sinsemilla-relation advantage (`deployedSinsemillaRelationEvent`), and the conservation
+side's relation arm is the named `ε_valuedlr` for the exhibited deployed finder
+(`valueDLRFinder`). The idealizations are `deployedViolationEvent`'s. -/
+theorem orchardBalanceIntegrity_measure_le_idealizedks_deployed
+    {MSG : Type} [Fintype MSG] [DecidableEq MSG] [Inhabited MSG]
+    {spendAuthVerify : PallasGroup → MSG → RedDSA.Sig Fq PallasGroup → Prop}
+    {H_bind : PallasGroup → PallasGroup → MSG → Fq}
+    (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind)
+    (issuance : ℕ → ℕ) (maxActions : ℕ) (hmax : maxActions < 2^16) (k : ℕ)
+    {ε_sinsemilladlr ε_valuedlr : ℝ≥0∞}
+    (hsin : A.deployedExperiment.toOuterMeasure
+      (A.deployedSinsemillaRelationEvent issuance maxActions k) ≤ ε_sinsemilladlr)
+    (hrel : ∀ j : A.ι, (PMF.uniformOfFintype (OrchardQuery MSG → Fq)).toOuterMeasure
+        {table | (A.valueDLRFinder k j table).isSome} ≤ ε_valuedlr) :
+    A.deployedExperiment.toOuterMeasure (A.deployedViolationEvent issuance maxActions
+        (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
+          (issuance := issuance) (maxActions := maxActions) k))
+      ≤ ε_sinsemilladlr + (ε_valuedlr + ((A.qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
+  balanceIntegrityBefore_measure_le_experimentAt 2 0 1 orchardQueryOf
+    (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id
+    (kv := keyBinding) (issuance := issuance) (maxActions := maxActions)
+    A.coins (basis := orchardValueBases) (by decide) (fun j => A.queryBound j _)
+    (fun j => A.algebraic j orchardValueBases) (orchard_ledger_no_overflow hmax) k
+    (le_trans (MeasureTheory.measure_mono
+      (balanceSubsetArmsAt_subset_orchardRelation spendAuthVerify
+        (redPallasBindingVerify H_bind) issuance maxActions 2 0 1 orchardQueryOf id A.LA
+        orchardValueBases k)) hsin)
     (fun j => by
       rw [A.conservationRelFiberAt_orchardValueBases k j]
       exact hrel j)

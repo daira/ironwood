@@ -128,6 +128,35 @@ def ledgerEventAt {ι : Type u} (basis : Fin m → G)
           kv issuance maxActions)
         ∈ Event (primitivesAtBasis m v_idx r_idx queryOf P₀ toSig basis x.2)
 
+omit [DecidableEq G] [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- `ledgerEventAt` is monotone in the event family: it preserves `⊆`. -/
+theorem ledgerEventAt_mono {ι : Type u} (basis : Fin m → G)
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    {E₁ E₂ : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)} (h : ∀ P, E₁ P ⊆ E₂ P) :
+    ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA E₁
+      ⊆ ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA E₂ :=
+  fun _ ⟨hval, hx⟩ => ⟨hval, h _ hx⟩
+
+omit [DecidableEq G] [Fintype Q] [DecidableEq Q] [Inhabited Q] in
+/-- `ledgerEventAt` preserves unions: it is a join-homomorphism, since the `∃ hval` that
+lifts the event distributes over the disjunction. -/
+theorem ledgerEventAt_union {ι : Type u} (basis : Fin m → G)
+    (LA : ι → (Fin m → G) → LabeledOracleComp Q (ZMod r) (fun _ => QueryRep (ZMod r) m)
+      (List (Tx KW (ZMod r) G RHO PSI MHASH MENC MSG SIG P₀.depth × QueryRep (ZMod r) m)))
+    (E₁ E₂ : ∀ P : Primitives (ZMod r) G IVK NK RHO PSI MHASH MENC MSG SIG,
+      Set (ValidAnnotated P kv issuance maxActions)) :
+    ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA (fun P => E₁ P ∪ E₂ P)
+      = ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA E₁
+        ∪ ledgerEventAt m v_idx r_idx queryOf P₀ toSig basis LA E₂ := by
+  ext x
+  constructor
+  · rintro ⟨hval, hx | hx⟩
+    exacts [Or.inl ⟨hval, hx⟩, Or.inr ⟨hval, hx⟩]
+  · rintro (⟨hval, hx⟩ | ⟨hval, hx⟩)
+    exacts [⟨hval, Or.inl hx⟩, ⟨hval, Or.inr hx⟩]
+
 /-- **The combined conservation relation finder.** Replay the labeled adversary at the
 presented basis and return whichever relation the sample yields: the relation arm's
 (`valueRelFinder`, at the value and randomness slots) when it fires, and the
