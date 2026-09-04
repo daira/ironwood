@@ -30,10 +30,9 @@ directory level, naming the notable modules as entry points.
   reduction-style security arguments can produce a break rather than merely assert one exists (see
   *breaks as computed data* on the [Formal Verification](../formal-verification.md) page), and
   turns one into a discrete log against known slot logs. `ProgrammedBasis` turns a relation into a
-  discrete log against a basis programmed from the DL challenge (Jaeger–Tessaro, [Expected-Time
-  Cryptography: Generic Techniques and Applications to Concrete
-  Soundness](https://eprint.iacr.org/2020/1213), Lemma 3); `RelationProbability`
-  and `RelationProbabilityCoins` price that reduction's single miss hyperplane at `1/|F|`, and
+  discrete log against a basis programmed from the DL challenge (Jaeger–Tessaro,
+  [Expected-Time Cryptography: Generic Techniques and Applications to Concrete Soundness](https://eprint.iacr.org/2020/1213), Lemma 3);
+  `RelationProbability` and `RelationProbabilityCoins` price that reduction's single miss hyperplane at `1/|F|`, and
   `UniformMeasure` holds the distribution facts they count with. None of these restrict the
   adversary — they consume relation coefficients from any source, and what scopes them is how the
   basis is sampled — so they sit here rather than under `Snark/Soundness/AGM/`. `Expr` is the
