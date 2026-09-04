@@ -4,8 +4,9 @@ The [proof map](proof-map.md) traces *verifier knowledge soundness* — the depl
 under `Zcash/Snark/`. This page is its companion for the other half of the development: the
 protocol **security properties** under `Zcash/Security/`. It covers:
 * the top-level capstones — the *ledger-model security games* of *Balance integrity*
-  (`orchardBalanceIntegrityExtraction_measure_le`), *Spendability* (`faerieGoldCore`,
-  `validLedger_append`), and *Spend authority* (`orchardSpendAuthority_measure_le`);
+  (`orchardBalanceIntegrityExtraction_measure_le_of_dlogProfiles`), *Spendability*
+  (`faerieGoldCore`, `validLedger_append`), and *Spend authority*
+  (`orchardSpendAuthority_measure_le`);
 * how each capstone connects, by reduction via intermediate security properties such as
   *binding-signature balance* and *key binding*, to an exhibited break of a cryptographic
   primitive in a specified adversary model — and where the intended hand-off to *verifier
@@ -93,8 +94,8 @@ flowchart TD
   classDef partial fill:#9a6700,stroke:#7d4e00,color:#ffffff
   classDef hyp fill:#cf222e,stroke:#a40e26,color:#ffffff
   classDef assumed fill:#57606a,stroke:#424a53,color:#ffffff
-  class BAL,SPEND,SPENDAUTH partial
-  class NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR,KS checked
+  class SPEND,SPENDAUTH partial
+  class BAL,NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR,KS checked
   class RDSA hyp
   class DL assumed
   classDef agmEdge stroke:#8858c8,stroke-width:4.2px
@@ -135,10 +136,14 @@ together with the deployed violation events.
 The `_idealizedks` endpoints remain, stated directly over that annotated model —their
 names mark it— and the composed capstones consume them at the constructed adversary.
 
-What remains open on the composed route to the Balance goals is quantitative, not
-structural: the per-slot-and-size knowledge-soundness and escape hypotheses. These are
-dischargeable verbatim by the knowledge-error endpoint, at a k·maxActions factor tracked
-as [#214](https://github.com/zcash/ironwood/issues/214). The deployed forms state validity
+On the composed route to the Balance goals, the `_of_dlogProfiles` endpoints carry no
+per-arm hypotheses at all. The knowledge arm is discharged by the adaptive-statement
+capstone, applied once per slot-size pair, and every arm's term in the bound is the
+constructed adversary's own advantage: the worst-pair Halo 2 knowledge error at the
+supplied DLOG profiles (`worstKnowledgeError`), the escape advantage on the exhibited
+finder (`escapeAdvantage`), and the deployed Sinsemilla and value-DLR advantages. The
+k·maxActions factor is tracked as
+[#214](https://github.com/zcash/ironwood/issues/214). The deployed forms state validity
 at the deployed value bases: the value commitment is definitionally the deployed one,
 with no reference-string step on the value side. Their accepted trade-offs —the binding
 challenge hash as a random oracle, the per-size finite presentation of the Fiat–Shamir

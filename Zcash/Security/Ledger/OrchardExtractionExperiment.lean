@@ -58,7 +58,8 @@ open Zcash.Security.Ledger.Bridge
 open Zcash.Security.Ledger.Model
 open Zcash.Security.Ledger.Pool
 open Zcash.Snark.ActionTerminal
-open Zcash.Snark.Capstone (adaptiveStatement_pairCount_lt)
+open Zcash.Snark.Capstone (adaptiveStatement_pairCount_lt
+  orchard_action_adaptiveStatement_knowledge_error_bound)
 open Zcash.Snark.Keygen (actionProofParamsFor)
 
 /-- The transaction-level data the ledger machine supplies for one chain position: the
@@ -487,6 +488,179 @@ theorem orchardShieldedBalanceCapExtraction_measure_le
     (extractionFailureEvent_measure_le H_bind A hqb halg hks hescape)
     (orchardShieldedBalanceCap_measure_le_idealizedks_deployed
       (toIdealizedKS H_bind A hqb halg) issuance maxActions hmax k hrel)
+
+/-- The knowledge-error bound of one slot-size pair at a DLOG profile: the bound that
+`orchard_action_adaptiveStatement_knowledge_error_bound` proves for the pair's
+knowledge-failure event under `runLawAt`. The `_of_dlogProfiles` endpoints take one
+profile per pair and compare this quantity against the uniform `ε_ks`. -/
+noncomputable def knowledgeErrorBound (t : Fin k) (n : Fin maxActions) {B : VestaG}
+    (profile : ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+      (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B) :
+    ℝ≥0∞ :=
+  (profile.advantage ((A.families t n).adaptiveStatementDlogRandomOracleQueries)
+      (ComputedAdaptiveActionStatementFSFamily.adaptiveStatementDlogGroupWork
+        profile.proverGroupWork profile.reductionGroupWork) +
+    1 / Fintype.card Fp) +
+  ((A.families t n).Q + 1 : ℕ) *
+    (1 / Fintype.card Fp +
+      actionCircuit.domainExponent * (2 / (Fintype.card Fp : ENNReal)) +
+      algebraicRootBudget
+        (actionCircuit.shape.withProofParams (actionProofParamsFor (n.1 + 1)))
+        actionCircuit.domainExponent +
+      ∑ i : Fin 5,
+        ((![(n.1 + 1) * 2 ^ 25, (n.1 + 1) * 950835027, (n.1 + 1) * 73554,
+            (n.1 + 1) * 2 ^ 23, 20470] i : ℕ) : ENNReal) / Fintype.card Fp)
+
+/-- The worst slot-size pair's knowledge-error bound at the supplied DLOG profiles. -/
+noncomputable def worstKnowledgeError {B : VestaG}
+    (profiles : ∀ (t : Fin k) (n : Fin maxActions),
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+        (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B) :
+    ℝ≥0∞ :=
+  ⨆ (t : Fin k) (n : Fin maxActions), knowledgeErrorBound A t n (profiles t n)
+
+/-- The escape advantage: the worst slot-size pair's probability that a run accepts and
+a member of its extracted bundle escapes the bridge (`runEscape`). -/
+noncomputable def escapeAdvantage : ℝ≥0∞ :=
+  ⨆ (t : Fin k) (n : Fin maxActions), (runLawAt n).toOuterMeasure (runEscape H_bind A t n)
+
+/-- The constructed adversary's deployed Sinsemilla-relation advantage at prefix `k`. -/
+noncomputable def sinsemillaAdvantage
+    (hqb : ∀ j b, (toLA H_bind A j b).QueryBound A.qH)
+    (halg : ∀ j, ∀ basis, AlgebraicAtBindingPointsAt 2 0 1 orchardQueryOf
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id basis
+      (toLA H_bind A j))
+    (issuance : ℕ → ℕ) : ℝ≥0∞ :=
+  (toIdealizedKS H_bind A hqb halg).deployedExperiment.toOuterMeasure
+    ((toIdealizedKS H_bind A hqb halg).deployedSinsemillaRelationEvent issuance
+      maxActions k)
+
+/-- The constructed adversary's value-DLR advantage: the worst coin's probability that
+the combined conservation finder returns a relation over the deployed value bases. -/
+noncomputable def valueDLRAdvantage
+    (hqb : ∀ j b, (toLA H_bind A j b).QueryBound A.qH)
+    (halg : ∀ j, ∀ basis, AlgebraicAtBindingPointsAt 2 0 1 orchardQueryOf
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id basis
+      (toLA H_bind A j)) : ℝ≥0∞ :=
+  ⨆ j, (PMF.uniformOfFintype (OrchardQuery MSG → Fq)).toOuterMeasure
+    {table | ((toIdealizedKS H_bind A hqb halg).valueDLRFinder k j table).isSome}
+
+/-- Each pair's knowledge-soundness hypothesis, proved by the adaptive-statement
+capstone at that pair's DLOG profile and compared against the uniform bound. -/
+theorem runKnowledgeFailure_measure_le_of_dlogProfile (hquery : Function.Injective query)
+    {B : VestaG} (hB : B ≠ 0) (t : Fin k) (n : Fin maxActions)
+    (profile : ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+      (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B)
+    {ε_ks : ℝ≥0∞} (hadv : knowledgeErrorBound A t n profile ≤ ε_ks) :
+    (runLawAt n).toOuterMeasure (runKnowledgeFailure A t n) ≤ ε_ks :=
+  le_trans
+    (orchard_action_adaptiveStatement_knowledge_error_bound (n.1 + 1) B hB query hquery
+      (A.families t n) profile)
+    hadv
+
+/-- **Balance integrity for the proof-emitting adversary, with the knowledge
+hypotheses discharged.** As `orchardBalanceIntegrityExtraction_measure_le`, with each
+slot-size pair's knowledge-soundness hypothesis proved by the adaptive-statement
+capstone (`orchard_action_adaptiveStatement_knowledge_error_bound`) at a supplied
+DLOG profile, and every other arm's ε instantiated at the constructed adversary's own
+advantage. No per-arm hypothesis remains: the conclusion carries the worst-pair Halo 2
+knowledge error at the supplied profiles, the escape advantage, and the deployed
+Sinsemilla and value-DLR advantages. -/
+theorem orchardBalanceIntegrityExtraction_measure_le_of_dlogProfiles
+    (hqb : ∀ j b, (toLA H_bind A j b).QueryBound A.qH)
+    (halg : ∀ j, ∀ basis, AlgebraicAtBindingPointsAt 2 0 1 orchardQueryOf
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id basis
+      (toLA H_bind A j))
+    (issuance : ℕ → ℕ) (hmax : maxActions < 2 ^ 16)
+    (hquery : Function.Injective query) {B : VestaG} (hB : B ≠ 0)
+    (profiles : ∀ (t : Fin k) (n : Fin maxActions),
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+        (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B)
+    :
+    (toIdealizedKS H_bind A hqb halg).deployedExperiment.toOuterMeasure
+        (extractionFailureEvent H_bind A ∪
+          (toIdealizedKS H_bind A hqb halg).deployedViolationEvent issuance maxActions
+            (fun P => balanceIntegrityViolationBefore (P := P) (kv := keyBinding)
+              (issuance := issuance) (maxActions := maxActions) k)) ≤
+      (k * maxActions : ℕ) * (worstKnowledgeError A profiles + escapeAdvantage H_bind A) +
+        (sinsemillaAdvantage H_bind A hqb halg issuance +
+          (valueDLRAdvantage H_bind A hqb halg +
+            ((A.qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card Fq)) :=
+  orchardBalanceIntegrityExtraction_measure_le H_bind A hqb halg issuance hmax
+    (fun t n => runKnowledgeFailure_measure_le_of_dlogProfile A hquery hB t n
+      (profiles t n)
+      (le_iSup₂ (f := fun t n => knowledgeErrorBound A t n (profiles t n)) t n))
+    (fun t n => le_iSup₂
+      (f := fun t n => (runLawAt n).toOuterMeasure (runEscape H_bind A t n)) t n)
+    (le_refl _)
+    (fun j => le_iSup
+      (f := fun j => (PMF.uniformOfFintype (OrchardQuery MSG → Fq)).toOuterMeasure
+        {table | ((toIdealizedKS H_bind A hqb halg).valueDLRFinder k j table).isSome}) j)
+
+/-- **Balance conservation for the proof-emitting adversary, with the knowledge
+hypotheses discharged.** As the integrity form
+(`orchardBalanceIntegrityExtraction_measure_le_of_dlogProfiles`), for the conservation
+violation. -/
+theorem orchardBalanceConservationExtraction_measure_le_of_dlogProfiles
+    (hqb : ∀ j b, (toLA H_bind A j b).QueryBound A.qH)
+    (halg : ∀ j, ∀ basis, AlgebraicAtBindingPointsAt 2 0 1 orchardQueryOf
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id basis
+      (toLA H_bind A j))
+    (issuance : ℕ → ℕ) (hmax : maxActions < 2 ^ 16)
+    (hquery : Function.Injective query) {B : VestaG} (hB : B ≠ 0)
+    (profiles : ∀ (t : Fin k) (n : Fin maxActions),
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+        (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B)
+    :
+    (toIdealizedKS H_bind A hqb halg).deployedExperiment.toOuterMeasure
+        (extractionFailureEvent H_bind A ∪
+          (toIdealizedKS H_bind A hqb halg).deployedViolationEvent issuance maxActions
+            (fun P => balanceConservationViolationBefore (P := P) (kv := keyBinding)
+              (issuance := issuance) (maxActions := maxActions) k)) ≤
+      (k * maxActions : ℕ) * (worstKnowledgeError A profiles + escapeAdvantage H_bind A) +
+        (valueDLRAdvantage H_bind A hqb halg +
+          ((A.qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
+  orchardBalanceConservationExtraction_measure_le H_bind A hqb halg issuance hmax
+    (fun t n => runKnowledgeFailure_measure_le_of_dlogProfile A hquery hB t n
+      (profiles t n)
+      (le_iSup₂ (f := fun t n => knowledgeErrorBound A t n (profiles t n)) t n))
+    (fun t n => le_iSup₂
+      (f := fun t n => (runLawAt n).toOuterMeasure (runEscape H_bind A t n)) t n)
+    (fun j => le_iSup
+      (f := fun j => (PMF.uniformOfFintype (OrchardQuery MSG → Fq)).toOuterMeasure
+        {table | ((toIdealizedKS H_bind A hqb halg).valueDLRFinder k j table).isSome}) j)
+
+/-- **Shielded balance cap for the proof-emitting adversary, with the knowledge
+hypotheses discharged.** As the conservation form, for the shielded pool exceeding the
+minted issuance at some prefix below `k`. -/
+theorem orchardShieldedBalanceCapExtraction_measure_le_of_dlogProfiles
+    (hqb : ∀ j b, (toLA H_bind A j b).QueryBound A.qH)
+    (halg : ∀ j, ∀ basis, AlgebraicAtBindingPointsAt 2 0 1 orchardQueryOf
+      (primitives spendAuthVerify (redPallasBindingVerify H_bind)) id basis
+      (toLA H_bind A j))
+    (issuance : ℕ → ℕ) (hmax : maxActions < 2 ^ 16)
+    (hquery : Function.Injective query) {B : VestaG} (hB : B ≠ 0)
+    (profiles : ∀ (t : Fin k) (n : Fin maxActions),
+      ComputedAdaptiveActionStatementFSFamily.AdaptiveStatementDlogProfile
+        (A.families t n) (adaptiveStatement_pairCount_lt (n.1 + 1) (A.families t n)) B)
+    :
+    (toIdealizedKS H_bind A hqb halg).deployedExperiment.toOuterMeasure
+        (extractionFailureEvent H_bind A ∪
+          (toIdealizedKS H_bind A hqb halg).deployedViolationEvent issuance maxActions
+            (fun P => shieldedBalanceCapViolationBefore (P := P) (kv := keyBinding)
+              (issuance := issuance) (maxActions := maxActions) k)) ≤
+      (k * maxActions : ℕ) * (worstKnowledgeError A profiles + escapeAdvantage H_bind A) +
+        (valueDLRAdvantage H_bind A hqb halg +
+          ((A.qH + 1 : ℕ) : ℝ≥0∞) / Fintype.card Fq) :=
+  orchardShieldedBalanceCapExtraction_measure_le H_bind A hqb halg issuance hmax
+    (fun t n => runKnowledgeFailure_measure_le_of_dlogProfile A hquery hB t n
+      (profiles t n)
+      (le_iSup₂ (f := fun t n => knowledgeErrorBound A t n (profiles t n)) t n))
+    (fun t n => le_iSup₂
+      (f := fun t n => (runLawAt n).toOuterMeasure (runEscape H_bind A t n)) t n)
+    (fun j => le_iSup
+      (f := fun j => (PMF.uniformOfFintype (OrchardQuery MSG → Fq)).toOuterMeasure
+        {table | ((toIdealizedKS H_bind A hqb halg).valueDLRFinder k j table).isSome}) j)
 
 end Endpoints
 
