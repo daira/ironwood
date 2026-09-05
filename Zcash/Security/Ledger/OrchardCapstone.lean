@@ -11,6 +11,10 @@ import Zcash.Security.Ledger.MerkleDLR
 /-!
 # The Orchard instantiation: every Balance-subset arm computes a discrete-log relation
 
+The fully composed Orchard Balance capstones — for a proof-emitting adversary, with
+the knowledge hypotheses discharged — are the `_of_dlogProfiles` endpoints of
+`Zcash.Security.Ledger.OrchardExtractionExperiment`, not here.
+
 These are the instantiations that use the Orchard-protocol bases and parameters. At
 them, each of the three Balance-subset break arms reduces to a nontrivial discrete-log
 relation among the fixed Sinsemilla bases. Each reducer is a total, hypothesis-free
