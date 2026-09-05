@@ -818,9 +818,9 @@ chain (`assembleTx`, `assembleChain`), and the constructed annotated adversary r
 the ledger machine and assembles its output (`toLA`). The laws (`runsLaw`,
 `toIdealizedKS`) are noncomputable measures over that chain. The `_of_dlogProfiles`
 endpoints discharge the per-slot-and-size knowledge hypotheses against the
-adaptive-statement capstone and state every arm's term as the constructed adversary's
-own advantage (`worstKnowledgeError`, `escapeAdvantage`, `sinsemillaAdvantage`,
-`valueDLRAdvantage`), with no named-ε hypotheses. -/
+adaptive-statement capstone and carry every relation arm in the single combined term
+(`combinedDLRAdvantage`, over the combined deployed basis), with no named-ε
+hypotheses; only the knowledge arm keeps the `k * maxActions` factor. -/
 
 assert_computable Zcash.Security.Ledger.OrchardExtractionExperiment.ExtractionBalanceAdversary.assembleTx +choice +native(
   CompElliptic.Fields.Pasta.pallasBase,
@@ -850,6 +850,16 @@ assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.orchardShieldedB
   CompElliptic.Fields.Pasta.pallasBase,
   CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
   CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.knowledgeFailureUnion_measure_le +native(
+  CompElliptic.Fields.Pasta.pallasBase,
+  Zcash.Snark.Fixture.vk_chunk_width_le,
+  Zcash.Snark.Fixture.vk_gates_degree_le,
+  Zcash.Snark.Fixture.vk_lookup_input_degree_le,
+  Zcash.Snark.Fixture.vk_lookup_table_degree_le,
+  Zcash.Snark.Keygen.certificate,
+  CompElliptic.Curves.Pasta.Pallas.q_nsmul_Gpt,
+  CompElliptic.Curves.Pasta.Vesta.p_nsmul_Gpt)
+assert_axioms Zcash.Security.Ledger.Model.challengeTableExperiment_badFiberAt_measure_le
 assert_axioms Zcash.Security.Ledger.OrchardExtractionExperiment.runKnowledgeFailure_measure_le_of_dlogProfile +native(
   CompElliptic.Fields.Pasta.pallasBase,
   Zcash.Snark.Fixture.vk_chunk_width_le,

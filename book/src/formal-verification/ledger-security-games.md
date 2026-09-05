@@ -39,10 +39,10 @@ flowchart TD
   SPENDAUTH --> KB
 
   subgraph ASSUMPTIONS["Hardness assumptions"]
-    DL[("Discrete log")]
+    DL{{"<span style='display:block; height:0.5em'></span>Discrete log<span style='display:block; height:0.5em'></span>"}}
   end
 
-  BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean'>non-balancing<br/>bundle computes</a>"| NDLR["NontrivialRelation<br/>(<span class='katex'><span class='mord mathcal'>V</span></span>,&nbsp;<span class='katex'><span class='mord mathcal'>R</span></span>) discrete-log<br/>relation"]
+  BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/Balance.lean'>non-balancing<br/>bundle computes</a>"| CDLR{{"<span style='display:block; height:0.5em'></span>Nontrivial discrete-log<br/>relation, combined<br/>deployed basis (Pallas)<span style='display:block; height:0.5em'></span>"}}
   BS --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/ExtractionArm.lean'>verifying signature<br/>the extractor misses</a>"| KERR["RedDSA<br/>extractability"]
   BS --> STMT["Witness or replay<br/>evidence<br/>ActionSatisfied<br/>§4.17.4"]
   NCB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Statement.lean'>wrong note<br/>opening computes</a>"| NCBK["NoteCommitBreak"]
@@ -50,21 +50,20 @@ flowchart TD
   MERK --> STMT
   MERK --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Merkle.lean'>wrong Merkle<br/>path computes</a>"| MC["DefinedCollision<br/>one height,<br/>encoding domain"]
   KB --> STMT
-  KB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/KeyBindingDLR.lean'>Orchard-protocol<br/>CommitIvkCollision<br/>computes</a>"| SDLR
-  KB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/KeyBinding/Basic.lean'>conflicting ivk<br/>witnesses compute</a>"| CUS["CollisionUpToSign<br/>shifted oracle,<br/>distinct queries"]
+  KB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/KeyBindingDLR.lean'>Orchard-protocol<br/>CommitIvkCollision<br/>computes</a>"| CDLR
+  KB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/KeyBinding/Basic.lean'>conflicting ivk<br/>witnesses compute</a>"| CUS{{"<span style='display:block; height:0.5em'></span>CollisionUpToSign<br/>shifted oracle,<br/>distinct queries<span style='display:block; height:0.5em'></span>"}}
   NFB --> STMT
   NFB --->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean'>distinct derive-inputs +<br/>equal nullifier<br/>computes</a>"| NFC["NullifierCollision"]
   SPENDAUTH -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean'>verified signature over<br/>unsigned sighash computes</a>"| SAF["SpendAuthForgery<br/>(randomization<br/>of ±ak)"]
 
   STMT STMTtoKS@-->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/OrchardExtractionExperiment.lean'>Balance: extract<br/>witness-annotated chain<br/>(#155 for the other games)</a>"| KS["Knowledge soundness:<br/>accepting proof yields<br/>witness or break data"]
-  NCBK --> SDLR["Sinsemilla<br/>discrete-log<br/>relation"]
+  NCBK --> CDLR
 
-  KERR KERRtoNDLR@==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| NDLR
-  NDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/DiscreteLog.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  SDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/DiscreteLog.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  KS KStoDL@===>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>independent<br/>hash-to-curve bases</a>"| DL
-  MC --> SDLR
-  NFC -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Nullifier.lean'>distinct-note openings<br/>compute</a>"| SDLR
+  KERR KERRtoCDLR@==>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/RedDSA/Extraction.lean'>good challenge<br/>computes</a>"| CDLR
+  CDLR -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/BindingSignature/DiscreteLog.lean'>independent<br/>group-hash bases<br/>(Pallas)</a>"| DL
+  KS KStoDL@===>|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Action/AdaptiveStatementKnowledge.lean'>independent<br/>group-hash bases<br/>(Vesta)</a>"| DL
+  MC --> CDLR
+  NFC -->|"<a target='_blank' href='https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Nullifier.lean'>distinct-note openings<br/>compute</a>"| CDLR
   SAF ---> RDSA["RedDSA unforgeability,<br/>±-randomized keys"]
   RDSA RDSAtoDL@===>|"re-rand reduction<br/><a target='_blank' href='https://eprint.iacr.org/2015/395'>[FKMSSS2016]</a> +<br/><a target='_blank' href='https://eprint.iacr.org/2019/877'>straight-line AGM extraction</a>"| DL
 
@@ -82,8 +81,7 @@ flowchart TD
   click CUS "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Common/RandomOracle.lean" _blank
   click NFC "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/Spendability.lean" _blank
   click SAF "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SpendAuthority.lean" _blank
-  click NDLR "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
-  click SDLR "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
+  click CDLR "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/SinsemillaDLR.lean" _blank
   click KS "https://github.com/zcash/ironwood/blob/main/Zcash/Snark/Soundness/Relation/KnowledgeSoundness.lean" _blank
   click DL "https://github.com/zcash/ironwood/blob/main/Zcash/Common/DiscreteLogRelation.lean" _blank
   click KERR "https://github.com/zcash/ironwood/blob/main/Zcash/Security/Ledger/ExtractionKnowledgeError.lean" _blank
@@ -92,14 +90,14 @@ flowchart TD
   classDef proven fill:#1a7f37,stroke:#116329,color:#ffffff
   classDef checked fill:#0969da,stroke:#0550ae,color:#ffffff
   classDef partial fill:#9a6700,stroke:#7d4e00,color:#ffffff
-  classDef hyp fill:#cf222e,stroke:#a40e26,color:#ffffff
+  classDef hyp fill:#a41826,stroke:#82071e,color:#ffffff
   classDef assumed fill:#57606a,stroke:#424a53,color:#ffffff
   class SPEND,SPENDAUTH partial
-  class BAL,NCB,BS,KB,MERK,NFB,STMT,NDLR,CUS,NCBK,MC,NFC,SAF,SDLR,KERR,KS checked
+  class BAL,NCB,BS,KB,MERK,NFB,STMT,CDLR,CUS,NCBK,MC,NFC,SAF,KERR,KS checked
   class RDSA hyp
   class DL assumed
   classDef agmEdge stroke:#8858c8,stroke-width:4.2px
-  class KERRtoNDLR,KStoDL,RDSAtoDL,STMTtoKS agmEdge
+  class KERRtoCDLR,KStoDL,RDSAtoDL,STMTtoKS agmEdge
 ```
 
 <p>
@@ -108,7 +106,7 @@ flowchart TD
 <span style="color:#1a7f37"> ■ </span> fully proven — nothing here yet<br/>
 <span style="color:#0969da"> ■ </span> stated and machine-checked in Lean, over abstract primitives<br/>
 <span style="color:#9a6700"> ■ </span> partly machine-checked; remainder tracked (discharging the capstones' named ε's end to end; the effect of undischarged RedDSA unforgeability on the Spendability and Spend authority goals)<br/>
-<span style="color:#cf222e"> ■ </span> named hypothesis; formalization deferred<br/>
+<span style="color:#a41826"> ■ </span> named hypothesis; formalization deferred<br/>
 <span style="color:#57606a"> ■ </span> assumption; terminal by design<br/>
 </p>
 
@@ -138,16 +136,16 @@ names mark it— and the composed capstones consume them at the constructed adve
 
 On the composed route to the Balance goals, the `_of_dlogProfiles` endpoints carry no
 per-arm hypotheses at all. The knowledge arm is discharged by the adaptive-statement
-capstone, applied once per slot-size pair, and every arm's term in the bound is the
-constructed adversary's own advantage: the worst-pair Halo 2 knowledge error at the
-supplied DLOG profiles (`worstKnowledgeError`), the escape advantage on the exhibited
-finder (`escapeAdvantage`), and the deployed Sinsemilla and value-DLR advantages. The
-k·maxActions factor is tracked as
-[#214](https://github.com/zcash/ironwood/issues/214). The deployed forms state validity
-at the deployed value bases: the value commitment is definitionally the deployed one,
-with no reference-string step on the value side. Their accepted trade-offs —the binding
-challenge hash as a random oracle, the per-size finite presentation of the Fiat–Shamir
-oracle, and elided byte encodings— are documented at
+capstone, applied once per slot-size pair, and every relation arm —the per-pair escapes,
+the Sinsemilla reducer's relations, and the value-DLR finder's— is carried by the single
+term `combinedDLRAdvantage`: one event over the composed deployed experiment, whose
+samples all compute nontrivial relations over the combined deployed basis
+(`orchardPoints`). The k·maxActions factor multiplies only the knowledge arm and is
+tracked as [#214](https://github.com/zcash/ironwood/issues/214). The deployed forms
+state validity at the deployed value bases: the value commitment is definitionally the
+deployed one, with no reference-string step on the value side. Their accepted
+trade-offs —the binding challenge hash as a random oracle, the per-size finite
+presentation of the Fiat–Shamir oracle, and elided byte encodings— are documented at
 `IdealizedKSBalanceAdversary.deployedViolationEvent`. For Spendability and Spend
 Authority the annotations remain a modelling assumption: those games are not yet
 composed with the circuit layer, and
@@ -171,7 +169,7 @@ extraction as a known coefficient.
 
 Every solid arrow reads "rests on"; where an edge carries a label, the label names the
 computed break object flowing along it, or the side condition under which the reduction
-holds (base independence from hash-to-curve). Heavy purple arrows mark reductions (or
+holds (base independence from the group hash). Heavy purple arrows mark reductions (or
 intended reductions) in the AGM+RO: both the source and the target of such an edge are
 interpreted as games against online-AGM adversaries with the challenge oracle as a
 programmable random oracle, so the model scopes the whole reduction rather than being
