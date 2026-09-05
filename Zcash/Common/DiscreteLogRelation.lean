@@ -24,14 +24,16 @@ basis family in the development has a finite index — a fixed generator family 
 reduction enumerates an index type: proofs and reductions read coefficients at the slots
 they name.
 
-The commitment schemes here present a generator family `g` alongside a few distinguished
-points `V` — the basis `(g, U, W)` of a Pedersen-with-blinding scheme, or `(g, U)` for a
+The commitment schemes here present a generator family `g` alongside distinguished points
+`V` — the basis `(g, U, W)` of a Pedersen-with-blinding scheme, or `(g, U)` for a
 Sinsemilla domain point. `BasisIndex n J` names the slots of such a basis, and
-`NontrivialRelation g V` is `AlgebraicRelationWitness` at it; the two-point form is spelled
-`NontrivialRelation g ![U, W]` and the one-point form `NontrivialRelation g ![U]`. Both
-crypto layers instantiate this: the binding-signature reduction
-(`Zcash.Security.BindingSignature`) and the deployed-verifier soundness peel (`Zcash.Snark`).
-Each use site documents its own reading of the generators.
+`NontrivialRelation g V` is `AlgebraicRelationWitness` at it. A reducer builds its
+relation at the sub-basis that its site presents (e.g. `NontrivialRelation g ![U, W]` or
+`NontrivialRelation g ![U]`), and `embed` carries it by zero-extension into a larger
+basis — in the ledger layer, the combined deployed basis carrying every deployed point
+under a named slot type. Both crypto layers instantiate this: the binding-signature
+reduction (`Zcash.Security.BindingSignature`) and the deployed-verifier soundness peel
+(`Zcash.Snark`). Each use site documents its own reading of the generators.
 
 The module also carries the representation types of algebraic provers
 (`GroupRepresentation`, `AlgebraicPoint`, `DiscreteLogWitness`) and the known-log
@@ -72,26 +74,70 @@ theorem AlgebraicRelationWitness.exists_nonzero_coeff {ι : Type*} [Fintype ι] 
   funext i
   exact not_not.mp (not_exists.mp h i)
 
-/-- Reindex a relation witness along an index equivalence: the coefficients compose with the
-equivalence, and nontriviality and the relation sum transport across it. `basis'` is the same
-family under the other index type (`hcompat`), so an instantiation can present its basis
-under a named slot type in place of a `Fin`-indexed one. -/
-def AlgebraicRelationWitness.reindex {ι κ : Type*} [Fintype ι] [Fintype κ] {basis : ι → G}
-    (w : AlgebraicRelationWitness (F := F) basis) (e : κ ≃ ι) {basis' : κ → G}
-    (hcompat : ∀ j, basis' j = basis (e j)) :
+/-- Zero-extension of a relation witness into a larger basis, along a slot injection
+presented as a section `f` with a partial inverse `r`. The coefficients transport along
+`f` and vanish off its image, so the relation sum and nontriviality carry over. The
+partial inverse keeps the definition computable — membership in the image is read off
+`r`, with no inverse search. -/
+def AlgebraicRelationWitness.embed {ι ι' : Type*} [Fintype ι] [Fintype ι'] [DecidableEq ι']
+    {basis : ι → G}
+    (w : AlgebraicRelationWitness (F := F) basis) {basis' : ι' → G}
+    (f : ι → ι') (r : ι' → Option ι) (hr : Function.IsPartialInv f r)
+    (hcompat : ∀ i, basis' (f i) = basis i) :
     AlgebraicRelationWitness (F := F) basis' where
-  coeffs := w.coeffs ∘ e
+  coeffs := fun j => match r j with | some i => w.coeffs i | none => 0
   nontrivial := by
     obtain ⟨i, hi⟩ := Function.ne_iff.mp w.nontrivial
-    exact Function.ne_iff.mpr ⟨e.symm i, by simpa using hi⟩
+    refine Function.ne_iff.mpr ⟨f i, ?_⟩
+    simpa [hr.eq i] using hi
   relation := by
-    have hrel := w.relation
-    rw [representationEval] at hrel ⊢
-    calc ∑ j, (w.coeffs ∘ e) j • basis' j
-        = ∑ j, w.coeffs (e j) • basis (e j) :=
-          Finset.sum_congr rfl fun j _ => by rw [Function.comp_apply, hcompat]
-      _ = ∑ i, w.coeffs i • basis i := Equiv.sum_comp e fun i => w.coeffs i • basis i
-      _ = 0 := hrel
+    have hvanish : ∀ j ∈ Finset.univ, j ∉ Finset.univ.image f →
+        (fun j => match r j with | some i => w.coeffs i | none => 0) j • basis' j = 0 := by
+      intro j _ hj
+      rcases hj' : r j with _ | i
+      · simp [hj']
+      · exact absurd
+          (by rw [← (hr i j).mp hj']; exact Finset.mem_image_of_mem f (Finset.mem_univ i))
+          hj
+    rw [representationEval]
+    calc ∑ j, (fun j => match r j with | some i => w.coeffs i | none => 0) j • basis' j
+        = ∑ j ∈ Finset.univ.image f,
+            (fun j => match r j with | some i => w.coeffs i | none => 0) j • basis' j :=
+          (Finset.sum_subset (Finset.subset_univ _) hvanish).symm
+      _ = ∑ i, (fun j => match r j with | some i => w.coeffs i | none => 0) (f i) •
+            basis' (f i) :=
+          Finset.sum_image fun a _ b _ h => hr.injective h
+      _ = ∑ i, w.coeffs i • basis i :=
+          Finset.sum_congr rfl fun i _ => by rw [hcompat i]; simp [hr.eq i]
+      _ = 0 := w.relation
+
+/-- The partial inverse of an identity-on-generators slot injection `Sum.map id g`:
+generator slots invert to themselves, and distinguished slots invert through `gr`. -/
+def sumMapPartialInv {α β γ : Type*} (gr : γ → Option β) : Sum α γ → Option (Sum α β) :=
+  fun x => match x with
+    | .inl a => some (.inl a)
+    | .inr c => (gr c).map .inr
+
+/-- The identity-on-generators sum of a partial inverse is a partial inverse. -/
+theorem isPartialInv_sumMap_id {α β γ : Type*} {g : β → γ} {gr : γ → Option β}
+    (hg : Function.IsPartialInv g gr) :
+    Function.IsPartialInv (Sum.map (id : α → α) g) (sumMapPartialInv gr) := by
+  rintro (a | b) (c | d)
+  · simpa [sumMapPartialInv] using eq_comm
+  · simp [sumMapPartialInv]
+  · simp [sumMapPartialInv]
+  · simpa [sumMapPartialInv] using hg b d
+
+/-- The constant one-slot map into slot `t` has the evident partial inverse. -/
+theorem isPartialInv_const_slot {γ : Type*} [DecidableEq γ] (t : γ) :
+    Function.IsPartialInv (fun _ : Fin 1 => t)
+      (fun j => if j = t then some 0 else none) := by
+  intro x y
+  fin_cases x
+  by_cases h : y = t
+  · simp [h]
+  · simp only [h, if_false]
+    exact ⟨fun hc => absurd hc (by simp), fun ht => absurd ht.symm h⟩
 
 /-- Coefficients over `basis` whose MSM equals `target`.
 

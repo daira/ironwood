@@ -61,14 +61,6 @@ abbrev OrchardAnnotated :=
   ValidAnnotated (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify) keyBinding
     issuance maxActions
 
-/-- The three Orchard Balance-subset relation targets: the key-binding and
-note-commitment arms land in two-generator relations at their domain points, the
-Merkle arm in a one-generator relation. -/
-inductive OrchardBalanceRelation where
-  | keyBinding (r : NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt])
-  | noteCommit (r : NontrivialRelation (F := Fq) pallasS ![noteQpt, noteCommitRpt])
-  | merkle (r : NontrivialRelation (F := Fq) pallasS ![merkleQpt])
-
 /-- **The Orchard Balance-subset reduction.** In a valid Orchard ledger, either the
 nonzero spends of the first `i + 1` transactions are covered by the positioned outputs
 of the first `i`, or the ledger's own data computes a nontrivial discrete-log relation
@@ -79,12 +71,12 @@ def orchardBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp En
     (hval : ValidLedger (primitives (MSG := MSG) (SIG := SIG) spendAuthVerify bindingVerify) keyBinding
       issuance maxActions ledger) (i : ℕ) :
     (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i))
-      ⊕' OrchardBalanceRelation :=
+      ⊕' NontrivialRelation (F := Fq) pallasS orchardPoints :=
   match balanceSubsetOrBreak hval i with
   | .inl hsub => .inl hsub
-  | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
-  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify nb))
-  | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
+  | .inr (.keyBinding _ _ h) => .inr (relationOfKeyBindingBreak h)
+  | .inr (.noteCommit nb) => .inr (relationOfNoteCommitBreak spendAuthVerify bindingVerify nb)
+  | .inr (.merkle c) => .inr (relationOfMerkleCollision c.2)
 
 /-! ## The Orchard Balance-subset probability bound -/
 
@@ -92,7 +84,7 @@ def orchardBalanceSubsetOrRelation {ledger : Ledger _ Fq PallasGroup Fp Fp Fp En
 nontrivial discrete-log relation among the fixed Sinsemilla bases. -/
 def orchardRelationEvent (i : ℕ) :
     Set (OrchardAnnotated spendAuthVerify bindingVerify issuance maxActions) :=
-  {ω | ∃ r : OrchardBalanceRelation,
+  {ω | ∃ r : NontrivialRelation (F := Fq) pallasS orchardPoints,
     orchardBalanceSubsetOrRelation spendAuthVerify bindingVerify issuance maxActions ω.2 i = .inr r}
 
 /-- A Balance-subset-violating Orchard ledger lands in the relation event: the total
@@ -278,7 +270,7 @@ Authority key-binding arm reaches the same discrete-log terminal as the Balance
 key-binding arm. The break is computed from the exhibited witness pair, and the
 reduction needs no oracle model. -/
 def relationOfSpendAuthorityKBBreak (brk : KeyBindingBreakData keyBinding) :
-    NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt] :=
+    NontrivialRelation (F := Fq) pallasS orchardPoints :=
   relationOfKeyBindingBreak brk.h
 
 /-- The Orchard Spend Authority reduction with its key-binding arm routed to the
@@ -295,7 +287,7 @@ def orchardSpendAuthorityOrRelation
       = (primitives spendAuthVerify bindingVerify).emb (keyBinding.ivk wV) • a.w.note_old.gd)
     {Signed : MSG → Prop} (hfresh : ¬ Signed tx.sighash) :
     SpendAuthForgery (primitives spendAuthVerify bindingVerify) (keyBinding.akP wV) Signed
-      ⊕' NontrivialRelation (F := Fq) pallasS ![ivkQpt, commitIvkRpt] :=
+      ⊕' NontrivialRelation (F := Fq) pallasS orchardPoints :=
   match spendAuthorityOrBreak hval htx ha hKB hrecv hfresh with
   | .inl f => .inl f
   | .inr b => .inr (relationOfSpendAuthorityKBBreak b)

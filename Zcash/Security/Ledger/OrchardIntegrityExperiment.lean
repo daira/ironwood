@@ -85,20 +85,21 @@ def noteCommitBreakOfKappa (table : Q → Fq) (logs : Fin m → Fq)
 `orchardBalanceSubsetOrRelation`, but at `primitivesAtBasis`'s primitives — the deployed Orchard
 primitives with the value and binding fields replaced by the presented slots. Those replaced
 fields are not read by any Balance-subset arm, so the reduction routes each break through the
-same Orchard reducer and lands in the same `OrchardBalanceRelation`. -/
+same Orchard reducer and lands in the same combined-basis relation. -/
 def orchardBalanceSubsetOrRelationAtBasis (basis : Fin m → PallasGroup) (table : Q → Fq)
     {ledger : Ledger _ Fq PallasGroup Fp Fp Fp Encoding MSG SIG _}
     (hval : ValidLedger (primitivesAtBasis m v_idx r_idx queryOf
         (primitives spendAuthVerify bindingVerify) toSig basis table) keyBinding issuance
         maxActions ledger) (i : ℕ) :
-    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' OrchardBalanceRelation :=
+    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i))
+      ⊕' NontrivialRelation (F := Fq) pallasS orchardPoints :=
   match balanceSubsetOrBreak hval i with
   | .inl hsub => .inl hsub
-  | .inr (.keyBinding _ _ h) => .inr (.keyBinding (relationOfKeyBindingBreak h))
-  | .inr (.noteCommit nb) => .inr (.noteCommit (relationOfNoteCommitBreak spendAuthVerify bindingVerify
+  | .inr (.keyBinding _ _ h) => .inr (relationOfKeyBindingBreak h)
+  | .inr (.noteCommit nb) => .inr (relationOfNoteCommitBreak spendAuthVerify bindingVerify
       (noteCommitBreakAtBasis spendAuthVerify bindingVerify m v_idx r_idx queryOf toSig
-        basis table nb)))
-  | .inr (.merkle c) => .inr (.merkle (relationOfMerkleCollision c.2))
+        basis table nb))
+  | .inr (.merkle c) => .inr (relationOfMerkleCollision c.2)
 
 /-- The Orchard Balance-subset reduction at the sampled bases:
 `orchardBalanceSubsetOrRelationAtBasis` at the sampled basis. -/
@@ -107,7 +108,8 @@ def kappaOrchardBalanceSubsetOrRelation (table : Q → Fq) (logs : Fin m → Fq)
     (hval : ValidLedger (kappaPrimitivesAt m gen v_idx r_idx queryOf
         (primitives spendAuthVerify bindingVerify) toSig table logs) keyBinding issuance maxActions
         ledger) (i : ℕ) :
-    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i)) ⊕' OrchardBalanceRelation :=
+    (nonZeroSpends ledger (i + 1) ≤ ↑(positionedOutputs ledger i))
+      ⊕' NontrivialRelation (F := Fq) pallasS orchardPoints :=
   orchardBalanceSubsetOrRelationAtBasis spendAuthVerify bindingVerify issuance maxActions m
     v_idx r_idx queryOf toSig (scalarBasis gen logs) table hval i
 
@@ -457,17 +459,23 @@ def deployedViolationEvent (A : IdealizedKSBalanceAdversary MSG spendAuthVerify 
 
 /-- **The deployed value-DLR finder — the machine the named `ε_valuedlr` bounds.** Replay
 coin `j`'s machine at the deployed value bases and return whichever arm's relation the
-sample yields, as a nontrivial relation over the named 𝒱/ℛ slots
-(`BindingSignature.valueBases`). -/
+sample yields, as a nontrivial relation over the combined deployed basis, supported on
+the two value slots. -/
 def valueDLRFinder (A : IdealizedKSBalanceAdversary MSG spendAuthVerify H_bind) (k : ℕ)
     (j : A.ι) (table : OrchardQuery MSG → Fq) :
-    Option (Zcash.NontrivialRelation (F := Fq) (Fin.elim0 : Fin 0 → PallasGroup)
-      (valueBases valueCommitV valueCommitR)) :=
+    Option (Zcash.NontrivialRelation (F := Fq) pallasS orchardPoints) :=
   (A.conservationFinder k j orchardValueBases table).map fun w =>
-    w.reindex valueBaseSlotEquiv fun s => by
-      rcases s with x | s
-      · exact x.elim0
-      · cases s <;> rfl
+    w.embed ![Sum.inr .idxValueCommitV, Sum.inr .idxValueCommitR]
+      (fun x => match x with
+        | .inr .idxValueCommitV => some 0
+        | .inr .idxValueCommitR => some 1
+        | _ => none)
+      (by
+        intro x y
+        rcases y with a | s
+        · fin_cases x <;> simp
+        · fin_cases x <;> cases s <;> decide)
+      (fun i => by fin_cases i <;> rfl)
 
 /-- The named-slot reindexing drops no sample: the combined finder's relation event at the
 deployed value bases is the deployed finder's. -/

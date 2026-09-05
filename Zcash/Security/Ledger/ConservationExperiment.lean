@@ -473,9 +473,9 @@ theorem shieldedBalanceCapBefore_measure_le_experimentAt {ι : Type u} (p : PMF 
 
 omit [DecidableEq G] in
 /-- **The standalone value-DLR game priced at textbook discrete log — the isolated
-Jaeger–Tessaro terminal step.** At the named value-base slots (the index of
-`NontrivialRelation Fin.elim0 (valueBases 𝒱 ℛ)`), a finder's probability of returning a
-nontrivial relation over bases programmed from the DL challenge is at most `ε + 1/#F`.
+Jaeger–Tessaro terminal step.** At the two named value-base slots (`ValueBaseIndex`), a
+finder's probability of returning a nontrivial relation over bases programmed from the
+DL challenge is at most `ε + 1/#F`.
 This states what the named `ε_valuedlr` costs against textbook discrete log. The deployed
 experiments deliberately do not take this step: a programmed basis is inconsistent with the
 deployed one, so they carry `ε_valuedlr` as the named advantage at the deployed bases, and
