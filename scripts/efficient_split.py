@@ -27,6 +27,9 @@ import subprocess
 import sys
 
 REPO = Path(__file__).resolve().parent.parent
+# The split is tracked beside this script, so that the experiment is reproducible from a
+# checkout; its header records the revisions it was drawn from.
+SPLIT_FILE = REPO / "scripts" / "efficient-split.tsv"
 DEFAULT_ROOTS = {
     "ironwood": REPO,
     "CompElliptic": REPO / ".lake" / "packages" / "CompElliptic",
@@ -313,11 +316,11 @@ def main() -> int:
     p_split.add_argument("--seed", type=int, default=20261014)
     p_split.add_argument("--fraction", type=float, default=0.5,
                          help="share of each file's pins in the evaluation set")
-    p_split.add_argument("--out", type=Path, default=REPO / "keep" / "efficient-split.tsv")
+    p_split.add_argument("--out", type=Path, default=SPLIT_FILE)
     p_split.set_defaults(func=cmd_split)
 
     p_apply = sub.add_parser("apply", help="pin one role with assert_efficient")
-    p_apply.add_argument("--split", type=Path, default=REPO / "keep" / "efficient-split.tsv")
+    p_apply.add_argument("--split", type=Path, default=SPLIT_FILE)
     p_apply.add_argument("--role", choices=ROLES, required=True)
     p_apply.add_argument("--mode", choices=("add", "replace"), default="replace")
     p_apply.add_argument("--only", metavar="LABEL", help="apply to the pins of this root only")
@@ -325,7 +328,7 @@ def main() -> int:
     p_apply.set_defaults(func=cmd_apply)
 
     p_list = sub.add_parser("list", help="print the pins of one role, or all")
-    p_list.add_argument("--split", type=Path, default=REPO / "keep" / "efficient-split.tsv")
+    p_list.add_argument("--split", type=Path, default=SPLIT_FILE)
     p_list.add_argument("--role", choices=ROLES)
     p_list.set_defaults(func=cmd_list)
 
