@@ -1,10 +1,12 @@
 import Zcash.Meta.Efficient
+import Zcash.Meta.AxiomCheck
 
 /-!
-# Regression tests for `Zcash.Meta.Efficient`
+# Regression tests for `Zcash.Meta.Efficient` and `assert_efficient`
 
 Cost functions derived for small first-order definitions, with their values pinned by `#eval`,
-one bound proved by induction, and the rejections pinned by `#guard_msgs`.
+one bound proved by induction, and the rejections pinned by `#guard_msgs`. `assert_efficient`
+is pinned on a passing definition, on a rejected one, and with a flag it does not deserve.
 -/
 
 namespace Zcash.Meta.Tests.Efficient
@@ -75,6 +77,20 @@ decreasing_by exact Nat.mod_lt _ (Nat.pos_of_ne_zero _h)
 #guard_msgs in
 #eval gcd'.cost 12 18
 
+-- A pin is silent on success, like `assert_computable`.
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.gcd'
+
+-- The flags are `assert_computable`'s, with the same checks behind them.
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.double
+
+/--
+error: Zcash.Meta.Tests.Efficient.double does not depend on Classical.choice; drop the '+choice' flag
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.double +choice
+
 /-! ## Rejections -/
 
 /--
@@ -82,6 +98,12 @@ error: efficient: 'List.reverse' has no cost function. Mark its definition `effi
 -/
 #guard_msgs (whitespace := lax) in
 efficient def rev (xs : List Nat) : List Nat := xs.reverse
+
+/--
+error: Zcash.Meta.Tests.Efficient.rev has no cost function: define it with `efficient def`, or register one with `efficient_cost`
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.rev
 
 /--
 error: efficient: applying a local function (f) is not supported yet; the cost of a higher-order argument has to be given symbolically
