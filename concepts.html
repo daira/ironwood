@@ -1,0 +1,302 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Concepts - The Ironwood Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-3865ffda.css">
+        <link rel="stylesheet" href="css/general-4c35105a.css">
+        <link rel="stylesheet" href="css/chrome-c0e702bf.css">
+        <link rel="stylesheet" href="css/print-ad67d350.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome-799aeb25.css">
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight-56612340.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="custom-a8328095.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "rust";
+            window.path_to_searchindex_js = "searchindex-498c5711.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d4c2b103.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Ironwood Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="concepts"><a class="header" href="#concepts">Concepts</a></h1>
+<p><span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord text"><span class="mord textsf">Ironwood</span></span></span></span></span></span> is the project to deploy a new shielded value pool for Zcash: the
+<em>Ironwood pool</em>. The <em>Ironwood pool</em> reuses the Orchard protocol —the Orchard
+action shape, keys, and proof system— while keeping its own state, separate from
+the <em>Orchard pool</em>, and using a new note plaintext format for quantum-recoverable
+notes.</p>
+<p>At a high level, <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord text"><span class="mord textsf">Ironwood</span></span></span></span></span></span> introduces:</p>
+<ul>
+<li>a new shielded value pool and value balance, the <em>Ironwood pool</em>, with its
+own note commitment tree and nullifier set but reusing the Orchard protocol;</li>
+<li>transaction version 6, which is version 5 with an <em>Ironwood-pool</em> bundle added;</li>
+<li>quantum-recoverable note plaintexts for <em>Ironwood-pool</em> notes;</li>
+<li>a rule that no funds can flow into the <em>Orchard pool</em> after NU6.3; and</li>
+<li>a circuit update that lets <em>Orchard-pool</em> notes be withdrawn or split into
+change notes, without allowing new value to enter that pool.</li>
+</ul>
+<h2 id="relationship-to-orchard"><a class="header" href="#relationship-to-orchard">Relationship To Orchard</a></h2>
+<p>We distinguish the Orchard protocol —the shared action shape, keys, proof
+system, and note machinery— from the <em>Orchard pool</em> and the <em>Ironwood pool</em>, the
+two value pools that use it. Each pool has its own note commitment tree,
+nullifier set, and value balance.</p>
+<p>The <em>Ironwood pool</em> reuses the Orchard protocol's action and zero-knowledge proof
+structure. This keeps the transition smaller than introducing an entirely new
+shielded protocol from first principles.</p>
+<p>The important distinction is that the <em>Ironwood pool</em> is not "more <em>Orchard-pool</em>
+state". It has its own value balance, note commitment tree, and nullifier set. An
+<em>Ironwood-pool</em> note is represented with Orchard-protocol note machinery, but it
+is committed into the <em>Ironwood pool</em>'s note commitment tree and spent against the
+<em>Ironwood pool</em>'s nullifier set.</p>
+<p>This lets the existing Orchard receiver and viewing-key infrastructure remain
+useful while creating a clean state boundary between legacy <em>Orchard-pool</em> funds
+and <em>Ironwood-pool</em> funds.</p>
+<h2 id="quantum-recoverable-notes"><a class="header" href="#quantum-recoverable-notes">Quantum-Recoverable Notes</a></h2>
+<p>ZIP 2005 defines a new Orchard-protocol note plaintext format with lead byte
+<span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6111em;"></span><span class="mord"><span class="mord mathtt">0x03</span></span></span></span></span>: the quantum-recoverable note plaintext format. The <em>Ironwood pool</em>
+adopts this format for its notes.</p>
+<p>In wallet-facing code, <em>Ironwood-pool</em> notes are Orchard-shaped notes using the
+quantum-recoverable note plaintext format. The note plaintext format of
+<em>Orchard-pool</em> notes remains unchanged. <em>Ironwood-pool</em> notes use that pool's
+treestate when they are spent.</p>
+<h2 id="value-movement-after-nu63"><a class="header" href="#value-movement-after-nu63">Value Movement After NU6.3</a></h2>
+<p>After NU6.3 activation, no funds can flow into the <em>Orchard pool</em>. Transactions
+can still spend <em>Orchard-pool</em> funds, and zero-balance <em>Orchard-pool</em> actions are
+still allowed, but the <em>Orchard pool</em>'s value balance must not be negative.</p>
+<p>Wallet-created payments and change that would previously have produced
+<em>Orchard-pool</em> outputs are routed to the <em>Ironwood pool</em> after NU6.3. This moves
+newly created shielded value into the <em>Ironwood pool</em> while still allowing legacy
+<em>Orchard-pool</em> notes to be spent.</p>
+<h2 id="transaction-version-6"><a class="header" href="#transaction-version-6">Transaction Version 6</a></h2>
+<p>A new transaction format, version 6, is introduced in order to add an
+<em>Ironwood-pool</em> bundle. There are no other transaction format changes from v5
+(there is a change to the signature hashing needed to support <a href="#anchor-update">anchor update</a>).</p>
+<p>A version 6 transaction can contain:</p>
+<ul>
+<li>transparent inputs and outputs,</li>
+<li>bundles for each of the <em>Sapling</em>, <em>Orchard</em>, and <em>Ironwood</em> pools.</li>
+</ul>
+<p>The <em>Sapling-pool</em> and transparent components are unchanged from version 5. The
+<em>Orchard-pool</em> and <em>Ironwood-pool</em> bundles follow the same Orchard-protocol
+bundle structure, but they are separate bundles in the transaction. The
+<em>Ironwood-pool</em> bundle uses different personalization strings for its transaction
+and authorization hashes.</p>
+<h3 id="anchor-update"><a class="header" href="#anchor-update">Anchor update</a></h3>
+<p>NU6.3 introduces an additional change for v6 transactions, applying to all of
+the pools that version supports (<em>Sapling</em>, <em>Orchard</em>, and <em>Ironwood</em>), that allows a
+transaction to be signed and then have its anchor updated later. This can improve
+privacy by leaking less information about when the transaction was signed.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="index.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="concepts/quantum-recoverability.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="index.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="concepts/quantum-recoverability.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-9aeb6ddf.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-9576a2db.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid-eefea253.min.js"></script>
+        <script src="mermaid-init-d0d5e6a7.js"></script>
+        <script src="todo-e74d2c27.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<!-- Hand-maintained mdBook source. This is not generated output; CI validates its graph against
+     proof-journey-data.json and the pinned Lean sources. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ironwood Soundness · Proof Structure Map</title>
+<style>
+  :root {
+    --bg: #eef1f7;
+    --surface: #ffffff;
+    --surface-2: #f6f8fc;
+    --ink: #16203a;
+    --muted: #5a6784;
+    --line: #d4dbe8;
+    --accent: #0e8fa3;
+    --c-proven: #2f9e63;
+    --c-hyp: #c9861a;
+    --c-floor: #c2503c;
+    --c-incoming: #0e8fa3;
+    --c-object: #7683a0;
+    --shadow: 0 1px 2px rgba(22,32,58,.06), 0 8px 28px rgba(22,32,58,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a0f1e; --surface: #111a2e; --surface-2: #0e1728; --ink: #dde5f4;
+      --muted: #8795ae; --line: #263248; --accent: #2cc3d6;
+      --c-proven: #46b979; --c-hyp: #e0a63c; --c-floor: #e0715b; --c-incoming: #2cc3d6; --c-object: #8695b2;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #eef1f7; --surface: #ffffff; --surface-2: #f6f8fc; --ink: #16203a;
+    --muted: #5a6784; --line: #d4dbe8; --accent: #0e8fa3;
+    --c-proven: #2f9e63; --c-hyp: #c9861a; --c-floor: #c2503c; --c-incoming: #0e8fa3; --c-object: #7683a0;
+    --shadow: 0 1px 2px rgba(22,32,58,.06), 0 8px 28px rgba(22,32,58,.08);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0f1e; --surface: #111a2e; --surface-2: #0e1728; --ink: #dde5f4;
+    --muted: #8795ae; --line: #263248; --accent: #2cc3d6;
+    --c-proven: #46b979; --c-hyp: #e0a63c; --c-floor: #e0715b; --c-incoming: #2cc3d6; --c-object: #8695b2;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+
+  header.top {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 22px;
+  }
+  header.top h1 { font-size: 18px; font-weight: 640; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  header.top p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+  .state {
+    margin-left: auto; align-self: center;
+    font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+    background: var(--surface-2); white-space: nowrap;
+  }
+
+  .layout { display: grid; grid-template-columns: 1fr 336px; gap: 0; }
+  .legendbar { grid-column: 1 / -1; border-top: 1px solid var(--line); padding: 8px 16px 10px; }
+  .legendbar h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 7px; }
+  .legendbar .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 3px 20px; margin-bottom: 0; }
+  .legendbar .legend .row { align-items: flex-start; }
+  .legendbar .legend .row .swatch { margin-top: 8.25px; }
+  .legendbar .legend .row .sq { margin-top: 0; }
+  @media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } }
+
+  .stage { min-width: 0; padding: 12px 12px 18px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 6px 12px; }
+  .toolbar .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin-right: 2px; }
+  .chip {
+    font: inherit; font-size: 12.5px; cursor: pointer;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px;
+    display: inline-flex; align-items: center; gap: 7px; transition: border-color .15s, background .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .chip:focus-visible, .node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .mapwrap { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  svg.map { display: block; width: 100%; min-width: 0; height: auto; }
+
+  .terr { fill: var(--th); opacity: 1; stroke: var(--ts); stroke-width: 1.4; stroke-dasharray: 3 3; rx: 16; }
+  /* Darkened toward the ink so the hue still identifies the territory but the title reads at the
+     scale the map is actually viewed at; the map SVG is laid out at 1920 wide and scaled down. */
+  .terr-label { font-size: 15px; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; fill: color-mix(in srgb, var(--ts) 78%, var(--ink)); opacity: 1; }
+  .terr-tag { font-family: ui-monospace, monospace; font-size: 12px; fill: var(--ts); opacity: .9; }
+  .map-title { font-size: 25px; font-weight: 650; fill: var(--ink); letter-spacing: .015em; }
+
+  .edge { fill: none; stroke-width: 2; opacity: .55; transition: opacity .15s, stroke-width .15s; }
+  .edge.entails { stroke: var(--ink); }
+  .edge.discharges { stroke: var(--accent); stroke-dasharray: 7 5; }
+  .edge.rests { stroke: var(--c-floor); stroke-width: 2.5; stroke-dasharray: 2.5 5; stroke-linecap: round; }
+  .edge.gap { stroke: var(--c-hyp); stroke-dasharray: 7 3 1.5 3; }
+  .edge.hot { opacity: 1; stroke-width: 3; }
+  .edge.hot.entails { marker-end: url(#ar-hot-entails); }
+  .edge.hot.discharges { marker-end: url(#ar-hot-discharges); }
+  .edge.hot.rests { marker-end: url(#ar-hot-rests); }
+  .edge.hot.gap { marker-end: url(#ar-hot-gap); }
+  .edge.dim { opacity: .5; }
+  /* Filtering is a different job from hover-dimming: `dim` fades the neighbourhood's surroundings
+     just enough to read through, while `filtered` has to actually take a category out of the
+     picture. Sharing one class made the Show chips look inert. */
+  .edge.filtered { opacity: .07; }
+
+  .node { cursor: pointer; }
+  .node rect { transition: opacity .15s; }
+  .node .box { fill: var(--nf); stroke: var(--ns); stroke-width: 1.75; rx: 9; filter: drop-shadow(0 1px 1px rgba(0,0,0,.05)); }
+  .node .label { font-size: 16.5px; font-weight: 650; fill: var(--ink); dominant-baseline: middle; }
+  .node.goal .box { fill: var(--accent); stroke: var(--accent); }
+  .node.goal .label { fill: #fff; font-weight: 640; }
+  .node.dim { opacity: .82; }
+  .node.filtered { opacity: .13; }
+  .node.near { filter: drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)); }
+  .node .anchor { font-size: 11px; fill: var(--muted); dominant-baseline: middle; }
+
+  body.journey-embed header.top,
+  body.journey-embed .toolbar,
+  body.journey-embed .rail { display: none; }
+  body.journey-embed .layout { display: block; }
+  body.journey-embed .stage { padding: 0; }
+  body.journey-embed { height: 100vh; overflow: hidden; }
+  body.journey-embed .layout,
+  body.journey-embed .stage,
+  body.journey-embed .mapwrap { height: 100%; min-height: 0; }
+  body.journey-embed .mapwrap {
+    display: grid; place-items: center; overflow: hidden;
+    border: 0; border-radius: 0; box-shadow: none; background: var(--surface-2);
+  }
+  body.journey-embed svg.map { width: 100%; min-width: 0; height: 100%; }
+  body.journey-embed .node { cursor: default; transition: opacity .35s ease; }
+  body.journey-embed .node.journey-hidden { opacity: .045; }
+  body.journey-embed .node.journey-past { opacity: .32; }
+  body.journey-embed .node.journey-current { opacity: 1; }
+  body.journey-embed .node.journey-current .box {
+    stroke-width: 3;
+    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--accent) 38%, transparent));
+    animation: journey-pulse 2.2s ease-in-out infinite;
+  }
+  body.journey-embed .edge { transition: opacity .35s ease, stroke-width .35s ease; }
+  body.journey-embed .edge.journey-hidden { opacity: .025; }
+  body.journey-embed .edge.journey-past { opacity: .2; }
+  body.journey-embed .edge.journey-current { opacity: 1; stroke-width: 3; }
+
+  @keyframes journey-pulse {
+    0%, 100% { filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 22%, transparent)); }
+    50% { filter: drop-shadow(0 0 11px color-mix(in srgb, var(--accent) 52%, transparent)); }
+  }
+
+  .rail { border-left: 1px solid var(--line); padding: 14px 18px 26px; min-width: 0; }
+  @media (max-width: 1040px) { .rail { border-left: none; border-top: 1px solid var(--line); } }
+  .rail h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 10px; }
+  .legend { display: grid; gap: 9px; margin-bottom: 20px; }
+  .legend .row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; }
+  .legend .swatch { width: 26px; height: 0; border-top-width: 3px; border-top-style: solid; flex: none; }
+  .legend .sq { width: 15px; height: 15px; border-radius: 4px; border: 1.75px solid; flex: none; }
+  .legend .muted { color: var(--muted); }
+
+  .detail { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .detail .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 3px 9px; border-radius: 999px; border: 1px solid; margin-bottom: 10px; }
+  .detail .title { font-family: ui-monospace, monospace; font-size: 15px; font-weight: 600; margin: 0 0 2px; text-wrap: balance; }
+  .detail .anchor { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); word-break: break-word; overflow-wrap: anywhere; margin-bottom: 12px; }
+  .detail .anchor a.src { color: inherit; text-decoration: underline; text-decoration-style: dotted; text-decoration-color: var(--line); }
+  .detail .anchor a.src:hover { color: var(--accent); text-decoration-color: var(--accent); }
+  .detail .role { font-size: 13.5px; margin: 0 0 14px; }
+  .detail .conns { display: grid; gap: 7px; }
+  .detail .conns .c { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; }
+  .detail .conns .verb { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); flex: none; min-width: 100px; white-space: nowrap; }
+  .detail .conns .verb.discharges { color: var(--accent); }
+  .detail .conns .verb.rests { color: var(--c-floor); }
+  .detail .conns .verb.gap { color: var(--c-hyp); }
+  .detail .conns .to { font-family: ui-monospace, monospace; }
+  .detail .conns .via { font-family: ui-monospace, monospace; font-size: 10.5px; color: var(--muted); opacity: .85; overflow-wrap: anywhere; }
+  .detail .empty { color: var(--muted); font-size: 13px; }
+  .detail .hint { font-size: 12.5px; color: var(--muted); margin: 12px 0 0; }
+  .railhint { font-size: 12px; color: var(--muted); margin: 0 0 8px; }
+  .node { cursor: pointer; }
+  .node:hover:not(.near):not(.pinned) { filter: drop-shadow(0 0 2.5px var(--accent)); }
+  .node.pinned { filter: drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)) drop-shadow(0 0 2.5px var(--accent)); }
+  .tag { font-family: ui-monospace, monospace; font-size: 11px; color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>Ironwood Soundness · Proof Structure Map</h1>
+    <p>How the deployed Ironwood SNARK-verifier soundness proof fits together — the theorems, the
+       assumptions they still carry, and what remains outside Lean.</p>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="stage">
+    <div class="toolbar" id="filters">
+      <span class="lbl">Show</span>
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="proven"><span class="dot" style="background:var(--c-proven)"></span>Proven</button>
+      <button class="chip" data-f="hyp"><span class="dot" style="background:var(--c-hyp)"></span>Hypothesis</button>
+      <button class="chip" data-f="floor"><span class="dot" style="background:var(--c-floor)"></span>Out-of-Lean</button>
+      <button class="chip" data-f="object"><span class="dot" style="background:var(--c-object)"></span>Definitions</button>
+    </div>
+    <div class="mapwrap">
+      <svg class="map" id="map" viewBox="0 0 1920 1090" role="img"
+           aria-label="Connected map of the Ironwood soundness proof structure"></svg>
+    </div>
+  </div>
+
+  <aside class="rail">
+    <h2>Detail</h2>
+    <p class="railhint">Click a node to show its details here; click the background to clear.</p>
+    <div class="detail" id="detail">
+      <p class="empty">A node's card shows what it is, its Lean anchor, and every theorem it connects to — with the lemma that justifies each link.</p>
+      <p class="hint">The soundness route is <span class="mono">accepting proof &#8594; verifier equation &#8594; one-run classify &#8594; deployed decode &#8594; Action witness extractor &#8594; knowledge bound</span>. <span class="mono">SnarkRelation</span> is a retained constraint-side payload, not the Action capstone's consumer boundary.</p>
+    </div>
+  </aside>
+  <section class="legendbar">
+    <h2>Legend</h2>
+    <div class="legend">
+      <div class="row"><span class="swatch" style="border-top-color:var(--ink)"></span><span><b>entails</b> — B follows from its incoming input(s); converging arrows are joint unless the node describes alternate routes</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--accent);border-top-style:dashed"></span><span><b>discharges</b> — A proves away assumption B</span></div>
+      <div class="row"><span class="swatch" style="border-top-color:var(--c-floor);border-top-style:dotted"></span><span><b>rests on</b> — B is an assumption needed by A (an in-Lean hypothesis, or an out-of-Lean floor)</span></div>
+      <div class="row" style="margin-top:6px"><span class="sq" style="border-color:var(--c-proven);background:color-mix(in srgb,var(--c-proven) 12%,var(--surface))"></span><span>Proven theorem</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-hyp);background:color-mix(in srgb,var(--c-hyp) 12%,var(--surface))"></span><span>Hypothesis in statement</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-floor);background:color-mix(in srgb,var(--c-floor) 12%,var(--surface))"></span><span>Out-of-Lean assumption</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--c-object);background:color-mix(in srgb,var(--c-object) 10%,var(--surface))"></span><span class="muted">Definition — a claim (Prop) or construction (data)</span></div>
+      <div class="row"><span class="sq" style="border-color:var(--accent);background:var(--accent)"></span><span>Top-level result (verifier soundness)</span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SVGNS = "http://www.w3.org/2000/svg";
+const journeyEmbed = new URLSearchParams(window.location.search).get('mode') === 'journey';
+document.body.classList.toggle('journey-embed', journeyEmbed);
+const COL = c => 130 + c * 236;
+const ROW = r => 96 + r * 116;
+
+const territories = [
+  { id:'faith', label:'Faithfulness',               cells:[[0,0],[1,0],[2,0]],             h:'#b0873a' },
+  // Label positions (labelDx / the shortened titles) are collision-tuned: each title sits in a
+  // gap of the edge routing at the 1920-wide layout. Re-check crossings after moving any node.
+  { id:'sl',    label:'Straight-line',   cells:[[1,5],[1,6],[2,6]],             h:'#c15f86', labelDx:52 },
+  { id:'caps',  label:'Capstones',                 cells:[[3,6],[3,7]],                   h:'#8a78e8', labelSide:'right', padRight:10, labelDx:-16 },
+  // headroom 26, not 32: the Faithfulness band now reaches column 2, and its rect bottom sits at
+  // y = 139. Anything above 30 here would collide with it.
+  { id:'fs',   label:'Fiat–Shamir · Random Oracle', cells:[[2,1],[3,1],[2,2],[3,2],[2,3]], h:'#6f7bd6', headroom:26 },
+  { id:'dec',  label:'Multiopen Decode', cells:[[6,3],[7,3],[6,4],[7,4]],       h:'var(--c-proven)', labelSide:'right' },
+  { id:'sz',   label:'Schwartz–Zippel', cells:[[6,6],[7,6]],                   h:'var(--c-incoming)' },
+  { id:'agmBoundary', label:'Online AGM', cells:[[4,1],[4,2],[5,2],[4,3],[5,3],[4,4],[5,4]], h:'#a06fb0', labelSide:'right', headroom:32 },
+  { id:'agm',  label:'DLOG reduction', cells:[[0,7],[1,7],[0,8],[1,8]], h:'#a06fb0', headroom:24, padRight:32, labelDx:112 },
+  { id:'floor',label:'Assumptions',    cells:[[2,8],[3,8],[5,8],[6,8]], h:'var(--c-floor)', labelDx:336 },
+];
+
+const nodes = [
+  { id:'assemble', c:0,r:0, label:'assembled MSM', status:'object',
+    anchor:'Verifier.Assemble.assemble',
+    role:'The whole verifier as a single multi-scalar multiplication — the fingerprint — copied line-for-line from halo2. Acceptance reads the strict assemble?, which returns none on rejection; the total wrapper’s zero fallback never feeds the accept condition.' },
+  { id:'fingerprint', c:1,r:0, label:'pinned to Rust', status:'proven',
+    anchor:'Fingerprint.Match.msmMatch_eval · Fixtures.MultiAction.Honest.Boundary.nonInteractiveFingerprint_matches_derived',
+    role:'msmMatch_eval checks the Lean-built MSM against the Rust verifier’s captured MSM, coefficient by coefficient; a match means equal group values. The check runs at the verifying key and challenges Lean derives itself — the dumped VK record is out of the picture. This is evidence about one capture, not all runs; Fingerprint/Epsilon prices the difference: a competing coefficient family that differs anywhere agrees at a random point with probability at most (D + B)/p (D its degree bound, B the VK’s summed denominator degrees). Backed by schedule checks, shape/VK checks, and per-slot tamper sweeps.' },
+  { id:'vkderiv', c:2,r:0, label:'derived VK', status:'proven',
+    anchor:'Keygen.Pipeline.toVerifierKey · Keygen.Certificate.certificate',
+    role:'The verifying key is computed, not assumed: one pipeline takes the circuit and a monomial URS to a full VerifyingKey — Lagrange URS by inverse FFT, fixed columns, permutation polynomials, commitments for both families. Certificate.certificate is a single native_decide comparing every field against the capture; VkCertificate carries that to the multi-action key, and InstanceCapture ties the captured instance commitments to the circuit-derived ones.' },
+  { id:'accept', c:0,r:1, label:'accepting proof', status:'object',
+    anchor:'Main.DeployedAccepts',
+    role:'The accept condition: assemble? succeeds and the MSM evaluates to the group identity. The premiss everything hangs from.' },
+  { id:'verifierEq', c:0,r:2, label:'verifier equation', status:'proven',
+    anchor:'Main.deployedAccepts_verifierEq · Deployed.Verification.deployed_verification_eq',
+    role:'The accept unpacked into halo2’s explicit IPA verifier equation: deployedAccepts_verifierEq turns MSM = 0 into P + [-v]g₀ + [ξ]S + Σ(rounds) + [-c·b·z]U + [-f]W + [-c]G′₀ = 0. One direction only, keeping the verifier’s rejection guards; no forked-transcript lane is exported.' },
+  { id:'gfold', c:0,r:3, label:'generator fold', status:'proven',
+    anchor:'Deployed.Fold.deployed_gterm_foldAll',
+    role:'The g-part of the equation rewritten as the closed fold the extractor reads. The deployed compute_s scalars halve each round exactly as commitGen_append splits a commitment, so the g-term is [-c]·G′₀ at the folded generator — the same fold Ipa.CommitFold proves for the commitment.' },
+  { id:'peel', c:0,r:4, label:'one-run classify', status:'proven',
+    anchor:'AGM.StraightLineIpa.straightLineIpaZeroOrRelation · straightLineBindingAttackZRootOrRelation · AGM.Peel.separateOrRelationWitness',
+    role:'Read together, the one-run endpoints give the classification. straightLineIpaZeroOrRelation returns zero symbolic IPA coordinates or concrete relation data; for a false accepted opening with z ≠ 0, straightLineBindingAttackZRootOrRelation refines the zero case to a round-local root event or a relation. Away from those priced roots, the deployed layer builds the retained decode. Nothing rewinds. separateOrRelationWitness is the executable coordinate-comparison kernel; its census pin admits Classical.choice, and the classify also carries the Vesta point-count native kernel.' },
+  { id:'clean', c:1,r:5, label:'clean deployed decode', status:'object',
+    anchor:'AGM.DeployedRootDecode.DeployedAlgebraicDecode · deployedAlgebraicDecode_of_good_roots',
+    role:'The relation-free result after the priced x₄, x₃, x₂, and x₁ root exclusions: the exact AGM batches and value equations for this accepting run, retained as DeployedAlgebraicDecode. Its aggregate coefficients and U/W parts are outputs, not hypotheses. The same decode yields the deployed IPA opening and the opened-batch/member views used by the circuit terminal.' },
+  { id:'relation', c:0,r:5, label:'relation (g,U,W)', status:'object',
+    anchor:'Zcash.NontrivialRelation · Common.DiscreteLogRelation.NontrivialRelation.ofCombinationCollision',
+    role:'The bad case: a nontrivial relation among (g, U, W), as concrete coefficients. Some relation always exists in a prime-order group, so merely claiming existence would say nothing — the point is that this branch computes one, exactly the break the reduction consumes.' },
+  { id:'slRoots', c:1,r:6, w:200, label:'pinned round roots', status:'proven',
+    anchor:'AGM.StraightLinePinnedRoots.StraightLineIpaOnlineTrace · StraightLineIpaSqueezeInvariance',
+    role:'The third case: per-round quadratic events the classify leaves open, collected in PinnedRootFamily and priced. The final-output interface never says when a representation was emitted, so the online trace fills that gap: it shows a computation made before the squeeze, shows it never queried the squeeze point, and ties it to the final proof. Squeeze-invariance comes from that query history, never from the final value alone.' },
+  { id:'IpaRelation', c:2,r:6, label:'IPA opening', status:'object',
+    anchor:'InnerProduct.IpaRelation',
+    role:'The opening produced by DeployedAlgebraicDecode.ipaRelation: commit a = P with ⟨a,b⟩ = v, b = (1, x, x², …). Both halves come from the same retained decode; commit_aMulti_eq_multiopen alone proves only the commitment half, not this conjunction.' },
+  { id:'SnarkRelation', c:3,r:6, label:'SnarkRelation', status:'object',
+    anchor:'Relation.KnowledgeSoundness.SnarkRelation',
+    role:'A constraint-side payload retained in DeployedConstraintWitness: opens and satisfiesCircuit for the same aggregate. snarkRelation_constraints builds it from those two facts. The Action knowledge endpoints do not consume this structure: their terminal projects the retained decode, establishes the stronger Action semantics, and returns ActionBundleWitness data directly.' },
+  { id:'circuitSat', c:4,r:6, w:235, label:'circuit satisfaction', status:'object',
+    anchor:'Relation.KnowledgeSoundness.circuitSatViaConstraints',
+    role:'The compressed full-list identity over gates, permutation, and lookup constraints. It is the circuitSat half stored in SnarkRelation, but not by itself the row-level semantics: ConstraintRelations recovers copy equalities and lookup inclusion only with the separately priced y, β, γ, and θ exclusions and the structural routing hypotheses.' },
+  { id:'capstones', c:3,r:7, label:'verifier knowledge soundness', status:'goal',
+    anchor:'Capstones.Action.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security',
+    role:'For every consensus-valid Action count, this bounds the chance the verifier accepts while witness extraction fails, against represented algebraic adversaries with random-oracle challenges. The adversary picks the statement and proof together. With Q ≤ 2^123 and adversary group work bounded by 2^125, the endpoint gives Adv_DLOG(2^124,2^126) + 2^-83. One closed program builds the charged basis, replays the exact adversary path, and pushes one proof-carrying cache through the verifier steps; Lean checks the data flow and the operation counts. What stays assumed: the supplied adversary and host callbacks match their costed versions, and the family meets the representation-length cap behind the three-decode bound.' },
+  { id:'gateLift', c:5,r:5, label:'gate-check lift', status:'proven',
+    anchor:'Canonical.Terminal.acceptedModel_circuitSat_or_relation',
+    role:'Turns the verifier’s single-point check at x into the full polynomial identity — circuit satisfaction — given a good challenge and the decoded columns, or else returns a relation. The canonical terminal merges the deployed column families (fixed, advice, instance, permutation, lookup, selector) into the one model the circuit boundary uses.' },
+  { id:'hquot', c:6,r:5, label:'quotient check', status:'proven',
+    anchor:'Constraint.Constraints.quotientCheck · quotientCheck_sound',
+    role:'The verifier’s check at x: numerator(x) = h(x)·(xⁿ − 1). On the live path it is derived from the member bindings; the old theorems that assumed it are gone (#151). quotientCheck_sound counts roots: a false identity passes for at most deg/|F| of the challenges. The x-to-x₃ transport lives with the hfold lemmas and hgood.' },
+  { id:'structural', c:5,r:7, w:235, label:'structural residuals', status:'hyp',
+    anchor:'hB · hquery · DeployedConstraintStaticChecks · DeployedConstraintXSqueezeSchedule',
+    role:'The structural assumptions that survive. None of the old four remain: the z = 0 case is priced as the (Q+1)/|F| term (straightLineRootFailure), hg0 is gone, hs/hξ appear only inside witness-construction helpers, and the pair-count bound is now proven (adaptiveStatement_pairCount_lt). Every endpoint still takes hB : B ≠ 0, as a binder or inside its DLOG profile. Endpoints that sample their basis through the generator oracle also take injectivity of the query map (hquery) — the fixed-basis captured one has no query map. The deployed endpoints also take the static-check and x-schedule interfaces: proven from the capture where there is one, explicit premisses on the consensus package.' },
+  { id:'hgood', c:5,r:6, label:'good-challenge premiss', status:'hyp',
+    anchor:'hgood',
+    role:'The challenge misses the Schwartz–Zippel bad set, so the point check implies the full identity. Produced, not assumed: the derivation spends probability budget from the accept event, and the straight-line route prices x-squeeze failure at (Q+1)·ε_x (captured ε_x = 20470/|F|). ChallengePricing treats the other surfaces — y, β, γ, θ — the same way.' },
+  { id:'roModel', c:2,r:1, w:216, label:'random-oracle model', status:'object',
+    anchor:'Oracle.Model.uniformChallenge · PMFEventBiasLE',
+    role:'Transcript squeezes as a reprogrammable random function. uniformChallenge models one fresh squeeze; PMFEventBiasLE names the bias allowed when an ideal bound is moved to the deployed challenge conversion — a stated premiss, not an equality. Blake2b randomness, transcript injectivity, the AGM, the generator oracle, and DLOG hardness all stay assumptions.' },
+  { id:'pinnedSqueeze', c:2,r:2, label:'pinned squeeze', status:'proven',
+    anchor:'FiatShamir.PinnedSqueeze.xEscAtPoint_measure_le · FiatShamir.PinnedRoots.PinnedRootFamily',
+    role:'The one-step Fiat–Shamir bound the analysis runs on: a set fixed before its squeeze is hit with bounded probability at each queried point. This replaced the forking lemma — events add up as a simple union instead of a four-way joint rewind, so nothing rewinds.' },
+  { id:'provenance', c:2,r:3, w:216, label:'assembly provenance', status:'proven',
+    anchor:'FiatShamir.Adversary.Provenance.AssemblyPoint',
+    role:'Every point the deployed multiopen MSM appends comes from the proof string or the verifying key — so each emitted point can carry a representation, and nothing of unknown origin sneaks in.' },
+  { id:'slCapstone', c:2,r:7, w:190, label:'deployed endpoints', line1:'deployed', line2:'endpoints', status:'proven',
+    anchor:'Fixtures.MultiAction.Honest.StraightLineKnowledgeError.orchard_deployed_straightline_captured_direct_generatorRO_knowledge_error_bound · AGM.StraightLineOrchardConsensusBounds.orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security',
+    role:'The deployed-level siblings of the adaptive endpoints: three captured-key knowledge-error bounds, plus one consensus finite-security package recording the tight three-bit reading at Adv_DLOG(2^126, 2^126) + 2^-84. They live with the layer that proves them, not in Capstones/ — verifier algebra, not circuit statement — but each is named in the trust census. The captured three are the only results tied to the actual recorded run: the capture proves the static checks and x-schedule instead of assuming them.' },
+  { id:'qAdversary', c:3,r:1, w:216, label:'Q-query adversary', status:'object',
+    anchor:'FiatShamir.Adversary.OracleComp',
+    role:'The adversary as a bounded query tree: at most Q oracle queries, answered from one table. Its query log feeds the resource accounting, and its blind-escape sets give the (Q + 1) factor on each priced surface.' },
+  { id:'ordering', c:3,r:2, w:270, label:'transcript ordering', status:'proven',
+    anchor:'FiatShamir.Ordering.roundPoint_mem_roundTranscript · deriveChallenges_x_eq',
+    role:'Each IPA round point lands in the transcript before its challenge is drawn, so later messages cannot bend earlier challenges; halo2 never reabsorbs a squeezed challenge. This is the chronology that pins the IPA and constraint root sets. The opened-batch interpolation points are separate extractor-side arithmetic, not transcript squeezes.' },
+  { id:'openedBatch', c:6,r:3, label:'opened batch', status:'object',
+    anchor:'Multiopen.Opened.OpenedBatchOpenings',
+    role:'The opened-batch view of one retained DeployedAlgebraicDecode: witnesses with declared U/W parts, commitment equations in power form, and matching evaluation equations. toOpenedBatch uses injective pinnedPoints rooted at the actual x₄ challenge; the extra interpolation points are extractor arithmetic, not oracle answers or reruns.' },
+  { id:'x4batch', c:7,r:3, label:'challenge batch', status:'proven',
+    anchor:'Multiopen.Deployed.deployedCommitment_x4_batch · multiopenValue_x4_batch',
+    role:'Under the x₄ squeeze, the pinned commitment and multiopen value already are flat power batches, with coefficients read off the fingerprinted grouping. The decode consumes the deployed grouping itself — no separate “model equals deployed” step.' },
+  { id:'decode', c:6,r:4, label:'decode columns', status:'object',
+    anchor:'Multiopen.Opened.openedColumnDecode · vandermonde_decode_map',
+    role:'The canonical Vandermonde view of OpenedBatchOpenings, run over witness, U, and W coordinates. On the live route it recovers the exact AGM x₄ columns already retained by DeployedAlgebraicDecode; the x₁ member view then unbatches each point-set aggregate. This node is produced by the opened batch — never by IpaRelation.' },
+  { id:'member_binding', c:7,r:4, label:'challenge unbatch', status:'proven',
+    anchor:'AGM.DecodeToOpened.DeployedAlgebraicDecode.toMemberDecode · DeployedAlgebraicDecode.memberBinding',
+    role:'One opening per member commitment, reconstructed at the actual x₁ challenge from the retained decode. toMemberDecode supplies the explicit two-level x₄-then-x₁ power combination; memberBinding supplies every routed claimed evaluation consumed by the canonical circuit terminal.' },
+  { id:'szBadSet', c:7,r:6, label:'SZ bad set', status:'proven',
+    anchor:'Constraint.Constraints.szBadSet_card_le',
+    role:'The counting step: bad x-values are roots of the difference polynomial, so at most degree-many exist. DegreeWalk supplies the explicit degree bound D behind ε_x = D/|F|.' },
+  { id:'goodChallenge', c:6,r:6, label:'good challenge', status:'proven',
+    anchor:'Pricing.GoodChallenge.uniformChallenge_szBadSet · exists_accepting_good_challenge',
+    role:'A uniform squeeze hits the bad set with probability at most natDegree C / p, so an accept event that beats this budget contains a good accepting challenge — hgood is produced, not assumed. The several d/p losses just add.' },
+  { id:'fsAdversary', c:4,r:1, dx:138, w:260, label:'FS algebraic adversary', status:'object',
+    anchor:'FiatShamir.Adversary.Algebraic.AlgebraicWfProof · ComputedAlgebraicFSFamily',
+    role:'The bounded-query adversary whose proof output carries algebraic representations. Its transcript is decoded into the representation-carrying proof the reduction uses; acceptance and attack events live on one oracle table, and one run reads one table. The representations are ghost data — the Halo 2 verifier never sees them.' },
+  { id:'straightAdapter', c:5,r:2, dx:5, w:190, label:'deployed AGM family', line1:'deployed', line2:'AGM family', status:'proven',
+    anchor:'Composition.StraightLineDeployed.ComputedStraightLineDeployedFSFamily.ofCovered · straightLineDeployedRelationFinder',
+    role:'The builder for the fixed-statement route. As a security notion the adaptive game supersedes it — every Action capstone is adaptive — but it is not dead weight: the captured endpoints bind here, and the adaptive terminal reuses its ActionBundleWitness. It assembles the online member family with caller-supplied root, IPA-round, and constraint-x stages plus freshness proofs, packaging what the relation finder consumes — it does not extract anything itself. straightLineRootFailure prices the z = 0 case instead of assuming it away.' },
+  { id:'directCost', c:5,r:3, dx:5, w:190, label:'AGM direct-decode bound', line1:'AGM direct-decode', line2:'work bound', status:'proven',
+    anchor:'AGM.StraightLineFiniteSecurity.straightLineDirectDecodeOps_le · StraightLineDirectDlogProfile.solverCost_le',
+    role:'Charges the actual coordinate data the finder walks, not an invented work number. The direct decode uses no group operations; verifier MSM and other group work are budgeted separately. The straight-line fallback budgets both its possible decodes; on the adaptive endpoint all three calls — identity, terminal, final extraction — come in below 2^123 once the family meets its representation-length cap. The theorem does not build a family meeting that cap.' },
+  { id:'securityBound', c:5,r:4, dx:5, w:190, label:'checked group-work bound', line1:'checked DLOG', line2:'group-work bound', status:'proven',
+    anchor:'Action.AdaptiveStatementCost.costedCachedKnowledgeExtractor_two_mul_bound · Capstones.Action.orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security',
+    role:'The cost-tracking program records Vesta group operations and strips back to the original adversary. One closed program builds the charged basis points, replays the exact adversary path, and drives verifier assembly through one proof-carrying cache. Lean proves the counter equals adversary work plus reduction work, and bounds it by twice the adversary budget: 2^125 adversary work fits in 2^126 DLOG work, with at most 2^124 oracle queries under Q ≤ 2^123. What stays assumed: the real adversary and host callbacks do no group work the costed program does not count.' },
+  { id:'adaptive', c:4,r:2, dx:35, w:190, label:'adaptive-statement game', line1:'adaptive-statement', line2:'game', status:'object',
+    anchor:'Action.AdaptiveStatementModel.AdaptiveActionStatementOutput',
+    role:'The strongest Action game: one adversary returns the public inputs and the proof together. Its transcript is not free — it is rebuilt from the VK representation and the instance commitments derived from the adversary’s own output, all bound before theta. vkHash stays opaque: the theorems hold for every such function and claim no cross-key binding.' },
+  { id:'retained', c:4,r:3, dx:35, w:190, label:'retained execution', line1:'retained', line2:'execution', status:'proven',
+    anchor:'Action.AdaptiveStatementProvenance.cachedExecution_log_length_le',
+    role:'One shared output-and-annotation cache. Every comparison — instance, pre-IPA, IPA, semantic, source — reads this single retained run instead of re-running the adversary, so queries are never counted twice.' },
+  { id:'knowExtract', c:4,r:4, dx:35, w:190, label:'knowledge extractor', line1:'knowledge', line2:'extractor', status:'proven',
+    anchor:'Action.AdaptiveStatementKnowledge.adaptiveStatementKnowledgeExtractor',
+    role:'The executable witness projection for the chosen statement. Its failure is covered by the same relation finder and statistical terms as false-statement soundness — knowledge costs no extra reduction.' },
+  { id:'algRel', c:0,r:6, label:'relation witness', status:'object',
+    anchor:'Common.AlgebraicRelation.AlgebraicRelationWitness',
+    role:'The relation packaged as an explicit witness — the input programmedExtractOrMiss consumes. The representation types borrow basic shape from ArkLib’s AGM file; ArkLib is not a dependency, and the prover, certificate, and reductions are proven here.' },
+  { id:'adapter', c:0,r:7, label:'programmed-basis adapter', line1:'programmed-basis', line2:'adapter', status:'object',
+    anchor:'Common.ProgrammedBasis.ProgrammedBasisEmbedding · programmedExtractOrMiss',
+    role:'Plants the discrete-log challenge in every basis slot as x·B + y·C with fresh pairs (Jaeger–Tessaro Lemma 3), then reads the returned relation: a nonzero challenge component gives the discrete log; a miss keeps the relation with proof it annihilates the planting.' },
+  { id:'dlrep', c:0,r:8, label:'DL solution', status:'object',
+    anchor:'Common.DiscreteLogRelation.DiscreteLogWitness',
+    role:'A solved discrete log (DiscreteLogWitness), read off any relation with a nonzero challenge component. The probability theorem bounds relation-finding by this solver’s finite-resource advantage — no separate hardness assumption is taken.' },
+  { id:'missesSlot', c:1,r:8, label:'programmed miss', status:'object',
+    anchor:'Common.ProgrammedBasis.ProgrammedRelationOutcome',
+    role:'The miss case keeps the exact returned relation plus proof that it annihilates the planted challenge — one 1/|Fp| slice of the randomness per relation, not a freely chosen one.' },
+  { id:'dlbound', c:1,r:7, label:'DL reduction bound', status:'proven',
+    anchor:'AGM.StraightLineFiniteSecurity.straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile · ComputedAdaptiveActionStatementFSFamily.adaptiveStatementKnowledgeFailure_prob_le · CertifiedAdaptiveStatementDlogProfile',
+    role:'For represented algebraic adversaries, every computed relation becomes either a DLOG solution or one 1/|Fp| miss. The adaptive certificate checks the staged adversary, reduction work runs through real counted group operations, and oracle, list, and decode resources are kept separate. The conclusion is stated in terms of the resulting solver’s advantage.' },
+  { id:'DLhard', c:2,r:8, label:'DLOG advantage', status:'floor',
+    anchor:'Common.RelationProbability.TextbookDLAdvantageLE · Action.AdaptiveStatementCost.CertifiedAdaptiveStatementDlogProfile',
+    role:'The finite-resource Vesta DLOG advantage in the bound. Lean builds the reduction and counts its queries and group work; it neither assumes a hardness statement nor computes a security number. Reading this as a concrete Vesta estimate happens outside Lean.' },
+  { id:'actionTerminal', c:4,r:7, w:190, label:'Action terminal', status:'proven',
+    anchor:'Action.AdaptiveStatementKnowledge.adaptiveStatementKnowledgeExtractor · Action.StraightLineTerminal.actionKnowledgeExtractor',
+    role:'Returns real data either way: private witnesses for the whole bundle — an ActionBundleWitness, each entry with a proof it satisfies the compiled Action spec — or explicit relation coefficients. Both routes end here (the adaptive one also keeps its annotation log), so a bare existence claim never counts as extracted knowledge.' },
+  { id:'blake2b', c:3,r:8, label:'Blake2b = RO', status:'floor',
+    anchor:'Oracle.Model.uniformChallenge',
+    role:'Blake2b treated as a random oracle. The oracle model itself — reprogramming, uniform challenges, conversion-bias transport — is proven in Lean; the assumption is that the real Blake2b transcript behaves like it, with injective transcripts.' },
+  { id:'h2cRO', c:6,r:8, w:235, label:'Hash-to-Curve = RO', status:'floor',
+    anchor:'AGM.ProbabilityVesta.orchardGeneratorROSetup · orchard_uniformURSIdentification_of_generatorRO',
+    role:'The generator hash-to-curve treated as a uniform random oracle into the group. Lean proves the sampled basis has the right distribution inside that model; that halo2’s real deterministic derivation behaves like the oracle is the assumption, separate from the transcript oracle.' },
+  { id:'ledgerComposition', c:4,r:8, w:225, label:'bundle → ledger composition', status:'proven',
+    anchor:'ActionBundleWitness · Security.Ledger.Bridge.actionSpecToLedgerData · OrchardExtractionExperiment',
+    role:'The output-side composition, formalized for Balance: actionSpecToLedgerData refines each extracted witness to the games-facing ledger data or a computed Sinsemilla break, bundleLedgerData traverses the extracted bundle, and the composed extraction experiment assembles the annotated chain at the deployed value bases. No out-of-Lean assumption remains here: the composed bound carries per-slot-and-size knowledge-soundness hypotheses in Lean, at a k·maxActions factor — a suboptimality of the reduction, tracked as #214.' },
+  { id:'deploymentProvenance', c:5,r:8, w:225, label:'deployment provenance', status:'floor',
+    anchor:'Keygen.Pipeline · Fingerprint.Match',
+    role:'The input-side deployment floor. Lean derives the verifying key and checks every field against the capture, but the ported configure/synthesize is not universally proven equal to the shipped Rust circuit, and the captured proof bytes, MSM, and oracle transcript remain empirical records rather than a byte-level refinement theorem.' },
+];
+
+// Each edge is [from, to, kind, via?] where `via` names the Lean lemma/def that
+// justifies the step (edge-level traceability): the producing theorem for `entails`,
+// the discharging lemma for `discharges`. `rests`/`gap` carry none — a floor or an
+// uncomposed modeling gap has no discharging lemma, and that absence is the point.
+const edges = [
+  ['assemble','fingerprint','entails','msmMatch_eval'],
+  ['vkderiv','fingerprint','entails','nonInteractiveFingerprint_matches_derived'],
+  ['assemble','accept','entails','DeployedAccepts'],
+  ['accept','verifierEq','entails','deployedAccepts_verifierEq'],
+  ['verifierEq','gfold','entails','deployed_gterm_foldAll'],
+  ['gfold','peel','entails','straightLineIpaZeroOrRelation'],
+  ['fsAdversary','peel','entails','AlgebraicWfProof'],
+  ['peel','clean','entails','deployedAlgebraicDecode_of_good_roots'],
+  ['peel','relation','entails','separateOrRelationWitness'],
+  ['peel','slRoots','entails','straightLineBindingAttackZRootOrRelation'],
+  ['pinnedSqueeze','slRoots','entails','StraightLineIpaSqueezeInvariance'],
+  ['clean','IpaRelation','entails','DeployedAlgebraicDecode.ipaRelation'],
+  ['IpaRelation','SnarkRelation','entails','snarkRelation_constraints'],
+  ['gateLift','circuitSat','entails','acceptedModel_circuitSat_or_relation'],
+  ['circuitSat','SnarkRelation','entails','snarkRelation_constraints'],
+  ['gateLift','hquot','rests'],
+  ['gateLift','hgood','rests'],
+  ['member_binding','gateLift','entails','acceptedModel_circuitSat_or_relation_of_decodedMemberPolynomial_eq'],
+  ['clean','openedBatch','entails','DeployedAlgebraicDecode.toOpenedBatch'],
+  ['x4batch','openedBatch','entails','deployedSyntheticOpenedX4'],
+  ['openedBatch','decode','entails','openedColumnDecode'],
+  ['clean','member_binding','entails','DeployedAlgebraicDecode.toMemberDecode · DeployedAlgebraicDecode.memberBinding'],
+  ['szBadSet','goodChallenge','entails','uniformChallenge_szBadSet'],
+  ['goodChallenge','hgood','discharges','exists_accepting_good_challenge'],
+  ['roModel','pinnedSqueeze','entails','xEscAtPoint_measure_le'],
+  ['ordering','pinnedSqueeze','entails','roundPoint_mem_roundTranscript'],
+  ['roModel','blake2b','rests'],
+  ['qAdversary','fsAdversary','entails','ComputedAlgebraicFSFamily'],
+  ['provenance','fsAdversary','entails','AssemblyPoint'],
+  ['fsAdversary','straightAdapter','entails','ComputedStraightLineDeployedFSFamily.ofCovered'],
+  ['fsAdversary','adaptive','entails','AdaptiveActionStatementOutput.toAlgebraicWfProof'],
+  ['adaptive','retained','entails','cachedExecution_log_length_le'],
+  ['retained','knowExtract','entails','adaptiveStatementKnowledgeExtractor'],
+  ['knowExtract','actionTerminal','entails','ActionBundleWitness'],
+  ['straightAdapter','directCost','entails','straightLineDirectDecodeOps_le'],
+  ['straightAdapter','dlbound','entails','straightLineConstraintFailure_prob_le_of_generatorRO_dlogProfile'],
+  ['directCost','securityBound','entails','StraightLineDirectDlogProfile.solverCost_le'],
+  ['dlbound','securityBound','entails','orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security'],
+  ['dlbound','slCapstone','entails','orchard_deployed_straightline_consensus_2pow123_generatorRO_finite_security'],
+  ['dlbound','capstones','entails','adaptiveStatementKnowledgeFailure_prob_le'],
+  ['securityBound','capstones','entails','orchard_action_adaptiveStatement_certified_2pow125_knowledge_finite_security'],
+  ['actionTerminal','capstones','entails','adaptiveStatementKnowledgeFailure_prob_le'],
+  ['relation','algRel','entails','AugmentedRelationWitness'],
+  ['algRel','adapter','entails','programmedExtractOrMiss'],
+  ['adapter','dlrep','entails','discreteLogOfChallenge_of_relation'],
+  ['adapter','missesSlot','entails','programmedExtractOrMiss'],
+  ['adapter','dlbound','entails','relationWithCoins_prob_le_of_textbookDL'],
+  ['dlbound','DLhard','rests'],
+  ['dlbound','h2cRO','rests'],
+  ['slCapstone','DLhard','rests'],
+  ['securityBound','DLhard','rests'],
+  ['securityBound','h2cRO','rests'],
+  ['capstones','structural','rests'],
+  ['capstones','ledgerComposition','rests'],
+  ['capstones','deploymentProvenance','rests'],
+];
+
+// Explicit routes keep cross-territory composition edges from passing through unrelated nodes.
+const edgeRoutes = {
+  'clean:openedBatch': [
+    { x:650, y:650 }, { x:1000, y:630 }, { x:1180, y:630 }, { x:1450, y:630 },
+    { x:1450, y:500 },
+  ],
+  'clean:member_binding': [
+    { x:650, y:658 }, { x:900, y:622 }, { x:1450, y:622 }, { x:1680, y:600 },
+  ],
+  'member_binding:gateLift': [{ x:1700, y:630 }, { x:1450, y:630 }],
+  // Down the left of the Fiat–Shamir column, then through the 34px gap between the DL reduction
+  // bound and the straight-line endpoints, and along the top of the assumptions band.
+  'roModel:blake2b': [
+    { x:470, y:280 }, { x:480, y:620 }, { x:490, y:860 }, { x:490, y:955 },
+    { x:660, y:978 },
+  ],
+  // Along the clear band between the row-1 boxes (bottom y≈235) and the row-2 boxes (top y≈305),
+  // then down the empty first column: the represented execution reaches the classify without
+  // crossing the oracle machinery or the adaptive column.
+  'fsAdversary:peel': [
+    { x:1040, y:272 }, { x:700, y:274 }, { x:470, y:276 }, { x:430, y:420 },
+    { x:400, y:520 }, { x:330, y:548 },
+  ],
+  // Up through the 41px gap between `ordering` and `adaptive`, then along the same clear band.
+  'provenance:fsAdversary': [
+    { x:850, y:400 }, { x:993, y:380 }, { x:993, y:270 }, { x:1060, y:262 },
+  ],
+  // Left of the row-5/6 boxes: clear of peel's right edge, relation's right edge, and clean's left.
+  'pinnedSqueeze:slRoots': [{ x:430, y:400 }, { x:250, y:560 }, { x:252, y:730 }],
+  // Straight down the 53px corridor between `relation` and `clean`: the default chord clips one
+  // corner or the other, so the pass has to be near-vertical.
+  'peel:slRoots': [{ x:258, y:640 }, { x:258, y:712 }],
+  // Down the 37px gap between SnarkRelation and circuitSat, then the 33px one past capstones.
+  'knowExtract:actionTerminal': [{ x:935, y:690 }, { x:937, y:850 }],
+  'dlbound:h2cRO': [{ x:600, y:970 }, { x:1400, y:970 }],
+  'capstones:structural': [{ x:1000, y:846 }, { x:1160, y:846 }],
+  'straightAdapter:dlbound': [
+    { x:1130, y:383 }, { x:980, y:402 }, { x:946, y:620 }, { x:950, y:840 },
+    { x:820, y:860 }, { x:470, y:856 },
+  ],
+  // The deployed endpoint occupies the direct row-7 chord; carry this separate Action bound just
+  // above it, in the narrow clear band below the other long-form reduction routes.
+  'dlbound:capstones': [
+    { x:480, y:870 }, { x:700, y:870 }, { x:720, y:875 },
+  ],
+  'dlbound:securityBound': [
+    { x:440, y:844 }, { x:700, y:842 }, { x:905, y:840 }, { x:932, y:824 },
+    { x:934, y:700 }, { x:1000, y:616 }, { x:1230, y:612 },
+  ],
+  'securityBound:capstones': [
+    { x:1290, y:596 }, { x:1208, y:636 }, { x:1206, y:700 }, { x:1207, y:790 },
+    { x:1203, y:852 }, { x:1080, y:860 },
+  ],
+  'securityBound:DLhard': [
+    { x:1500, y:600 }, { x:1692, y:640 }, { x:1692, y:810 }, { x:1665, y:940 },
+    { x:1200, y:952 }, { x:760, y:944 },
+  ],
+  'securityBound:h2cRO': [
+    { x:1520, y:610 }, { x:1680, y:655 }, { x:1668, y:880 }, { x:1600, y:966 },
+  ],
+};
+
+const statusColor = { proven:'--c-proven', hyp:'--c-hyp', floor:'--c-floor', object:'--c-object', goal:'--accent' };
+const statusName  = { proven:'Proven', hyp:'Hypothesis', floor:'Out-of-Lean assumption', object:'Definition', goal:'Top-level' };
+const relPhrase = {
+  'out-entails':    ['→', 'entails'],
+  'out-discharges': ['→', 'discharges'],
+  'out-rests':      ['→', 'rests on'],
+  'in-entails':     ['←', 'follows from'],
+  'in-discharges':  ['←', 'discharged by'],
+  'in-rests':       ['←', 'relied on by'],
+  'out-gap':        ['⇢', 'gap fixed by'],
+  'in-gap':         ['⇠', 'fixes gap in'],
+};
+
+const byId = {};
+nodes.forEach(n => {
+  n.cx = COL(n.c) + (n.dx || 0); n.cy = ROW(n.r);
+  // Wrap long single-line labels onto two lines at the space nearest the
+  // middle, so the box (whose width is capped below) always fits its text.
+  if (!n.line1 && !n.w && !n.tag && n.label.length > 18 && n.label.includes(' ')) {
+    const mid = n.label.length / 2;
+    let best = -1;
+    for (let i = n.label.indexOf(' '); i !== -1; i = n.label.indexOf(' ', i + 1)) {
+      if (best === -1 || Math.abs(i - mid) < Math.abs(best - mid)) { best = i; }
+    }
+    n.line1 = n.label.slice(0, best);
+    n.line2 = n.label.slice(best + 1);
+  }
+  const ch = n.line1 ? Math.max(n.line1.length, n.line2.length) : n.label.length;
+  n.w = n.w || Math.max(126, Math.min(216, ch * 10.2 + 30));
+  n.h = 46;
+  byId[n.id] = n;
+});
+
+const adj = {};
+nodes.forEach(n => adj[n.id] = []);
+edges.forEach((e,i) => {
+  adj[e[0]].push({ i, other:e[1], kind:e[2], dir:'out', via:e[3] });
+  adj[e[1]].push({ i, other:e[0], kind:e[2], dir:'in', via:e[3] });
+});
+
+const svg = document.getElementById('map');
+function el(tag, attrs) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+const defs = el('defs', {});
+[['entails','var(--ink)'],['discharges','var(--accent)'],['rests','var(--c-floor)'],['gap','var(--c-hyp)']].forEach(([k,c]) => {
+  // Two sizes per kind: the base head, and a slightly larger one that CSS
+  // swaps in for selected (.hot) edges — 1.2x rather than tracking the
+  // stroke-width ratio.
+  [['ar-', 15], ['ar-hot-', 18]].forEach(([prefix, size]) => {
+    const m = el('marker', { id:prefix+k, viewBox:'0 0 10 10', refX:'9', refY:'5', markerWidth:String(size), markerHeight:String(size), markerUnits:'userSpaceOnUse', orient:'auto-start-reverse' });
+    m.appendChild(el('path', { d:'M0,0 L10,5 L0,10 z', fill:c }));
+    defs.appendChild(m);
+  });
+});
+svg.appendChild(defs);
+
+const mapTitle = el('text', { x:960, y:46, 'text-anchor':'middle', class:'map-title' });
+mapTitle.textContent = 'Formal Verification of Ironwood';
+svg.appendChild(mapTitle);
+
+const terrLayer = el('g', {});
+const terrLabelLayer = el('g', {});
+const nodeAt = {};
+nodes.forEach(n => { nodeAt[n.c + ',' + n.r] = n; });
+territories.forEach(t => {
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  t.cells.forEach(([c,r]) => {
+    const n = nodeAt[c + ',' + r];
+    const cx = n ? n.cx : COL(c), cy = n ? n.cy : ROW(r);
+    const hw = n ? n.w/2 : 90, hh = n ? n.h/2 : 23;
+    x0=Math.min(x0,cx-hw); y0=Math.min(y0,cy-hh);
+    x1=Math.max(x1,cx+hw); y1=Math.max(y1,cy+hh);
+  });
+  const pad=20;
+  const padRight=t.padRight || pad;
+  const headroom=t.headroom || 14;
+  const g = el('g', {});
+  const rect = el('rect', { x:x0-pad, y:y0-pad-headroom, width:(x1-x0)+pad+padRight, height:(y1-y0)+pad*2+headroom, class:'terr' });
+  rect.style.setProperty('--th', `color-mix(in srgb, ${t.h} 7%, var(--surface))`);
+  rect.style.setProperty('--ts', t.h);
+  g.appendChild(rect);
+  const labX = (t.labelSide === 'right' ? x1+padRight-14 : x0-pad+14) + (t.labelDx || 0);
+  const lab = el('text', { x:labX, y:y0-pad-headroom+22+(t.labelDy||0), class:'terr-label' });
+  if (t.labelSide === 'right') lab.setAttribute('text-anchor', 'end');
+  lab.style.setProperty('--ts', t.h);
+  lab.textContent = t.label;
+  terrLabelLayer.appendChild(lab);
+  if (t.tag) {
+    const tg = el('text', { x:x1+padRight-14, y:y0-pad-headroom+22, 'text-anchor':'end', class:'terr-tag' });
+    tg.style.setProperty('--ts', t.h);
+    tg.textContent = t.tag;
+    terrLabelLayer.appendChild(tg);
+  }
+  terrLayer.appendChild(g);
+});
+svg.appendChild(terrLayer);
+
+function borderPoint(n, tx, ty) {
+  const dx = tx - n.cx, dy = ty - n.cy;
+  if (dx === 0 && dy === 0) return { x:n.cx, y:n.cy };
+  const hw = n.w/2 + 3, hh = n.h/2 + 3;
+  const s = 1 / Math.max(Math.abs(dx)/hw, Math.abs(dy)/hh);
+  return { x:n.cx + dx*s, y:n.cy + dy*s };
+}
+const edgeLayer = el('g', {});
+const edgeEls = edges.map((e) => {
+  const a = byId[e[0]], b = byId[e[1]];
+  const route = edgeRoutes[`${e[0]}:${e[1]}`];
+  const first = route?.[0], last = route?.[route.length - 1];
+  const s = borderPoint(a, first?.x ?? b.cx, first?.y ?? b.cy);
+  const t = borderPoint(b, last?.x ?? a.cx, last?.y ?? a.cy);
+  let d;
+  if (route) {
+    d = `M${s.x},${s.y}`;
+    route.forEach((control, i) => {
+      const next = route[i + 1];
+      const end = next ? { x:(control.x + next.x)/2, y:(control.y + next.y)/2 } : t;
+      d += ` Q${control.x},${control.y} ${end.x},${end.y}`;
+    });
+  } else {
+    const mx=(s.x+t.x)/2, my=(s.y+t.y)/2;
+    let nx=t.y-s.y, ny=-(t.x-s.x); const len=Math.hypot(nx,ny)||1;
+    const dist=Math.hypot(t.x-s.x,t.y-s.y); const off=Math.min(46, dist*0.13);
+    const cx=mx+nx/len*off, cy=my+ny/len*off;
+    d = `M${s.x},${s.y} Q${cx},${cy} ${t.x},${t.y}`;
+  }
+  const p = el('path', { class:'edge '+e[2], d, 'marker-end':`url(#ar-${e[2]})` });
+  edgeLayer.appendChild(p);
+  return p;
+});
+svg.appendChild(edgeLayer);
+svg.appendChild(terrLabelLayer);
+
+const nodeLayer = el('g', {});
+nodes.forEach(n => {
+  const g = el('g', { class:'node '+n.status, tabindex:'0', role:'button', 'data-id':n.id,
+    'aria-label':`${n.label} — ${statusName[n.status]}` });
+  const cvar = statusColor[n.status];
+  const rect = el('rect', { class:'box', x:n.cx-n.w/2, y:n.cy-n.h/2, width:n.w, height:n.h });
+  if (n.status !== 'goal') {
+    rect.style.setProperty('--nf', `color-mix(in srgb, var(${cvar}) 11%, var(--surface))`);
+    rect.style.setProperty('--ns', `var(${cvar})`);
+  }
+  g.appendChild(rect);
+  const lab = el('text', { class:'label mono', x:n.cx, y:n.cy + (n.line2 ? -9 : n.tag ? -5 : 0), 'text-anchor':'middle' });
+  lab.textContent = n.line1 || n.label;
+  g.appendChild(lab);
+  if (n.line2) {
+    const tg = el('text', { class:'label mono', x:n.cx, y:n.cy+10, 'text-anchor':'middle' });
+    tg.textContent = n.line2;
+    g.appendChild(tg);
+  } else if (n.tag) {
+    const tg = el('text', { class:'anchor mono', x:n.cx, y:n.cy+13, 'text-anchor':'middle' });
+    tg.textContent = n.tag;
+    g.appendChild(tg);
+  }
+  nodeLayer.appendChild(g);
+  n._g = g;
+});
+svg.appendChild(nodeLayer);
+
+const detail = document.getElementById('detail');
+let pinned = null, activeFilter = 'all', journeyActive = false;
+
+// The top-level result carries status 'goal' and has no chip of its own, so it has to ride along
+// with 'proven' — it is a proven theorem, and dropping it out of that view was the one node the
+// filter should never hide.
+function matchesFilter(id) {
+  const s = byId[id].status;
+  return activeFilter === 'all' || s === activeFilter || (activeFilter === 'proven' && s === 'goal');
+}
+
+function applyFilter() {
+  nodes.forEach(n => {
+    n._g.classList.toggle('filtered', !matchesFilter(n.id));
+    n._g.classList.remove('dim', 'near');
+  });
+  edgeEls.forEach((p,i) => {
+    const [a,b] = edges[i];
+    p.classList.toggle('filtered', !(matchesFilter(a) || matchesFilter(b)));
+    p.classList.remove('hot', 'dim');
+  });
+}
+
+function highlight(id) {
+  const near = new Set([id]);
+  const eidx = new Set();
+  adj[id].forEach(a => { near.add(a.other); eidx.add(a.i); });
+  // A pinned node's neighbourhood takes over from the filter, so clear `filtered` here; unpinning
+  // calls clearHi() and re-applies the filter.
+  nodes.forEach(n => { n._g.classList.remove('filtered'); n._g.classList.toggle('dim', !near.has(n.id)); n._g.classList.toggle('near', near.has(n.id)); });
+  edgeEls.forEach((p,i) => { p.classList.remove('filtered'); p.classList.toggle('hot', eidx.has(i)); p.classList.toggle('dim', !eidx.has(i)); });
+}
+
+function applyJourneyStage(payload) {
+  journeyActive = true;
+  pinned = null;
+  const focus = new Set(payload.focus || []);
+  const revealed = new Set(payload.revealed || payload.focus || []);
+  nodes.forEach(n => {
+    n._g.classList.remove('dim', 'filtered');
+    n._g.classList.toggle('journey-current', focus.has(n.id));
+    n._g.classList.toggle('journey-past', !focus.has(n.id) && revealed.has(n.id));
+    n._g.classList.toggle('journey-hidden', !revealed.has(n.id));
+  });
+  edgeEls.forEach((p, i) => {
+    const [a, b] = edges[i];
+    const bothRevealed = revealed.has(a) && revealed.has(b);
+    const touchesCurrent = focus.has(a) || focus.has(b);
+    p.classList.remove('dim', 'hot', 'filtered');
+    p.classList.toggle('journey-current', bothRevealed && touchesCurrent);
+    p.classList.toggle('journey-past', bothRevealed && !touchesCurrent);
+    p.classList.toggle('journey-hidden', !bothRevealed);
+  });
+}
+
+function renderDetail(id) {
+  const n = byId[id];
+  const cvar = statusColor[n.status];
+  const conns = adj[id]
+    .slice()
+    .sort((a, b) => (a.dir === b.dir ? 0 : a.dir === 'in' ? -1 : 1))
+    .map(a => {
+      const [arrow, word] = relPhrase[a.dir + '-' + a.kind];
+      const via = a.via ? ` <span class="via">${a.via}</span>` : '';
+      return `<div class="c"><span class="verb ${a.kind}">${arrow} ${word}</span><span class="to">${byId[a.other].label}${via}</span></div>`;
+    }).join('');
+  detail.innerHTML = `
+    <span class="badge" style="color:var(${cvar});border-color:var(${cvar})">${statusName[n.status]}${n.tag?` · <span class="tag">${n.tag}</span>`:''}</span>
+    <p class="title">${n.label}</p>
+    <p class="anchor"><a class="src" target="_blank" rel="noopener" href="https://github.com/search?q=repo%3Azcash%2Fironwood+${encodeURIComponent(n.anchor.split('·')[0].trim().split('.').pop().replace(/[*]/g,''))}&type=code">${n.anchor}</a></p>
+    <p class="role">${n.role}</p>
+    <div class="conns">${conns || '<span class="empty">No connections.</span>'}</div>`;
+}
+
+nodes.forEach(n => {
+  const g = n._g;
+  const show = () => { if (journeyActive || activeFilter!=='all') return; highlight(n.id); renderDetail(n.id); };
+  const unshow = () => {
+    if (journeyActive || activeFilter!=='all') return;
+    if (pinned) { highlight(pinned); renderDetail(pinned); }
+    else { clearHi(); }  // the card persists; only the map highlight clears
+  };
+  // Deliberately no pointerenter/pointerleave handlers: the card and the map
+  // highlighting change only on click or keyboard focus, so moving the mouse
+  // around the map causes no flicker and never steals the text being read.
+  g.addEventListener('focus', show);
+  g.addEventListener('blur', unshow);
+  g.addEventListener('click', (e) => { if (journeyActive) return; e.stopPropagation(); pinned = (pinned===n.id)?null:n.id; nodes.forEach(m => m._g.classList.toggle('pinned', pinned===m.id)); if(pinned){highlight(pinned);renderDetail(pinned); if (detail.getBoundingClientRect().top > innerHeight) detail.scrollIntoView({behavior:'smooth', block:'nearest'});} else {clearHi(); resetDetail(); if(activeFilter!=='all') applyFilter();} });
+  g.addEventListener('keydown', (e) => { if(e.key==='Enter'||e.key===' '){ e.preventDefault(); g.click(); } });
+});
+
+function clearHi() {
+  nodes.forEach(n => { n._g.classList.remove('dim'); n._g.classList.remove('near'); n._g.classList.remove('filtered'); });
+  edgeEls.forEach(p => { p.classList.remove('hot'); p.classList.remove('dim'); p.classList.remove('filtered'); });
+}
+
+function resetDetail() {
+  detail.innerHTML = `<p class="empty">A node's card shows what it is, its Lean anchor, and every theorem it connects to — with the lemma that justifies each link.</p>
+    <p class="hint">The soundness route is <span class="mono">accepting proof → verifier equation → one-run classify → deployed decode → Action witness extractor → knowledge bound</span>. <span class="mono">SnarkRelation</span> is a retained constraint-side payload, not the Action capstone's consumer boundary.</p>`;
+}
+
+svg.addEventListener('click', () => { if (journeyActive) return; pinned = null; nodes.forEach(m => m._g.classList.remove('pinned')); clearHi(); resetDetail(); if(activeFilter!=='all') applyFilter(); });
+
+// Report the document height so the host page can size the iframe to fit,
+// leaving all scrolling to the page itself.
+function postHeight() {
+  try { parent.postMessage({ iwmapHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+}
+window.addEventListener('load', postHeight);
+new ResizeObserver(postHeight).observe(document.body);
+
+document.getElementById('filters').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  activeFilter = b.dataset.f; pinned = null;
+  document.querySelectorAll('#filters .chip').forEach(c => c.setAttribute('aria-pressed', c===b ? 'true':'false'));
+  if (activeFilter === 'all') { clearHi(); resetDetail(); } else applyFilter();
+});
+
+// Theme sync: the embedding book page posts its active theme (mdBook toggle).
+window.addEventListener('message', (e) => {
+  const t = e.data && e.data.iwtheme;
+  if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+  if (e.data && e.data.iwjourney) applyJourneyStage(e.data.iwjourney);
+});
+if (journeyEmbed) window.parent.postMessage({ iwjourneyReady: true }, '*');
+</script>
+</body>
+</html>

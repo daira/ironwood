@@ -1,0 +1,406 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Formal Verification - The Ironwood Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="favicon-8114d1fc.png">
+        <link rel="stylesheet" href="css/variables-3865ffda.css">
+        <link rel="stylesheet" href="css/general-4c35105a.css">
+        <link rel="stylesheet" href="css/chrome-c0e702bf.css">
+        <link rel="stylesheet" href="css/print-ad67d350.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome-799aeb25.css">
+        <link rel="stylesheet" href="fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="highlight-493f70e1.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="ayu-highlight-56612340.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="custom-a8328095.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "";
+            const default_light_theme = "rust";
+            const default_dark_theme = "rust";
+            window.path_to_searchindex_js = "searchindex-498c5711.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="toc-d4c2b103.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Ironwood Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="formal-verification"><a class="header" href="#formal-verification">Formal Verification</a></h1>
+<p>Ironwood's formal verification is a Lean 4 development (over Mathlib) in this repository:
+verifier soundness for the deployed Halo 2 verifier under <code>Zcash/Snark/</code>, and the protocol
+security-property layers (binding-signature balance, key binding, and the ledger-model
+security games) under <code>Zcash/Security/</code>.</p>
+<p>The <a href="formal-verification/guide.html">Guide to the Ironwood Formalization</a> is the reader-facing
+overview of what is proved and what a reader of the theorems is trusting;
+<a href="formal-verification/security-models.html">Security Models</a> develops the adversary models and
+where hardness judgements live. This page documents two development-wide conventions — how
+security breaks are represented, and how what the development trusts is checked at build time.</p>
+<h2 id="breaks-as-computed-data"><a class="header" href="#breaks-as-computed-data">Breaks as computed data</a></h2>
+<p>The security arguments are reduction-style: a theorem shows that a violation of a protocol
+property <em>exhibits</em> a concrete break of an underlying primitive — for example a
+discrete-log relation, a hash collision, or a commitment-opening collision. Hardness
+assumptions are consumed only at the computational layer, against the exhibited break.</p>
+<p>Care is needed in how "exhibits" is stated. In a prime-order group, a nontrivial
+discrete-log relation between any two elements always <em>exists</em>; for any compressing hash,
+collisions always <em>exist</em> by pigeonhole. So a <code>Prop</code> that existentially quantifies over the
+break data ("there exist distinct inputs with equal outputs") is simply <em>true</em> at every
+instantiation of interest. A theorem concluding <code>property ∨ ∃-break</code> is then vacuous, and a
+hypothesis <code>¬ ∃-break</code> is unsatisfiable. Proof irrelevance makes this unrecoverable: even
+when a proof constructs the break honestly, a consumer of the statement cannot extract it.</p>
+<p>The convention:</p>
+<ul>
+<li><strong>Break events are structures carrying the breaking data</strong> (the colliding queries, the
+relation coefficients), with <code>Prop</code> certificates attached. Examples:
+<code>RandomOracle.Collision</code> and <code>RandomOracle.CollisionUpToSign</code> (the ±-collision shape
+produced by coordinate-extractor arguments — and the Merkle tree-hash collision computed
+by <code>Merkle.collisionOfWrongLeaf</code> is a <code>Collision</code> directly), <code>Ledger.NoteCommitBreak</code>, and
+<code>BindingSignature.NontrivialRelation</code> (the discrete-log relation computed from a
+non-balancing verifying bundle).</li>
+<li><strong>Reductions are plain computable <code>def</code>s</strong> producing them, such as
+<code>Merkle.collisionOfWrongLeaf</code>, <code>noteCommitBreakOfNe</code>, and the
+<code>NontrivialRelation.ofImbalance</code> family (through to the per-pool Orchard and Sapling
+bundle capstones, whose balance statements are the contrapositives under discrete-log
+relation hardness). A structure with data fields
+cannot be inhabited by proof-irrelevant existence, and a plain <code>def</code> cannot conjure the
+data from mere existence via choice — the compiler enforces this, so <code>noncomputable</code> is
+not permitted for these definitions.</li>
+<li>Efficiency of a reduction is the one property Lean cannot express; it is established by
+inspection. The constructions here are straight-line manipulations of their inputs.</li>
+<li>Predicates over <em>named</em> witnesses (for example, a key-binding break of two specific
+witnesses) keep their content as <code>Prop</code>s: the breaking pair is bound in the statement
+rather than existentially closed.</li>
+</ul>
+<p>The principle's scope is <strong>computational reductions</strong>: it applies wherever the argument is
+that an efficient adversary achieving some effect would thereby violate a computational
+assumption. For that argument to have content, the reduction must be the kind of object an
+adversary's output can be fed through — a computable function producing the break the
+assumption forbids. It is not a constructivism requirement on the development at large.
+<code>Classical.choice</code> is used throughout Mathlib and throughout the <code>Prop</code>-valued reasoning
+here, and Lean is not intended to support purely constructive proofs. The point is that
+choice must not be what <em>produces the break data</em>: a <code>noncomputable</code> reduction could
+satisfy its type by using classical choice to "find" the break, proving nothing about
+efficient adversaries. Ordinary theorems, and the <code>Prop</code> certificate fields inside break
+structures, remain freely classical.</p>
+<h2 id="trust-discipline"><a class="header" href="#trust-discipline">Trust discipline</a></h2>
+<p>Following the pattern of CompElliptic's
+<a href="https://github.com/daira/CompElliptic#trust-discipline">trust discipline</a>, the development
+distinguishes general theorems from concrete, closed computational facts, and holds them to
+different trust standards.</p>
+<p><strong>General, quantified theorems</strong> (the soundness statements and security reductions) rest, in
+their abstract form over an arbitrary <code>Fp</code>-module, only on the standard classical axioms
+<code>propext</code>, <code>Classical.choice</code>, and <code>Quot.sound</code> — no <code>sorry</code>, no additional axioms, no compiler
+trust. Instantiated at the concrete Pasta curves they may inherit CompElliptic's closed
+<code>native_decide</code> arithmetic facts: the Pallas or Vesta point-count witness and, where Pallas
+square-root data enters, its Tonelli–Shanks root-of-unity certificate. The reusable census also
+contains Ironwood's closed NU6.3 cross-address separation check. The <code>+native</code> flag on each
+build-time check names exactly which owners that endpoint reaches.</p>
+<p><strong><code>@[csimp]</code> replacement lemmas</strong> get their own <code>assert_axioms</code> entries in
+<code>Zcash/TrustBoundary.lean</code>, enforced by <code>scripts/check_csimp_census.sh</code> in CI: the compiler
+applies a csimp substitution in all downstream compiled code, but the axioms of the lemma's
+own proof are not propagated into downstream <code>native_decide</code> axiom tracking (
+<a href="https://github.com/leanprover/lean4/issues/7463">lean4#7463</a>), so the check must sit on the
+lemma itself. The underlying mechanism study — what <code>native_decide</code>, the interpreter, and
+precompiled native code actually trust — is
+<a href="https://github.com/daira/CompElliptic/blob/main/design/lean-native-trust-research.md"><code>design/lean-native-trust-research.md</code></a>
+in the CompElliptic repository.</p>
+<p><strong>Native-executing checks are temporary, and opt-in until they go.</strong> Executing a check through
+locally compiled native code (a <code>precompileModules</code> dylib — ours, or the CompElliptic pin's)
+trusts the C emitter, the local C toolchain, and the loader, coarse-grained and with no axiom
+trace. That is a real extension of the trusted base, and the performance it buys does not
+justify it: these checks are slated for removal rather than for permanent accommodation, and
+the discipline below is what contains them in the meantime, not a settled design. Loading a
+lane's dylib is inseparable from elaborating modules that import it, so the enforced
+invariant sits at the level of checks: no module whose import closure reaches a lane module
+may contain an evaluation-based check (<code>#eval</code>, <code>#guard</code>, <code>native_decide</code>) unless explicitly
+opted in — a documented review discipline; nothing in CI enforces it today. Appendix C of the
+research document linked above records the observed Lake behaviour behind this rule.</p>
+<p><strong>Concrete, closed facts with no free variables</strong> may additionally use <code>native_decide</code>
+(which discharges a goal by running compiled native code, adding a compiler-trust axiom) and
+the kernel's GMP-backed bignum arithmetic. The principal such facts in this repository are the
+four derived-form fingerprint boundary theorems <code>nonInteractiveFingerprint_matches_derived</code>
+(the generated per-capture <code>fingerprint_matches</code> are their raw forms): numeric checks that the
+Lean verifier's assembled multi-scalar multiplication equals the Rust verifier's on each
+captured proof — two honest, two at random inputs. The CompElliptic dependency applies the
+same discipline to its concrete curve-arithmetic facts (cardinalities, primality
+certificates). Such facts are independently re-checkable (another implementation, or hand
+computation, would compute the same result), so a miscompiled or buggy oracle could in
+principle be caught by disagreement.</p>
+<p>These boundaries are <em>checked at build time</em>, not merely documented. <code>Zcash.TrustBoundary</code> is the
+top-level census for reusable library claims — the key-binding, birthday, ledger, and
+binding-signature break reductions together with the fixture-free SNARK
+binding/knowledge-soundness stack (the executable extractors, the endpoints across the modeled
+adversaries, and the DL capstones). <code>Zcash.lean</code> imports it directly, so <code>lake build Zcash</code> enforces
+that census. Concrete capstones stay with their captures in the fixture-local trust-boundary
+modules and are enforced by <code>FixtureCheck</code>. The obligations use two commands from
+<code>Zcash.Meta.AxiomCheck</code>:</p>
+<ul>
+<li><code>assert_axioms d</code> fails the build unless <code>d</code> rests only on the standard classical axioms
+(<code>propext</code>, <code>Classical.choice</code>, <code>Quot.sound</code>) — in particular no <code>sorry</code> and no <code>native_decide</code>;
+<code>assert_axioms d +native(…)</code> additionally permits the toolchain-dependent <code>native_decide</code>
+compiler-trust axioms of the named owning declarations, which the curve-instantiated
+endpoints carry. Unlike a <code>#guard_msgs</code>-pinned <code>#print axioms</code>, it states the expected tier
+in one line and stays green across toolchain bumps that rename the <code>native_decide</code> axiom,
+while still failing the moment a declaration reaches beyond its tier. It covers the
+general soundness theorems, probability bounds, and run-time/query-charge lemmas.</li>
+<li><code>assert_computable d</code> additionally requires <code>d</code> to be a plain <code>def</code> — not <code>noncomputable</code> — so it
+guards the <em>breaks-as-computed-data</em> discipline: the data-producing reductions (a collision, fold,
+peel, or fork turned into a discrete-log relation) stay genuinely computable, closing the gap
+where a reduction could silently become <code>noncomputable</code> and still build. <code>Classical.choice</code> is
+admitted only through erased <code>Prop</code> certificate fields (<code>+choice</code>); the relation coefficients are
+direct terms of the inputs, so the break data cannot have been conjured from mere propositional
+existence. <code>+native</code> covers the Vesta producers.</li>
+</ul>
+<p>The boundaries kept as literal pins are the four fixture censuses —
+<code>Zcash.Snark.Fixtures.SingleAction.Honest.TrustBoundary</code>, <code>…MultiAction.Honest.TrustBoundary</code>,
+and their two <code>…Random.TrustBoundary</code> siblings — which belong to
+the <code>FixtureCheck</code> target (kept out of <code>lake build Zcash</code> because the captures are large and slow).
+Each states its tier with <code>assert_axioms</code> like the rest of the development, and <em>additionally</em>
+retains <code>#guard_msgs</code>-pinned <code>#print axioms</code> checks on <code>fingerprint_matches</code> and the derived
+boundary theorems, documenting precisely <em>which</em>
+compiler-trust axiom <code>native_decide</code> adds — on this toolchain a per-declaration axiom
+(<code>…_native.native_decide.ax_1_1</code>), where older Lean versions used the global <code>Lean.ofReduceBool</code> —
+because for a captured fingerprint match the exact axiom set <em>is</em> the claim, the case
+<code>Zcash.Meta.AxiomCheck</code> reserves the pinned form for. CI builds all the default lake targets
+(<code>scripts/check_build_coverage.sh</code> checks that CI and the lakefile agree on that list, and
+that every Lean module is reachable from it), and each <code>fingerprint_matches</code>'s
+<code>native_decide</code> compiles and runs the verifier, so anything <code>noncomputable</code> on the
+assembled-verifier path fails the build.</p>
+<p>What the fixture captures actually <em>check</em> is the statement of record in each family's
+<code>Boundary.lean</code> — <code>nonInteractiveFingerprint_matches_derived</code> — with the quantified match and its
+ε in <code>Snark/Fingerprint/Epsilon.lean</code> and the per-capture headliners in
+<code>Fixtures/*/Random/Epsilon.lean</code>. Capture lineage, seeds, and the reproducibility pipeline are in
+<code>Zcash/Snark/Fixtures/PROVENANCE.md</code>. Together, the captures and ε theorems support the typed,
+post-decoding Rust↔Lean boundary, not universal byte-level refinement. Byte encoding, transcript
+domain-prefix bytes, and BLAKE2b remain external; <code>Snark/Fingerprint/Match.lean</code> enumerates this
+boundary, tracked in <a href="https://github.com/zcash/ironwood/issues/66">#66</a>.</p>
+<p><strong>The circuit-side layout fixtures are pinned, not regenerated.</strong> The CS and layout dumps behind
+<code>CircuitCheck</code>'s <code>TestVk*</code> comparisons (<code>Zcash/Circuits/Fixtures/*.json</code>) were emitted by one-off
+instrumentation of halo2/orchard that was never published, so unlike the verifier-fingerprint
+captures they have no regenerate-and-diff pipeline: CI pins their bytes (<code>SHA256SUMS</code>, with a
+set-equality check so an unpinned dump cannot be added), and those pins live in the same
+repository they guard. Independent anchoring exists at verifying-key granularity —
+<code>Keygen/Certificate.lean</code> checks the key derived from the ported circuit against the
+release-regenerated capture — but the row-level layout content below the key, and the
+base-circuit dump (<code>actionBaseLayout.json</code>), which has no capture-side anchor at all, rest on the
+pinned bytes plus review. Lineage, and the follow-up to regenerate these from released sources,
+are recorded in <code>Zcash/Circuits/Fixtures/PROVENANCE.md</code>.</p>
+<h2 id="modelling-boundaries"><a class="header" href="#modelling-boundaries">Modelling boundaries</a></h2>
+<p>The trust discipline above bounds what the <em>proofs</em> rest on. The boundaries in what the
+statements <em>model</em> —the random-oracle treatment of the challenge hash, the
+algebraic-adversary restriction, the abstract types standing in for byte-level encodings, and
+the sampled bases standing in for the deployed fixed ones— are neither axioms nor
+compiler-trust questions, so no census sees them. The Guide's
+<a href="formal-verification/guide.html#what-you-are-trusting">What you are trusting</a> states each of
+these boundaries and collects the whole set;
+<a href="formal-verification/security-models.html">Security Models</a> develops the adversary models they
+define and where the hardness judgements live.</p>
+<p>Coined terms and shorthand for the development are
+collected on the <a href="formal-verification/definitions.html">Definitions</a> page.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="design/action-circuit.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="formal-verification/guide.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="design/action-circuit.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="formal-verification/guide.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr-ef4e11c1.min.js"></script>
+        <script src="mark-09e88c2c.min.js"></script>
+        <script src="searcher-9aeb6ddf.js"></script>
+
+        <script src="clipboard-1626706a.min.js"></script>
+        <script src="highlight-abc7f01d.js"></script>
+        <script src="book-9576a2db.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="mermaid-eefea253.min.js"></script>
+        <script src="mermaid-init-d0d5e6a7.js"></script>
+        <script src="todo-e74d2c27.js"></script>
+
+
+
+    </div>
+    </body>
+</html>

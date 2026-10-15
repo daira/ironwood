@@ -1,0 +1,323 @@
+<!DOCTYPE HTML>
+<html lang="en" class="rust sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Build and CI Checks - The Ironwood Book</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon-de23e50b.svg">
+        <link rel="shortcut icon" href="../favicon-8114d1fc.png">
+        <link rel="stylesheet" href="../css/variables-3865ffda.css">
+        <link rel="stylesheet" href="../css/general-4c35105a.css">
+        <link rel="stylesheet" href="../css/chrome-c0e702bf.css">
+        <link rel="stylesheet" href="../css/print-ad67d350.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome-799aeb25.css">
+        <link rel="stylesheet" href="../fonts/fonts-9644e21d.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight-493f70e1.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night-4c0ae647.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight-56612340.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../custom-a8328095.css">
+
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "rust";
+            const default_dark_theme = "rust";
+            window.path_to_searchindex_js = "../searchindex-498c5711.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc-d4c2b103.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('rust')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Ironwood Book</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.4/dist/katex.min.css">
+<h1 id="build-and-ci-checks"><a class="header" href="#build-and-ci-checks">Build and CI checks</a></h1>
+<p>Building the Lean development re-elaborates every proof reachable from the build
+targets — a successful build <em>is</em> the verification. This page lists what CI runs on
+top of that build, and what each additional check guards. The workflow files under
+<code>.github/workflows/</code> are the mechanism; the substance of what they do is described
+here.</p>
+<h2 id="the-build"><a class="header" href="#the-build">The build</a></h2>
+<p>CI builds with</p>
+<pre><code class="language-sh">lake build --wfail Zcash FixtureCheck CircuitCheck MetaCheck SecurityCheck CensusCheck
+</code></pre>
+<p>The named targets are exactly the lakefile's default set, so <code>lake build --wfail</code>
+is equivalent. The <code>--wfail</code> treats warnings as errors. <code>sorry</code> elaborates with a
+warning, so among other things this causes any use of <code>sorry</code> to fail CI even where
+no census entry reaches it.</p>
+<p>The targets:</p>
+<ul>
+<li><strong><code>Zcash</code></strong> — the library: everything reachable from <code>Zcash.lean</code>, which imports
+<code>Zcash.TrustBoundary</code>, the library-wide axiom census. Building this target enforces
+every census entry in that file.</li>
+<li><strong><code>FixtureCheck</code></strong> — the captured fixtures, the knowledge soundness capstones, and
+the keygen certificate. The fixture-local trust boundaries and the <code>native_decide</code>
+fingerprint faithfulness checks run here; this target is separate because the
+captures are large and slow.</li>
+<li><strong><code>CircuitCheck</code></strong> — <code>Zcash.Circuits.Tests</code>: comparisons of the pinned verifying-key
+and layout dumps against the Lean circuit model.</li>
+<li><strong><code>MetaCheck</code></strong> — tests of <code>Zcash.Meta.AxiomCheck</code> itself: forged axioms exercising
+its rejection paths, kept out of the production import graph.</li>
+<li><strong><code>SecurityCheck</code></strong> — <code>Zcash.Security.Ledger.BridgeTests</code>: regression checks
+guarding the protocol distinctions a type-correct refinement could silently erase.</li>
+<li><strong><code>CensusCheck</code></strong> — the endpoint census enforced a second time, from the elaborated
+environment: every endpoint-named declaration in the census files' import closure
+must carry a direct pin.</li>
+</ul>
+<p>The build also re-elaborates proofs in the CompElliptic library that it depends on,
+but <em>not</em> necessarily every proof in that library, and <em>not</em> CompElliptic's
+<a href="https://github.com/daira/CompElliptic/blob/main/.github/workflows/ci.yml">additional CI checks</a>.</p>
+<h2 id="source-level-checks"><a class="header" href="#source-level-checks">Source-level checks</a></h2>
+<p>Each of these is a standalone script under <code>scripts/</code>, run by CI on every
+Lean-relevant change. All of them can be run locally from the repository root.</p>
+<ul>
+<li><strong><code>check_build_coverage.sh</code></strong> — CI and the lakefile agree on the target list, and
+every Lean module is reachable from it. A module no target reaches is not elaborated
+at all: its <code>sorry</code>s, its axiom drift, and even a failure to compile would be
+invisible to a green build.</li>
+<li><strong><code>check_endpoint_census.sh</code></strong> — every deliverable soundness endpoint is named in a
+census pin. The census commands traverse a declaration's <em>dependencies</em>, so an
+endpoint that nothing pinned depends on would otherwise be invisible to every census
+entry.</li>
+<li><strong><code>check_csimp_census.sh</code></strong> — every <code>@[csimp]</code> replacement lemma has its own
+<code>assert_axioms</code> entry. The compiler applies a csimp substitution in all downstream
+compiled code, but the lemma's own axioms are not propagated into downstream
+<code>native_decide</code> axiom tracking
+(<a href="https://github.com/leanprover/lean4/issues/7463">lean4#7463</a>).</li>
+<li><strong><code>check_costed_group_work_census.sh</code></strong> — the staged Vesta work model's host
+callbacks (<code>pure</code>/<code>map</code> payloads) carry non-group computation at no charge to the
+group-work counter. The cost language is shallow, so Lean cannot check that an
+opaque payload performs no Vesta group law; each such definition is therefore
+pinned, and a new one must join the census to be reviewed against that condition.</li>
+<li><strong><code>check_no_umbrella_imports.sh</code></strong> — no Lean file imports a Mathlib umbrella module.
+<code>import Mathlib</code> pulls in all of Mathlib, and several such processes in a parallel
+build create severe memory pressure.</li>
+<li><strong><code>check_fixture_manifest.sh</code></strong> — every machine-generated capture artifact matches
+its recorded digest and provenance entry in <code>Zcash/Snark/Fixtures/MANIFEST.tsv</code>.
+This binds the committed artifacts to their provenance on every run, with no Rust
+toolchain needed.</li>
+</ul>
+<h2 id="fixture-regeneration"><a class="header" href="#fixture-regeneration">Fixture regeneration</a></h2>
+<p><strong><code>scripts/regenerate-fingerprint-fixtures.sh</code></strong> proves the committed captures
+regenerate byte-for-byte from their sources: it clones the pinned Orchard release,
+asserts the tag and its published lockfile checksums, regenerates every capture family
+plus the proof-byte siblings, and diffs each committed artifact. CI runs the full
+regeneration when a fixture-relevant path changes; on every other run, the manifest
+check above still binds the artifacts to their recorded digests.</p>
+<p>The circuit-side layout dumps have no regeneration pipeline: their generator is
+unpublished one-off instrumentation in local halo2/orchard checkouts
+(<code>Zcash/Circuits/Fixtures/PROVENANCE.md</code> records the lineage). This should not be
+confused with the <em>verifier-fingerprint</em> exporter above, which is published and
+pinned. Publishing the layout instrumentation is
+<a href="https://github.com/zcash/ironwood/issues/207">#207</a>. CI instead pins the bytes of
+the layout dumps: <code>SHA256SUMS</code> must list exactly the committed dumps, each digest
+must match, and the <code>Stamp.lean</code> rendering of those pins —which carries a fixture
+change into Lake's import graph— must be current.</p>
+<h2 id="book-checks"><a class="header" href="#book-checks">Book checks</a></h2>
+<p>The book workflow validates the proof-journey page's graph data before building:
+<code>book/validate-proof-journey.py</code> checks the recorded edges against the checked-out
+Lean tree, so a renamed or deleted anchor fails CI rather than silently pointing at
+nothing. The book itself is then built with <code>mdbook</code>, which resolves every included
+file and internal link.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../formal-verification/source-map.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../formal-verification/working-notes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../formal-verification/source-map.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../formal-verification/working-notes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr-ef4e11c1.min.js"></script>
+        <script src="../mark-09e88c2c.min.js"></script>
+        <script src="../searcher-9aeb6ddf.js"></script>
+
+        <script src="../clipboard-1626706a.min.js"></script>
+        <script src="../highlight-abc7f01d.js"></script>
+        <script src="../book-9576a2db.js"></script>
+
+        <!-- Custom JS scripts -->
+        <script src="../mermaid-eefea253.min.js"></script>
+        <script src="../mermaid-init-d0d5e6a7.js"></script>
+        <script src="../todo-e74d2c27.js"></script>
+
+
+
+    </div>
+    </body>
+</html>
