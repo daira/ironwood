@@ -285,4 +285,42 @@ assert_efficient Zcash.Meta.Tests.Efficient.getD'
 #guard_msgs in
 #eval getD'.cost none (· + 1) 0 (fun _ => 1)
 
+/-! ## A local function without a companion: the report names it and gives its type. A local
+that the elaborator named, such as a field bound by a `match` through the unfolded matcher, is
+shown as the pretty-printer renders it, with the expression that uses it. -/
+
+def callIn (s : Sum Nat (Nat → Nat)) : Nat :=
+  match s with
+  | .inl n => n
+  | .inr g => g 1
+
+/--
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.callIn':
+  in the body of `Zcash.Meta.Tests.Efficient.callIn`, the function `val✝` of type `ℕ → ℕ` is called in `val✝ 1`, but its cost is unknown there. It is a local with no name of its own, bound by a lambda, a `let`, or a `match` pattern. The derivation has cost companions only for the parameters of `Zcash.Meta.Tests.Efficient.callIn`, and for functions stored in fields of those parameters.
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.callIn
+
+def callInCases (s : Sum Nat (Nat → Nat)) : Nat :=
+  Sum.casesOn (motive := fun _ => Nat) s (fun n => n) (fun g => g 1)
+
+/--
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.callInCases':
+  in the body of `Zcash.Meta.Tests.Efficient.callInCases`, the function `g` of type `ℕ → ℕ` is called, but its cost is unknown there. It is a local bound by a lambda, a `let`, or a `match` pattern. The derivation has cost companions only for the parameters of `Zcash.Meta.Tests.Efficient.callInCases`, and for functions stored in fields of those parameters.
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.callInCases
+
+def passIn (s : Sum Nat (Nat → Nat)) : List Nat :=
+  match s with
+  | .inl n => [n]
+  | .inr g => [1].map g
+
+/--
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.passIn':
+  in the body of `Zcash.Meta.Tests.Efficient.passIn`, the function `val✝` of type `ℕ → ℕ` is passed on, but its cost is unknown there. It is a local with no name of its own, bound by a lambda, a `let`, or a `match` pattern. The derivation has cost companions only for the parameters of `Zcash.Meta.Tests.Efficient.passIn`, and for functions stored in fields of those parameters.
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.passIn
+
 end Zcash.Meta.Tests.Efficient

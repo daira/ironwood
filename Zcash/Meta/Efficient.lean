@@ -374,8 +374,8 @@ partial def argsCost (ctx : Context) (args : Array Expr) (isFn : Array Bool) : T
 /-- The companion in scope for the function reached from a parameter by `path`, whose type is
 given by `mkType`. In the collecting pass a missing one is recorded, with its type, and a
 placeholder of that type stands in for it. -/
-partial def companionFor (ctx : Context) (key : FVarId × List Name) (mkType : TermElabM Expr) :
-    TermElabM Expr := do
+partial def companionFor (ctx : Context) (key : FVarId × List Name) (mkType : TermElabM Expr)
+    (use? : Option Expr := none) : TermElabM Expr := do
   if let some c := ctx.companions[key]? then return c
   let raw ← key.1.getUserName
   let where_ := m!"{raw.eraseMacroScopes}{key.2.foldl (fun s f => s ++ "." ++ f.toString) ""}"
@@ -386,14 +386,22 @@ partial def companionFor (ctx : Context) (key : FVarId × List Name) (mkType : T
       function that takes a companion `{where_}.cost`."
   unless ctx.params.contains key.1 do
     -- A local introduced by the elaborator has a synthesized name, which the user cannot act
-    -- on; describe it by its type instead.
-    let who ← if raw.hasMacroScopes || raw.isAnonymous then
-        pure m!"a function of type `{← inline (← inferType (mkFVar key.1))}` that has no name of its own"
-      else pure m!"the function `{where_}`"
-    throwError "efficient: in the body of `{ctx.fn}`, {who} is called, but its cost is unknown \
-      there. It is a local bound by a lambda, a `let`, or a `match` pattern. The derivation has \
-      cost companions only for the parameters of `{ctx.fn}`, and for functions stored in fields \
-      of those parameters."
+    -- on; show it as the pretty-printer does, with the expression that uses it.
+    let fv := mkFVar key.1
+    let nameless := raw.hasMacroScopes || raw.isAnonymous
+    let name ← if nameless then inline fv else pure m!"{where_}"
+    -- `use?` is the call headed by the local, or the local itself when it is passed on.
+    let (verb, site) ← match use? with
+      | some u => do
+        if u.consumeMData == fv then pure ("is passed on", m!"")
+        else if nameless then pure ("is called", m!" in `{← inline u}`")
+        else pure ("is called", m!"")
+      | none => pure ("is called", m!"")
+    let local_ := if nameless then "a local with no name of its own, bound by" else "a local bound by"
+    throwError "efficient: in the body of `{ctx.fn}`, the function `{name}` of type \
+      `{← inline (← inferType fv)}` {verb}{site}, but its cost is unknown there. It is \
+      {local_} a lambda, a `let`, or a `match` pattern. The derivation has cost companions only \
+      for the parameters of `{ctx.fn}`, and for functions stored in fields of those parameters."
   let some ref := ctx.collect
     | throwError "efficient: no cost companion for `{where_}` in `{ctx.fn}` (internal: it \
         should have been collected in the first pass)"
@@ -435,7 +443,7 @@ else, such as a function computed on the spot and stored in a structure, is not 
 partial def companionOf (ctx : Context) (arg : Expr) : TermElabM Expr := do
   if let some key ← structPath? arg then
     if ctx.params.contains key.1 || key.2.isEmpty then
-      return ← companionFor ctx key (companionType (← inferType arg))
+      return ← companionFor ctx key (companionType (← inferType arg)) arg
   -- A field of a structure that is not a parameter (a global constant, or one built on the
   -- spot): through the field's value, if the structure reduces to its constructor.
   if let some field ← fieldOf? arg then
@@ -702,7 +710,7 @@ partial def costApp (ctx : Context) (e : Expr) : TermElabM Expr := do
         call: {ex.toMessageData}"
     return add (add (natLit 1) inner) call
   | .fvar id =>
-    let comp ← companionFor ctx (id, []) (companionType (← inferType f))
+    let comp ← companionFor ctx (id, []) (companionType (← inferType f)) e
     let inner ← argsCost ctx args (← functionArgs args)
     return add (add (natLit 1) inner) (← applyCompanion ctx comp args)
   | .proj .. =>
