@@ -251,4 +251,18 @@ assert_efficient Zcash.Meta.Tests.Efficient.iter
 #guard_msgs in
 #eval iter.cost (· + 1) 3 0 (fun _ => 1)
 
+/-! A matcher whose alternative rebinds a parameter as a pattern variable, as `Option.bind`'s
+`| some a, f => f a` does: the matcher is unfolded, which restores the parameter and its
+companion. -/
+
+def bindOpt (x : Option Nat) (f : Nat → Option Nat) : Option Nat := x.bind f
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.bindOpt
+
+-- One call of `bind`, its decision, one call of `f`, and `f`'s own cost of one.
+/-- info: 4 -/
+#guard_msgs in
+#eval bindOpt.cost (some 3) (fun n => some (n + 1)) (fun _ => 1)
+
 end Zcash.Meta.Tests.Efficient

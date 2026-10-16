@@ -339,7 +339,16 @@ partial def costOf (ctx : Context) (e : Expr) : TermElabM Expr := do
     let cb ← withLetDecl n t v fun x => do
       mkLetFVars #[x] (← costOf ctx (b.instantiate1 x))
     return add cv cb
-  | .app .. | .const .. => costApp ctx e.headBeta
+  | .app .. =>
+    let e := e.headBeta
+    match e.getAppFn with
+    | .letE n t v b nd =>
+      -- `(let x := v; b) args`, which a `have` in a `do` block elaborates to: the arguments
+      -- go into the body, under the binding.
+      costOf ctx (.letE n t v (mkAppN b (e.getAppArgs.map (·.liftLooseBVars 0 1))) nd)
+    | .mdata _ f => costOf ctx (mkAppN f e.getAppArgs)
+    | _ => costApp ctx e
+  | .const .. => costApp ctx e
   | .lam .. =>
     throwError "efficient: a function-valued expression outside an argument position is not \
       supported yet (a `let`-bound function, say)"
@@ -579,11 +588,21 @@ partial def costApp (ctx : Context) (e : Expr) : TermElabM Expr := do
     -- alternative, which is where they are applied.
     let discrs ← argsCost ctx m.discrs (m.discrs.map fun _ => false)
     let termCtx ← read
-    let m' ← m.transform
-      (onMotive := fun _ _ => pure (mkConst ``Nat))
-      (onAlt := fun _ _ _ alt => (costOf ctx (mkAppN alt m.remaining).headBeta).run' termCtx)
-    let m' := { m' with remaining := #[] }
-    return add (add (natLit 1) discrs) m'.toExpr
+    try
+      let m' ← m.transform
+        (onMotive := fun _ _ => pure (mkConst ``Nat))
+        (onAlt := fun _ _ _ alt => (costOf ctx (mkAppN alt m.remaining).headBeta).run' termCtx)
+      let m' := { m' with remaining := #[] }
+      return add (add (natLit 1) discrs) m'.toExpr
+    catch ex =>
+      -- An alternative may rebind a discriminant that has a companion as a pattern variable
+      -- (`| some a, f => f a`), which the walker then cannot price. The matcher's own
+      -- definition applies the alternative to the discriminants, so unfolding it restores the
+      -- original term, companion included. The `casesOn` underneath is priced as usual.
+      -- (`unfoldDefinition?` declines a matcher; `delta?` unfolds it by its value.)
+      if let some e' ← delta? e then
+        return ← costOf ctx e'.headBeta
+      throw ex
   let f := e.getAppFn
   let args := e.getAppArgs
   match f with
