@@ -150,7 +150,7 @@ partial def spin (n : Nat) : Nat := spin n
 
 /--
 error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.spin':
-efficient: 'Zcash.Meta.Tests.Efficient.spin' is a `partial` definition (an opaque constant implemented by unsafe code), so it has no body to price; register a cost function for it with `efficient_cost Zcash.Meta.Tests.Efficient.spin := <cost function>`
+  'Zcash.Meta.Tests.Efficient.spin' is a `partial` definition (an opaque constant implemented by unsafe code), so it has no body to price; register a cost function for it with `efficient_cost Zcash.Meta.Tests.Efficient.spin := <cost function>`
 -/
 #guard_msgs (whitespace := lax) in
 efficient def useSpin (n : Nat) : Nat := n + spin n

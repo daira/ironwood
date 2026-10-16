@@ -119,6 +119,11 @@ structure Context where
 
 private def natLit (n : Nat) : Expr := mkNatLit n
 
+/-- `e` for an error message, on one line: the pretty-printer would otherwise break an
+application such as `pts p` across lines at the message width. -/
+private def inline (e : Expr) : MetaM MessageData := do
+  return .ofFormat (.text ((← ppExpr e).pretty 100000))
+
 /-- Mark `e` as a value whose cost has been paid elsewhere, so that the walker prices it at
 zero: the recursive result that an induction hypothesis stands for. -/
 private def markPaid (e : Expr) : Expr := mkMData (KVMap.empty.insert `efficient.paid (.ofBool true)) e
@@ -369,17 +374,23 @@ placeholder of that type stands in for it. -/
 partial def companionFor (ctx : Context) (key : FVarId × List Name) (mkType : TermElabM Expr) :
     TermElabM Expr := do
   if let some c := ctx.companions[key]? then return c
-  let where_ := m!"{← key.1.getUserName}{key.2.foldl (fun s f => s ++ "." ++ f.toString) ""}"
+  let raw ← key.1.getUserName
+  let where_ := m!"{raw.eraseMacroScopes}{key.2.foldl (fun s f => s ++ "." ++ f.toString) ""}"
   if ctx.viaEfficientDef then
     throwError "efficient def: `{where_}` is a function, and `efficient def` cannot price a call \
       of a function parameter: the cost function it builds has no companion for the parameter's \
       cost. Define `{ctx.fn}` with `def` and pin it with `assert_efficient`, which derives a cost \
       function that takes a companion `{where_}.cost`."
   unless ctx.params.contains key.1 do
-    throwError "efficient: a call of `{where_}` cannot be priced. `{where_}` is bound by a \
-      lambda, a `let`, or a `match` pattern inside `{ctx.fn}`, not a parameter of it. Only a \
-      parameter of the definition, or a function stored in a field of a parameter, has a cost \
-      companion."
+    -- A local introduced by the elaborator has a synthesized name, which the user cannot act
+    -- on; describe it by its type instead.
+    let who ← if raw.hasMacroScopes || raw.isAnonymous then
+        pure m!"a function of type `{← inline (← inferType (mkFVar key.1))}` that has no name of its own"
+      else pure m!"the function `{where_}`"
+    throwError "efficient: in the body of `{ctx.fn}`, {who} is called, but its cost is unknown \
+      there. It is a local bound by a lambda, a `let`, or a `match` pattern. The derivation has \
+      cost companions only for the parameters of `{ctx.fn}`, and for functions stored in fields \
+      of those parameters."
   let some ref := ctx.collect
     | throwError "efficient: no cost companion for `{where_}` in `{ctx.fn}` (internal: it \
         should have been collected in the first pass)"
@@ -427,7 +438,7 @@ partial def companionOf (ctx : Context) (arg : Expr) : TermElabM Expr := do
   if let some field ← fieldOf? arg then
     if let some v ← fieldValue? (← structBase arg) field then
       return ← companionOf ctx v
-    throwError "efficient: the function in field {field} of {← structBase arg} is applied or \
+    throwError "efficient: the function in field `{field}` of `{← inline (← structBase arg)}` is applied or \
       passed on, but the structure is not a parameter of `{ctx.fn}` and does not reduce to its \
       constructor, so its cost cannot be given"
   match arg with
@@ -435,7 +446,7 @@ partial def companionOf (ctx : Context) (arg : Expr) : TermElabM Expr := do
   | .lam .. => functionCost ctx arg
   | _ =>
     unless arg.getAppFn.isConst do
-      throwError "efficient: the function argument {arg} is neither a parameter, a function in \
+      throwError "efficient: the function argument `{← inline arg}` is neither a parameter, a function in \
         a field of one, a lambda, nor a global function, so its cost cannot be given yet"
     functionCost ctx arg
 
@@ -571,7 +582,7 @@ partial def companionAt (ctx : Context) (arg : Expr) (path : List Name) : TermEl
         return ← companionFor ctx (root, p ++ path) (companionType (← inferType chain))
     if let some v ← fieldValue? arg field then
       return ← companionAt ctx v rest
-    throwError "efficient: the function in field {field} of {arg} is needed by a callee, but the \
+    throwError "efficient: the function in field `{field}` of `{← inline arg}` is needed by a callee, but the \
       structure is neither a parameter nor reducible to its constructor, so its cost cannot be \
       given yet"
 
@@ -702,14 +713,20 @@ partial def costApp (ctx : Context) (e : Expr) : TermElabM Expr := do
 and registered. `visiting` holds the functions whose costs are being derived further up. -/
 partial def ensureCost (visiting : NameSet) (c : Name) : TermElabM Name := do
   if let some cost := costFn? (← getEnv) c then return cost
-  let chain (why : MessageData) : MessageData :=
-    m!"efficient: while deriving the cost of '{c}':\n{why}"
-  if let some why := (failedCostsExt.getState (← getEnv)).find? c then throwError (chain why)
+  -- The reasons nest: a derivation that fails on a callee's failure indents the callee's
+  -- report under its own line, so `efficient:` appears once, at the top.
+  let chain (why : String) : MessageData :=
+    m!"efficient: while deriving the cost of '{c}':" ++ .nest 2 (m!"\n" ++ .ofFormat (.text why))
+  -- A callee that many pins need fails once in full; a later pin that needs it refers to that
+  -- report instead of repeating the chain.
+  if (failedCostsExt.getState (← getEnv)).contains c then
+    throwError "efficient: the cost of '{c}' could not be derived; see the report above"
   try deriveCost visiting c
   catch ex =>
     let why ← (← addMessageContextFull ex.toMessageData).toString
+    let why := if why.startsWith "efficient: " then (why.drop "efficient: ".length).toString else why
     modifyEnv (failedCostsExt.modifyState · (·.insert c why))
-    throwError (chain ex.toMessageData)
+    throwError (chain why)
 
 /-- Derive and register the cost function of `c`; `ensureCost` memoizes its failures. -/
 partial def deriveCost (visiting : NameSet) (c : Name) : TermElabM Name := do
