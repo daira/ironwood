@@ -323,4 +323,60 @@ error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.passIn'
 #guard_msgs (whitespace := lax) in
 assert_efficient Zcash.Meta.Tests.Efficient.passIn
 
+/-! ## A class method on an instance that is a field of a parameter: its companion is keyed by
+the parameter, the field, and the method, as a function field's is, and a method that returns
+data gets a constant companion. A caller whose structure is built on the spot supplies them
+from the fields' values. -/
+
+class Counter (α : Type) where
+  limit : Nat
+  step : α → Nat
+
+structure Holder (α : Type) where
+  counter : Counter α
+  seed : α
+
+def viaHolder (h : Holder Nat) : Nat := h.counter.step h.seed + h.counter.limit
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.viaHolder
+
+-- The addition at two, the call of `step` and its cost of one, and the access of `limit` at
+-- its cost of zero.
+/-- info: 5 -/
+#guard_msgs in
+#eval viaHolder.cost ⟨⟨7, (· + 1)⟩, 3⟩ 0 (fun _ => 1)
+
+def viaLiteralHolder (x : Nat) : Nat := viaHolder ⟨⟨7, (· + 1)⟩, x⟩
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.viaLiteralHolder
+
+-- One call of `viaHolder`, with `limit`'s literal free and `step`'s lambda at two.
+/-- info: 7 -/
+#guard_msgs in
+#eval viaLiteralHolder.cost 3
+
+/-! An instance that is neither a parameter nor a field of one: the report says what it is. -/
+
+def onLocal (xs : List (Counter Nat)) : List Nat := xs.map fun c => c.limit
+
+/--
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.onLocal':
+  the class method 'Zcash.Meta.Tests.Efficient.Counter.limit' is used on an instance whose methods cannot be priced: the instance `c` is a local bound by a lambda, a `let`, or a `match` pattern, not a parameter of `Zcash.Meta.Tests.Efficient.onLocal`. Register a cost function for the method with `efficient_cost Zcash.Meta.Tests.Efficient.Counter.limit := <cost function>`
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.onLocal
+
+opaque hiddenCounter : Counter Nat := ⟨0, id⟩
+
+def onOpaque (n : Nat) : Nat := Counter.step (self := hiddenCounter) n
+
+/--
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.onOpaque':
+  the class method 'Zcash.Meta.Tests.Efficient.Counter.step' is used on an instance whose methods cannot be priced: the instance `hiddenCounter` is headed by `Zcash.Meta.Tests.Efficient.hiddenCounter`, an `opaque` constant. Register a cost function for the method with `efficient_cost Zcash.Meta.Tests.Efficient.Counter.step := <cost function>`
+-/
+#guard_msgs (whitespace := lax) in
+assert_efficient Zcash.Meta.Tests.Efficient.onOpaque
+
 end Zcash.Meta.Tests.Efficient

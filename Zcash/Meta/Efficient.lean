@@ -409,6 +409,30 @@ partial def companionFor (ctx : Context) (key : FVarId × List Name) (mkType : T
   ref.modify (·.push (key.1, key.2, ty))
   mkSorry ty true
 
+/-- Why the class instance `inst` has no priced methods, for the report: it is a local that is
+not a parameter, a field of such a local, a global that does not reduce to its constructor, or
+something else. (An instance that is a parameter, or a field of one, has companions instead.) -/
+partial def describeInstance (ctx : Context) (inst : Expr) : TermElabM MessageData := do
+  let inst := inst.consumeMData
+  let local_ := "a local bound by a lambda, a `let`, or a `match` pattern, not a parameter of"
+  match ← structPath? inst with
+  | some (_, []) => return m!"the instance `{← inline inst}` is {local_} `{ctx.fn}`"
+  | some (root, _) =>
+    return m!"the instance `{← inline inst}` is a field of `{← inline (mkFVar root)}`, which \
+      is {local_} `{ctx.fn}`"
+  | none =>
+    let .const n _ := inst.getAppFn
+      | return m!"the instance `{← inline inst}` is neither a parameter of `{ctx.fn}`, a field \
+          of one, nor an expression that reduces to its constructor"
+    let kind ← match (← getEnv).find? n with
+      | some (.opaqueInfo _) => pure "an `opaque` constant"
+      | some (.axiomInfo _) => pure "an axiom"
+      | some (.defnInfo _) =>
+        if (← getReducibilityStatus n) == .irreducible then pure "an irreducible definition"
+        else pure "a definition that does not reduce to its constructor here"
+      | _ => pure "not a definition"
+    return m!"the instance `{← inline inst}` is headed by `{n}`, {kind}"
+
 /-- `e` reduced until its head is a constructor or it cannot be unfolded further, by at most a
 few unfoldings: a structure computed on the spot, such as `Equiv.symm e` or a global constant,
 often reduces to its constructor, which exposes the field's value. -/
@@ -658,15 +682,16 @@ partial def costApp (ctx : Context) (e : Expr) : TermElabM Expr := do
           let inner ← argsCost ctx rest (← functionArgs rest)
           return add (add (natLit 1) inner) (← applyCompanion ctx comp rest)
         return ← argsCost ctx args (← functionArgs args)
-      -- A class method on an instance parameter of the definition being priced is a function
-      -- stored in a field of a parameter, with the instance as the structure.
+      -- A class method on an instance that is a parameter of the definition being priced, or a
+      -- field of one, is a function stored in a field of a parameter, with the instance as the
+      -- structure: its companion is keyed by the parameter, the path, and the method.
       let inst := args[info.numParams]!
       if (costFn? env c).isNone then
-        if let .fvar id := inst.consumeMData then
+        if let some (id, path) ← structPath? inst then
           if ctx.params.contains id then
             let access := mkAppN f args[:info.numParams + 1]
             let rest := args[info.numParams + 1:].toArray
-            let comp ← companionFor ctx (id, [Name.mkSimple c.getString!])
+            let comp ← companionFor ctx (id, path ++ [Name.mkSimple c.getString!])
               (companionType (← inferType access))
             let inner ← argsCost ctx rest (← functionArgs rest)
             return add (add (natLit 1) inner) (← applyCompanion ctx comp rest)
@@ -678,9 +703,9 @@ partial def costApp (ctx : Context) (e : Expr) : TermElabM Expr := do
         if let some e' ← unfoldProjInst? e then
           return ← costOf ctx e'
         if registeredArity.isNone then
-          throwError "efficient: the class method '{c}' is used on an instance that cannot be \
-            unfolded here (an instance variable, say); register a cost function for it with \
-            `efficient_cost {c} := <cost function>`"
+          throwError "efficient: the class method '{c}' is used on an instance whose methods \
+            cannot be priced: {← describeInstance ctx inst}. Register a cost function for the \
+            method with `efficient_cost {c} := <cost function>`"
     if env.isConstructor c || freeConstants.contains c then
       return ← argsCost ctx args (← functionArgs args)
     -- `casesOn` and `rec`: one for the decision, then the branch. The auxiliary recursors of
