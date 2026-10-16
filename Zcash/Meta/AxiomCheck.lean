@@ -7,6 +7,7 @@ import Lean.Compiler.CSimpAttr
 import Mathlib.Util.AssertNoSorry
 import Zcash.Meta.EndpointCensus
 import Zcash.Meta.Efficient
+import Zcash.Meta.EfficientPrelude
 
 /-!
 # `assert_axioms` — a concise, build-checked trust-boundary bound
@@ -491,18 +492,19 @@ elab "assert_computable " n:ident choice:("+choice")? native:(nativeFlag)? : com
 
 /--
 `assert_efficient foo` fails the build unless `foo` passes every check of `assert_computable` and
-has a cost function, derived by `efficient def` or registered by `efficient_cost`
-(`Zcash.Meta.Efficient`). `+choice` and `+native(D₁, ...)` mean what they mean for
-`assert_computable`, and the census records the pin in the same way. So an `assert_computable`
-pin becomes an `assert_efficient` pin by changing the keyword.
+has a cost function: one registered by `efficient_cost`, derived by `efficient def`, or derived
+here on demand from `foo`'s definition and the definitions of everything it calls
+(`Zcash.Meta.Efficient`). The derivation fails, and says why, at a primitive without a cost
+function, at a well-founded recursion whose measure Lean cannot settle by itself, and at the
+higher-order constructs the prototype does not price. `+choice` and `+native(D₁, ...)` mean what
+they mean for `assert_computable`, and the census records the pin in the same way. So an
+`assert_computable` pin becomes an `assert_efficient` pin by changing the keyword.
 
 The cost function is required to exist; no bound on it is checked here. A bound is an ordinary
 theorem about `foo.cost`.
 -/
 elab "assert_efficient " n:ident choice:("+choice")? native:(nativeFlag)? : command => do
   let name ← checkComputable n choice.isSome native
-  if (Efficient.costFn? (← getEnv) name).isNone then
-    throwError "{n} has no cost function: define it with `efficient def`, or register one \
-      with `efficient_cost`"
+  discard <| liftTermElabM <| Efficient.ensureCost {} name
 
 end Zcash.Meta

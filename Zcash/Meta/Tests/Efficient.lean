@@ -91,24 +91,164 @@ error: Zcash.Meta.Tests.Efficient.double does not depend on Classical.choice; dr
 #guard_msgs (whitespace := lax) in
 assert_efficient Zcash.Meta.Tests.Efficient.double +choice
 
-/-! ## Rejections -/
+/-! ## On-demand derivation: a plain definition, a recursive one in equation style, and a call
+into the core library, each priced from its definition by `assert_efficient` alone. -/
 
-/--
-error: efficient: 'List.reverse' has no cost function. Mark its definition `efficient`, or register a cost function for it with `efficient_cost List.reverse := <cost function>`.
--/
-#guard_msgs (whitespace := lax) in
-efficient def rev (xs : List Nat) : List Nat := xs.reverse
+def triple (n : Nat) : Nat := n + n + n
 
-/--
-error: Zcash.Meta.Tests.Efficient.rev has no cost function: define it with `efficient def`, or register one with `efficient_cost`
--/
-#guard_msgs (whitespace := lax) in
+-- The pin derives `triple.cost`; two additions and two calls.
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.triple
+
+/-- info: 4 -/
+#guard_msgs in
+#eval triple.cost 1
+
+def sumList' : List Nat → Nat
+  | [] => 0
+  | x :: rest => x + sumList' rest
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.sumList'
+
+/-- info: 13 -/
+#guard_msgs in
+#eval sumList'.cost [1, 2, 3]
+
+/-- `List.reverse` is priced from its own definition, through `List.reverseAux`, whose derived
+cost is private to this module. -/
+def rev (xs : List Nat) : List Nat := xs.reverse
+
+#guard_msgs in
 assert_efficient Zcash.Meta.Tests.Efficient.rev
 
+/-- info: 9 -/
+#guard_msgs in
+#eval rev.cost [1, 2, 3]
+
+/-- Well-founded recursion with a hand-written decreasing proof. The on-demand derivation can
+only offer Lean's default decreasing tactic for the cost function's recursion, which does not
+prove `a % b < b`, so the pin fails with Lean's report (dropped here, since it quotes source
+positions) and leaves `gcd''` without a cost function. `gcd'` above shows the way through: an
+`efficient def`, whose termination suffix is copied to the cost function. -/
+def gcd'' (a b : Nat) : Nat :=
+  if _h : b = 0 then a else gcd'' b (a % b)
+termination_by b
+decreasing_by exact Nat.mod_lt _ (Nat.pos_of_ne_zero _h)
+
+#guard_msgs (drop error) in
+assert_efficient Zcash.Meta.Tests.Efficient.gcd''
+
+/-- info: false -/
+#guard_msgs in
+#eval show Lean.Elab.Command.CommandElabM Unit from do
+  Lean.logInfo m!"{(Zcash.Meta.Efficient.costFn? (← Lean.getEnv) ``Zcash.Meta.Tests.Efficient.gcd'').isSome}"
+
+/-! ## Rejections -/
+
+partial def spin (n : Nat) : Nat := spin n
+
 /--
-error: efficient: applying a local function (f) is not supported yet; the cost of a higher-order argument has to be given symbolically
+error: efficient: while deriving the cost of 'Zcash.Meta.Tests.Efficient.spin':
+efficient: 'Zcash.Meta.Tests.Efficient.spin' is a `partial` definition (an opaque constant implemented by unsafe code), so it has no body to price; register a cost function for it with `efficient_cost Zcash.Meta.Tests.Efficient.spin := <cost function>`
+-/
+#guard_msgs (whitespace := lax) in
+efficient def useSpin (n : Nat) : Nat := n + spin n
+
+/-- An honest `opaque` with a value is a reduction barrier for proofs; what runs is its value,
+which is what gets priced. -/
+opaque hidden : Nat := 3
+
+#guard_msgs in
+efficient def useHidden (n : Nat) : Nat := n + hidden
+
+/--
+error: efficient def: `f` is a function, and `efficient def` cannot price a call of a function parameter: the cost function it builds has no companion for the parameter's cost. Define `Zcash.Meta.Tests.Efficient.applyTwice` with `def` and pin it with `assert_efficient`, which derives a cost function that takes a companion `f.cost`.
 -/
 #guard_msgs (whitespace := lax) in
 efficient def applyTwice (f : Nat → Nat) (n : Nat) : Nat := f (f n)
+
+/-! ## Higher order, on demand: a function-typed parameter gets a cost companion, a lambda
+argument is priced by its body, and a library function such as `List.map` derives with
+companions of its own. -/
+
+def applyTwice' (f : Nat → Nat) (n : Nat) : Nat := f (f n)
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.applyTwice'
+
+-- The companion `f.cost` follows the original binders. Two calls of `f`, each one unit plus
+-- `f`'s own cost of one.
+/-- info: 4 -/
+#guard_msgs in
+#eval applyTwice'.cost (· + 1) 3 (fun _ => 1)
+
+def incrAll (xs : List Nat) : List Nat := xs.map (· + 1)
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.incrAll
+
+-- One call of `map`; per element a match, a call of the lambda, its addition (one for the call
+-- and one for the operation), and the recursive call; and the match of the empty case.
+/-- info: 17 -/
+#guard_msgs in
+#eval incrAll.cost [1, 2, 3]
+
+/-! ## Functions stored in structures: a field that is called gets a companion keyed by the
+parameter and the field, and a caller that builds the structure in place supplies that
+companion from the field's lambda. -/
+
+structure Oracle where
+  query : Nat → Nat
+  bound : Nat
+
+def twoQueries (o : Oracle) (x : Nat) : Nat := o.query x + o.query o.bound
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.twoQueries
+
+-- Two calls of the stored function, each one unit plus its own cost of two, and one addition.
+/-- info: 8 -/
+#guard_msgs in
+#eval twoQueries.cost ⟨(· * 2), 5⟩ 3 (fun _ => 2)
+
+def viaLiteral (x : Nat) : Nat := twoQueries ⟨(· + 1), 7⟩ x
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.viaLiteral
+
+-- One call of `twoQueries`, whose companion is the cost of `(· + 1)`, two per call.
+/-- info: 9 -/
+#guard_msgs in
+#eval viaLiteral.cost 3
+
+/-! ## A recursor with induction hypotheses: each hypothesis contributes the cost of the
+recursive result and stands for its value in the branch. -/
+
+def pow2 (n : Nat) : Nat := Nat.rec 1 (fun _ ih => ih + ih) n
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.pow2
+
+-- Per step one decision, the recursive result's cost, and an addition (a call and an
+-- operation); the base case is one decision.
+/-- info: 10 -/
+#guard_msgs in
+#eval pow2.cost 3
+
+/-! A recursor whose motive is a function type: the minor premise binds the result's argument
+after the induction hypothesis, and the hypothesis is a cost function, charged at each
+application. -/
+
+def iter (f : Nat → Nat) (n : Nat) : Nat → Nat := Nat.rec id (fun _ ih x => f (ih x)) n
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.iter
+
+-- Per step one decision, a call of the hypothesis at the argument, and a call of `f` with its
+-- own cost of one; the base case is one decision.
+/-- info: 13 -/
+#guard_msgs in
+#eval iter.cost (· + 1) 3 0 (fun _ => 1)
 
 end Zcash.Meta.Tests.Efficient
