@@ -355,7 +355,7 @@ alone (it decides an `nk`-equality branch on `DecidableEq NK`); the reduction da
 direct term of the inputs. -/
 
 assert_efficient Zcash.Security.RandomOracle.Collision.upToSign
-assert_computable Zcash.Security.Ledger.Merkle.collisionOfWrongLeaf
+assert_efficient Zcash.Security.Ledger.Merkle.collisionOfWrongLeaf
 assert_efficient Zcash.Security.Ledger.noteCommitBreakOfNe
 assert_efficient Zcash.Security.Ledger.nfOldEqOrBreak +choice
 
@@ -373,13 +373,13 @@ The ledger-model definitions are plain computable data over public ledger conten
 theorems are deterministic list facts. -/
 
 assert_efficient Zcash.Security.Ledger.Model.posVal
-assert_computable Zcash.Security.Ledger.Merkle.subRoot
-assert_computable Zcash.Security.Ledger.Merkle.authChildren
+assert_efficient Zcash.Security.Ledger.Merkle.subRoot
+assert_efficient Zcash.Security.Ledger.Merkle.authChildren
 assert_axioms Zcash.Security.Ledger.Merkle.Path.compress_isSome
 assert_axioms Zcash.Security.Ledger.Merkle.path_of_root
 assert_efficient Zcash.Security.Ledger.Model.leafList
 assert_efficient Zcash.Security.Ledger.Model.leafFun
-assert_computable Zcash.Security.Ledger.Model.rootAfter
+assert_efficient Zcash.Security.Ledger.Model.rootAfter
 assert_efficient Zcash.Security.Ledger.Model.nullifiers
 assert_efficient Zcash.Security.Ledger.Model.transparentPoolBalance
 assert_efficient Zcash.Security.Ledger.Model.outputActions
@@ -498,11 +498,11 @@ roadblock branch decides nullifier membership and searches out the revealing act
 It carries no `+choice`: neither the decision nor the search reaches for choice, and
 no choice-bearing proof term survives in its erased `Prop` positions either. -/
 
-assert_computable Zcash.Security.Ledger.Model.honestTx
+assert_efficient Zcash.Security.Ledger.Model.honestTx
 assert_efficient Zcash.Security.Ledger.Model.HonestAction.withDummySpend
 assert_axioms Zcash.Security.Ledger.Model.HonestAction.satisfied
 assert_axioms Zcash.Security.Ledger.Model.honestTx_valid
-assert_computable Zcash.Security.Ledger.Model.spendabilityOrBreak
+assert_efficient Zcash.Security.Ledger.Model.spendabilityOrBreak
 
 /-! ## Probabilistic capstones
 
@@ -696,7 +696,7 @@ assert_computable Zcash.Security.Ledger.Model.kbPairOf
 assert_axioms Zcash.Security.Ledger.Model.spendPinnedOrBreak_kbPair
 assert_axioms Zcash.Security.Ledger.Model.allPinnedOrBreak_kbPair
 assert_axioms Zcash.Security.Ledger.Model.balanceSubsetOrBreak_kbPair
-assert_computable Zcash.Security.Ledger.Model.kwAt
+assert_efficient Zcash.Security.Ledger.Model.kwAt
 assert_axioms Zcash.Security.Ledger.Model.spendAuthorityOrBreak_pair
 assert_axioms Zcash.Security.Ledger.Model.balanceSubset_keyBindingArm_measure_le
 assert_axioms Zcash.Security.Ledger.Model.spendAuthority_keyBindingArm_measure_le
@@ -721,7 +721,7 @@ assert_computable Zcash.Security.Ledger.Model.extractorAtBasis +choice
 assert_efficient Zcash.Security.Ledger.Model.bvkAt +choice
 assert_efficient Zcash.Security.Ledger.Model.failTxOfAnn
 assert_efficient Zcash.Security.Ledger.Model.kappaOut +choice
-assert_computable Zcash.Security.Ledger.Model.kappaComposite +choice
+assert_efficient Zcash.Security.Ledger.Model.kappaComposite +choice
 assert_axioms Zcash.Security.Ledger.Model.bvkAt_eq
 assert_axioms Zcash.Security.Ledger.Model.kappaComposite_queryBound
 assert_computable Zcash.Security.Ledger.Model.allConservedOrBreak_extractFail +choice
@@ -1286,7 +1286,7 @@ separately with `assert_axioms`. -/
 assert_efficient Zcash.Snark.bindOrRelationWitness
 assert_efficient Zcash.Snark.finForallOrRelationWitness
 assert_efficient Zcash.Snark.finForallOption
-assert_computable Zcash.Snark.listForallOrRelationWitness
+assert_efficient Zcash.Snark.listForallOrRelationWitness
 assert_computable Zcash.Snark.boundedForallOrRelationWitness
 assert_efficient Zcash.Snark.szBadSetAvoidance? +choice
 assert_computable Zcash.Snark.foldSplitAvoidance? +choice
