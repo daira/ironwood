@@ -265,4 +265,24 @@ assert_efficient Zcash.Meta.Tests.Efficient.bindOpt
 #guard_msgs in
 #eval bindOpt.cost (some 3) (fun n => some (n + 1)) (fun _ => 1)
 
+/-! An alternative that is a bare parameter: once the unfolded matcher is beta-reduced, the
+branch is a local, which is a value and not a call. -/
+
+def getD' (x : Option Nat) (f : Nat → Nat) (d : Nat) : Nat :=
+  match x, f with
+  | some a, g => g a
+  | none, _ => d
+
+#guard_msgs in
+assert_efficient Zcash.Meta.Tests.Efficient.getD'
+
+-- The decision, one call of `f`, and `f`'s own cost of one; the decision alone for `none`.
+/-- info: 3 -/
+#guard_msgs in
+#eval getD'.cost (some 3) (· + 1) 0 (fun _ => 1)
+
+/-- info: 1 -/
+#guard_msgs in
+#eval getD'.cost none (· + 1) 0 (fun _ => 1)
+
 end Zcash.Meta.Tests.Efficient

@@ -345,7 +345,10 @@ partial def costOf (ctx : Context) (e : Expr) : TermElabM Expr := do
       mkLetFVars #[x] (← costOf ctx (b.instantiate1 x))
     return add cv cb
   | .app .. =>
+    -- Reducing a lambda at the head may leave something other than an application, such as a
+    -- bare local, which is a value rather than a call.
     let e := e.headBeta
+    unless e.isApp do return ← costOf ctx e
     match e.getAppFn with
     | .letE n t v b nd =>
       -- `(let x := v; b) args`, which a `have` in a `do` block elaborates to: the arguments
