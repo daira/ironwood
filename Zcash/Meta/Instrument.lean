@@ -105,7 +105,7 @@ reducible, and its field are unfolded, and nothing else is. The expression is be
 and again after each step: the instance of a function type holds its codomain's instance as a
 lambda, and the stuck operation would otherwise hide in a redex such as
 `(fun a => instI) (forget ac)`. -/
-partial def reduceCosted (instI : FVarId) (e : Expr) : MetaM Expr := do
+def reduceCosted (instI : FVarId) (e : Expr) : MetaM Expr := do
   Meta.transform (← Core.betaReduce e) (pre := fun s => do
     if isCostedOp s.getAppFn then
       let args := s.getAppArgs
@@ -121,25 +121,26 @@ partial def reduceCosted (instI : FVarId) (e : Expr) : MetaM Expr := do
 /-- `e` with every application of `Costed.WithCosts`, `Costed.forget`, or `Costed.Consistent` to
 the type `t` and the hypothetical instance `instI` replaced by the corresponding generated
 declaration, applied to the remaining arguments: the mirror for `WithCosts`, which takes no
-further argument, and the erasure and the predicate for the others, which take the value. -/
-partial def substituteStuck (t : Expr) (instI : FVarId) (withCosts forget consistent : Expr)
-    (e : Expr) : Expr :=
-  e.replace fun s => do
+further argument, and the erasure and the predicate for the others, which take the value. The
+traversal is post-order, so that the value that `forget` or `Consistent` is applied to, which
+carries stuck occurrences in its own type arguments, is substituted before the application is. -/
+def substituteStuck (t : Expr) (instI : FVarId) (withCosts forget consistent : Expr)
+    (e : Expr) : CoreM Expr :=
+  Core.transform e (post := fun s => do
     let f := s.getAppFn
     let args := s.getAppArgs
-    guard (args.size ≥ 2 && args[0]! == t && args[1]! == mkFVar instI)
-    let head ← if f.isConstOf ``Costed.WithCosts then some withCosts
+    unless args.size ≥ 2 && args[0]! == t && args[1]! == mkFVar instI do return .done s
+    let head := if f.isConstOf ``Costed.WithCosts then some withCosts
       else if f.isConstOf ``Costed.forget then some forget
       else if f.isConstOf ``Costed.Consistent then some consistent
       else none
-    -- `replace` does not descend into a replacement, and the value that `forget` or `Consistent` is
-    -- applied to carries stuck occurrences in its own type arguments.
-    return mkAppN head (args[2:].toArray.map (substituteStuck t instI withCosts forget consistent))
+    let some head := head | return .done s
+    return .done (mkAppN head args[2:].toArray))
 
 /-- `e` with the trivial parts of a consistency hypothesis removed: the consistency of a first-order
 value reduces to `True`, which leaves `True → P`, `P ∧ True`, and `True ∧ P` behind in the clause
 for a function whose argument or result is first order. -/
-partial def simpTrue (e : Expr) : CoreM Expr :=
+def simpTrue (e : Expr) : CoreM Expr :=
   Core.transform e (post := fun s => do
     match s with
     | .forallE _ d b _ =>
@@ -157,12 +158,13 @@ partial def simpTrue (e : Expr) : CoreM Expr :=
 `∀ x, P → A` and `∀ x, P → B`. A conjunction cannot stay in a hypothesis of the consistency
 predicate: the kernel would read the predicate's occurrence inside `And` as a nested inductive
 occurrence, and refuses one whose parameters mention local variables. -/
-partial def splitConjunctions (h : Expr) : MetaM (Array Expr) := do
-  match h with
-  | .forallE .. => forallTelescope h fun xs body => do
-    (← splitConjunctions body).mapM fun c => mkForallFVars xs c
-  | .app (.app (.const ``And _) p) q => return (← splitConjunctions p) ++ (← splitConjunctions q)
-  | _ => return #[h]
+def splitConjunctions (h : Expr) : MetaM (Array Expr) :=
+  -- The binders, including the premises, come off once; what is left is a tree of `And`.
+  forallTelescope h fun xs body => conjuncts body |>.mapM fun c => mkForallFVars xs c
+where
+  conjuncts : Expr → Array Expr
+    | .app (.app (.const ``And _) p) q => conjuncts p ++ conjuncts q
+    | e => #[e]
 
 /-- Define `name` by `addPreDefinitions`, which settles its recursion as it settles a `def`'s, and
 fail with the reported reason if it does not go through. Some of its failures are logged rather than
@@ -296,7 +298,7 @@ def paramInfos (m : Mirror) : Array BinderInfo :=
 
 /-- `e` with the occurrences stuck on the hypothetical instance replaced by the generated
 declarations. -/
-def subst (m : Mirror) (e : Expr) : Expr :=
+def subst (m : Mirror) (e : Expr) : CoreM Expr :=
   substituteStuck m.t m.instI m.mirrorApp m.forgetApp m.consistentApp e
 
 /-- One of the three operations at the type `τ`, reduced through the known instances and with
@@ -306,7 +308,7 @@ def reducedOp (m : Mirror) (op : Name) (τ : Expr) (args : Array Expr) : MetaM E
   let (inst, _) ← costedInstance τ
   let e ← reduceCosted m.instI
     (mkAppN (mkConst op [(← getLevel τ).dec.get!]) (#[τ, inst] ++ args))
-  return m.subst e
+  m.subst e
 
 /-- Fail if `e`, computed for the field `f` of `I`, still mentions the hypothetical instance. That
 means an occurrence of a shape that the substitution does not recognize, which is a limitation of
