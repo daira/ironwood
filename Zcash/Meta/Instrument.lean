@@ -14,6 +14,11 @@ and registered with `register_costed`, in which case it is a trusted assumption 
 derivation accepts an instance only from this registry, so a `Costed` instance declared anywhere
 else is refused rather than trusted. See the documentation of `Zcash.Meta.Costed` for what an
 instance asserts and why that cannot be a law.
+
+An inductive type gets its instance generated on demand (`ensureCosted`): the identity instance
+when no value of it holds a function, and otherwise a *mirror*, an inductive type of the same
+shape whose function fields carry their costed forms, with its erasure back to the original and
+its consistency predicate (`Mirror`).
 -/
 
 open Lean Elab Command Meta Term
@@ -72,18 +77,377 @@ def isDataLocal (x : Expr) : MetaM Bool := do
   if (← isClass? t).isSome then return false
   return true
 
+/-- The name of a declaration generated for the type `I`: `I.suffix` for a type of the current
+module, and a module-private name for a type of an imported module, as derived cost functions
+are named, since two modules may each generate it. -/
+def generatedName (env : Environment) (I : Name) (suffix : String) : Name :=
+  if (env.getModuleIdxFor? I).isSome then
+    mkPrivateName env (Name.mkSimple (I.toString ++ "." ++ suffix))
+  else I ++ Name.mkSimple suffix
+
+/-- Whether `f` is one of the three operations of `Costed`, which take the type and the instance as
+their first two arguments. -/
+private def isCostedOp (f : Expr) : Bool :=
+  f.isConstOf ``Costed.WithCosts || f.isConstOf ``Costed.forget || f.isConstOf ``Costed.Consistent
+
+/-- Reduce the `Costed` operations in `e` (`WithCosts`, `forget`, `Consistent`) through their
+instances, as far as they go, leaving the ones stuck on the hypothetical instance `instI` of
+the type being mirrored.
+
+This is how a field's costed form is computed while the mirror does not exist yet: the field's type
+is given the instance that synthesis finds, in which the type being mirrored is covered by the
+hypothetical instance, and the operation is unfolded one instance at a time. `WithCosts (List I)`
+through the instance of `List` becomes `List (WithCosts I instI)`, whose inner operation is stuck,
+since `instI` is a free variable with no value; `substituteStuck` then replaces it by the mirror.
+Each step is a weak-head normalization at default transparency, so that the instance, which is
+reducible, and its field are unfolded, and nothing else is. The expression is beta-reduced first,
+and again after each step: the instance of a function type holds its codomain's instance as a
+lambda, and the stuck operation would otherwise hide in a redex such as
+`(fun a => instI) (forget ac)`. -/
+partial def reduceCosted (instI : FVarId) (e : Expr) : MetaM Expr := do
+  Meta.transform (← Core.betaReduce e) (pre := fun s => do
+    if isCostedOp s.getAppFn then
+      let args := s.getAppArgs
+      if args.size ≥ 2 then
+        -- Stuck on the hypothetical instance: leave it for `substituteStuck`.
+        if args[1]! == mkFVar instI then return .done s
+        let s' ← withDefault (whnf s)
+        -- `whnf` returns the same expression when it cannot unfold the head (an instance that
+        -- is a local variable of the mirror, say); then visit the arguments as usual.
+        unless s' == s do return .visit (← Core.betaReduce s')
+    return .continue)
+
+/-- `e` with every application of `Costed.WithCosts`, `Costed.forget`, or `Costed.Consistent` to
+the type `t` and the hypothetical instance `instI` replaced by the corresponding generated
+declaration, applied to the remaining arguments: the mirror for `WithCosts`, which takes no
+further argument, and the erasure and the predicate for the others, which take the value. -/
+partial def substituteStuck (t : Expr) (instI : FVarId) (withCosts forget consistent : Expr)
+    (e : Expr) : Expr :=
+  e.replace fun s => do
+    let f := s.getAppFn
+    let args := s.getAppArgs
+    guard (args.size ≥ 2 && args[0]! == t && args[1]! == mkFVar instI)
+    let head ← if f.isConstOf ``Costed.WithCosts then some withCosts
+      else if f.isConstOf ``Costed.forget then some forget
+      else if f.isConstOf ``Costed.Consistent then some consistent
+      else none
+    -- `replace` does not descend into a replacement, and the value that `forget` or `Consistent` is
+    -- applied to carries stuck occurrences in its own type arguments.
+    return mkAppN head (args[2:].toArray.map (substituteStuck t instI withCosts forget consistent))
+
+/-- `e` with the trivial parts of a consistency hypothesis removed: the consistency of a first-order
+value reduces to `True`, which leaves `True → P`, `P ∧ True`, and `True ∧ P` behind in the clause
+for a function whose argument or result is first order. -/
+partial def simpTrue (e : Expr) : CoreM Expr :=
+  Core.transform e (post := fun s => do
+    match s with
+    | .forallE _ d b _ =>
+      -- `True → b` is `b` when `b` does not use the hypothesis (bound variable 0); the variables
+      -- bound further out shift down by one.
+      if d.isConstOf ``True && !b.hasLooseBVar 0 then return .done (b.lowerLooseBVars 1 1)
+      return .continue
+    | .app (.app (.const ``And _) p) q =>
+      if q.isConstOf ``True then return .done p
+      if p.isConstOf ``True then return .done q
+      return .continue
+    | _ => return .continue)
+
+/-- `h` split into one proposition per conjunct, under the same binders: `∀ x, P → A ∧ B` becomes
+`∀ x, P → A` and `∀ x, P → B`. A conjunction cannot stay in a hypothesis of the consistency
+predicate: the kernel would read the predicate's occurrence inside `And` as a nested inductive
+occurrence, and refuses one whose parameters mention local variables. -/
+partial def splitConjunctions (h : Expr) : MetaM (Array Expr) := do
+  match h with
+  | .forallE .. => forallTelescope h fun xs body => do
+    (← splitConjunctions body).mapM fun c => mkForallFVars xs c
+  | .app (.app (.const ``And _) p) q => return (← splitConjunctions p) ++ (← splitConjunctions q)
+  | _ => return #[h]
+
+/-- Define `name` by `addPreDefinitions`, which settles its recursion as it settles a `def`'s, and
+fail with the reported reason if it does not go through. Some of its failures are logged rather than
+thrown, and some leave a definition containing `sorry` behind, so the messages are captured and all
+three outcomes are checked, as the companion walker does for a cost function. -/
+def addDefinition (name : Name) (levelParams : List Name) (type value : Expr) :
+    TermElabM Unit := do
+  let saved := (← getThe Core.State).messages
+  modifyThe Core.State fun s => { s with messages := {} }
+  let outcome ← try
+      addPreDefinitions ({}, {}) #[{
+        ref := .missing, kind := .def, levelParams, modifiers := {}, declName := name,
+        binders := .missing, type, value, termination := .none }]
+      pure (Except.ok ())
+    catch ex => pure (Except.error ex)
+  let msgs := (← getThe Core.State).messages
+  modifyThe Core.State fun s => { s with messages := saved }
+  let failure ← match outcome with
+    | .error ex => pure (some ex.toMessageData)
+    | .ok () =>
+      if msgs.hasErrors then
+        let errors : List MessageData := msgs.toList.filterMap fun (m : Message) =>
+          if m.severity == MessageSeverity.error then some m.data else none
+        pure (some (MessageData.joinSep errors "\n"))
+      else match (← getEnv).find? name with
+        | some info =>
+          if (info.value?.map Expr.hasSorry).getD false then
+            pure (some m!"the definition contains `sorry`")
+          else pure none
+        | none => pure (some m!"the definition was not added")
+  if let some why := failure then
+    throwError "efficient: `{name}` could not be defined: {why}"
+
+/-! ## Mirrors
+
+The costed form of an inductive type `I` whose values hold functions is a generated mirror:
+
+* the inductive type `I.withCosts`, with `I`'s parameters followed by a `Costed` instance for
+  each type parameter, and one constructor per constructor of `I` whose data fields have their
+  costed forms;
+* `I.withCosts.forget`, back to `I`, by cases on the mirror, rebuilding each constructor from
+  its fields' erasures, with a recursive call for a field of type `I`;
+* `I.withCosts.Consistent`, an inductive predicate on the mirror, with one constructor per
+  constructor of `I` whose hypotheses are the fields' consistency. It is an inductive predicate,
+  not a recursive definition, because the consistency of a function field quantifies over the
+  function's arguments and asks for the consistency of its results, which is a recursive call
+  under a binder, not on a subterm;
+* the instance `I.instCosted`, which `generateCosted` declares from these three.
+
+A field's costed form is computed before the mirror exists, with a hypothetical instance of `I`
+in scope (`reduceCosted`), and the occurrences stuck on that instance are then replaced by the
+mirror (`substituteStuck`). A nested occurrence of `I` inside another inductive type, such as a
+field of type `List I`, is accepted by the kernel but refused here, since its erasure would have
+to recurse under that type's map, which `forget` cannot do structurally. -/
+
+/-- What the parts of a mirror share: the type being mirrored, its parameters and the instances
+of its type parameters as local variables, the hypothetical instance, and the names and the
+applied forms of the three declarations, which are referred to before they exist. -/
+structure Mirror where
+  I : Name
+  info : InductiveVal
+  levels : List Level
+  /-- `I`'s parameters, as local variables. -/
+  params : Array Expr
+  /-- The `Costed` instances of the type parameters, as local variables. -/
+  insts : Array Expr
+  /-- `I` applied to its parameters. -/
+  t : Expr
+  /-- The universe of the values of `I`: `t : Type v`. -/
+  v : Level
+  /-- The hypothetical instance of `I`, a local variable with no value. -/
+  instI : FVarId
+  mirrorName : Name
+  forgetName : Name
+  consistentName : Name
+  /-- The mirror, the erasure, and the predicate, each applied to the parameters and the instances.
+  -/
+  mirrorApp : Expr
+  forgetApp : Expr
+  consistentApp : Expr
+
+/-- `e`, a telescope of `∀` or `fun` binders, with the binder annotations of its leading binders
+replaced by `infos`, one per binder, as far as `infos` goes. -/
+def setBinderInfos (e : Expr) (infos : Array BinderInfo) : Expr :=
+  go e 0
+where
+  go (e : Expr) (i : Nat) : Expr :=
+    if h : i < infos.size then
+      match e with
+      | .forallE n d b _ => .forallE n d (go b (i + 1)) infos[i]
+      | .lam n d b _ => .lam n d (go b (i + 1)) infos[i]
+      | _ => e
+    else e
+
+namespace Mirror
+
+/-- The number of parameters of the generated inductive types: `I`'s, then the instances. -/
+def numParams (m : Mirror) : Nat := m.params.size + m.insts.size
+
+/-- The binder annotations of the parameters and the instances in a generated constructor or
+function: implicit, as a constructor's parameters are, and instance-implicit. -/
+def paramInfos (m : Mirror) : Array BinderInfo :=
+  m.params.map (fun _ => .implicit) ++ m.insts.map (fun _ => .instImplicit)
+
+/-- `e` with the occurrences stuck on the hypothetical instance replaced by the generated
+declarations. -/
+def subst (m : Mirror) (e : Expr) : Expr :=
+  substituteStuck m.t m.instI m.mirrorApp m.forgetApp m.consistentApp e
+
+/-- One of the three operations at the type `τ`, reduced through the known instances and with
+the stuck occurrences replaced: `op` is the operation's constant, `args` what follows the type
+and the instance. -/
+def reducedOp (m : Mirror) (op : Name) (τ : Expr) (args : Array Expr) : MetaM Expr := do
+  let (inst, _) ← costedInstance τ
+  let e ← reduceCosted m.instI
+    (mkAppN (mkConst op [(← getLevel τ).dec.get!]) (#[τ, inst] ++ args))
+  return m.subst e
+
+/-- Fail if `e`, computed for the field `f` of `I`, still mentions the hypothetical instance. That
+means an occurrence of a shape that the substitution does not recognize, which is a limitation of
+the generator. The user is told what to do and asked to report it, with the term in the message, so
+that the report is complete. -/
+def checkReplaced (m : Mirror) (f e : Expr) : MetaM Unit := do
+  if e.hasAnyFVar (· == m.instI) then
+    throwError "efficient: no `Costed` instance could be generated for `{m.I}`: the costed \
+      form of its field `{f}` has a shape that the generator does not handle yet. Write an \
+      instance for `{m.I}` by hand and register it with `register_costed`, and please report \
+      this case, with the term in which the hypothetical instance `{mkFVar m.instI}` of \
+      `{m.I}` survives:{indentExpr e}"
+
+/-- The costed form of the type `τ`. -/
+def costedForm (m : Mirror) (τ : Expr) : MetaM Expr := m.reducedOp ``Costed.WithCosts τ #[]
+
+/-- The erasure of `fc`, a value of the costed form of `τ`. -/
+def erasure (m : Mirror) (τ fc : Expr) : MetaM Expr := m.reducedOp ``Costed.forget τ #[fc]
+
+/-- The consistency of `fc`, a value of the costed form of `τ`, with its trivial parts removed. -/
+def consistency (m : Mirror) (τ fc : Expr) : MetaM Expr := do
+  simpTrue (← m.reducedOp ``Costed.Consistent τ #[fc])
+
+/-- The mirror's fields for one constructor of `I`, as local variables, so that each part of the
+mirror is built in the same telescope: a binder of the costed form for each data field, and the
+original binder for a proof or a type. A later field's type may mention an earlier field, as
+`(n : Nat) (v : Fin n)` does, or a proof field may mention a function field; in the mirror that
+earlier field is only available as its costed form, so its *erasure* takes its place in the
+later types. The continuation gets the mirror fields, the original fields' types after that
+replacement, and the erasures of the mirror fields. -/
+partial def withFields {α} (m : Mirror) (fields : Array Expr)
+    (k : Array Expr → Array Expr → Array Expr → MetaM α) : MetaM α :=
+  -- `olds` are the original fields seen so far and `news` what replaces them in later types.
+  go 0 #[] #[] #[] #[] #[]
+where
+  go (i : Nat) (olds news types erasures acc : Array Expr) : MetaM α := do
+    if h : i < fields.size then
+      let f := fields[i]
+      let τ := (← inferType f).replaceFVars olds news
+      let name ← f.fvarId!.getUserName
+      if ← isDataLocal f then
+        let τc ← m.costedForm τ
+        m.checkReplaced f τc
+        withLocalDecl name .default τc fun fc => do
+          let er ← m.erasure τ fc
+          -- An erasure that still mentions the hypothetical instance would need the mirror's
+          -- `forget` under some other type's map (`List.map forget` for a field of type `List I`),
+          -- which `forget` cannot do by structural recursion; a field of type `I` itself is fine,
+          -- since its erasure is a plain recursive call.
+          if er.hasAnyFVar (· == m.instI) then
+            throwError "efficient: the erasure of the field `{f}` of `{m.I}`, of type `{τ}`, \
+              would recurse into `{m.I}` under another type, which is not supported yet; \
+              write a `Costed` instance for `{m.I}` and register it with `register_costed`"
+          go (i + 1) (olds.push f) (news.push er) (types.push τ) (erasures.push er) (acc.push fc)
+      else
+        withLocalDecl name (← f.fvarId!.getBinderInfo) τ fun f' =>
+          go (i + 1) (olds.push f) (news.push f') (types.push τ) (erasures.push f') (acc.push f')
+    else k acc types erasures
+
+/-- `withFields` over the fields of the constructor `ctor` of `I`, with the parameters instantiated.
+-/
+def withCtorFields {α} (m : Mirror) (ctor : Name)
+    (k : Array Expr → Array Expr → Array Expr → MetaM α) : MetaM α := do
+  let ctorInfo ← getConstInfoCtor ctor
+  forallTelescope (← instantiateForall ctorInfo.type m.params) fun fields _ =>
+    m.withFields fields k
+
+/-- Declare the mirror inductive: `I`'s parameters, then the `Costed` instances of its type
+parameters, then a constructor per constructor of `I` over the mirror fields, and the auxiliary
+constructions that the `inductive` command adds (`casesOn` for `forget` and for the translation,
+`below` and `brecOn` for structural recursion over the mirror, the `SizeOf` instances for
+well-founded recursion, `noConfusion` for proofs). The constructor types name the mirror by its
+constant, as any inductive declaration does. -/
+def addInductive (m : Mirror) : MetaM Unit := do
+  let mut ctors : List Constructor := []
+  for ctor in m.info.ctors do
+    let ctorType ← m.withCtorFields ctor fun mfields _ _ =>
+      return setBinderInfos (← mkForallFVars (m.params ++ m.insts ++ mfields) m.mirrorApp)
+        m.paramInfos
+    -- Every stuck occurrence was checked field by field; this is the last resort before the
+    -- hypothetical instance could escape into a declaration.
+    if ctorType.hasAnyFVar (· == m.instI) then
+      throwError "efficient: no `Costed` instance could be generated for `{m.I}`: the \
+        constructor `{ctor}` of its mirror would mention the hypothetical instance of `{m.I}`, \
+        which the generator does not handle yet. Write an instance for `{m.I}` by hand and \
+        register it with `register_costed`, and please report this case"
+    ctors := ctors ++ [{ name := ctor.updatePrefix m.mirrorName, type := ctorType }]
+  let type ← mkForallFVars (m.params ++ m.insts) (mkSort (mkLevelSucc m.v))
+  addDecl (.inductDecl m.info.levelParams m.numParams
+    [{ name := m.mirrorName, type, ctors }] false)
+  mkRecOn m.mirrorName
+  mkCasesOn m.mirrorName
+  -- The remaining constructions are conveniences, and a mirror that nests in another inductive type
+  -- (a function field's codomain is a pair) does not get all of them; the derivation needs only
+  -- `casesOn`.
+  for mk in [Lean.mkNoConfusion, mkBelow, mkBRecOn, mkSizeOfInstances] do
+    try mk m.mirrorName catch _ => pure ()
+
+/-- Define `forget`: by cases on the mirror, each constructor of `I` rebuilt from the erasures of
+the mirror fields. The erasure of a field of type `I` is the recursive call, written as an
+application of the constant being defined; `addPreDefinitions` turns that into structural recursion,
+as it does for a `def`. -/
+def addForget (m : Mirror) : TermElabM Unit := do
+  let type ← mkForallFVars (m.params ++ m.insts) (← mkArrow m.mirrorApp m.t)
+  let value ← withLocalDecl `x .default m.mirrorApp fun x => do
+    let motive ← mkLambdaFVars #[x] m.t
+    let mut minors := #[]
+    for ctor in m.info.ctors do
+      let minor ← m.withCtorFields ctor fun mfields _ erasures =>
+        mkLambdaFVars mfields (mkAppN (mkConst ctor m.levels) (m.params ++ erasures))
+      minors := minors.push minor
+    -- `casesOn` takes the parameters, the motive, the major premise, and the minor premises;
+    -- its first universe parameter is the motive's, here the universe of `I`.
+    let casesOn := mkAppN (mkConst (m.mirrorName ++ `casesOn) (mkLevelSucc m.v :: m.levels))
+      (m.params ++ m.insts ++ #[motive, x] ++ minors)
+    mkLambdaFVars (m.params ++ m.insts ++ #[x]) casesOn
+  addDefinition m.forgetName m.info.levelParams (setBinderInfos type m.paramInfos)
+    (setBinderInfos value m.paramInfos)
+
+/-- Declare `Consistent`: an inductive predicate on the mirror, with one constructor per constructor
+of `I`, whose hypotheses are the consistency of the data fields; a hypothesis that reduces to `True`
+(a first-order field) is dropped. The predicate occurs in a hypothesis under a binder, for a
+function field, which is positive. -/
+def addConsistent (m : Mirror) : MetaM Unit := do
+  let mut ctors : List Constructor := []
+  for ctor in m.info.ctors do
+    let ctorType ← m.withCtorFields ctor fun mfields types _ => do
+      let mut hyps := #[]
+      for fc in mfields, τ in types do
+        -- A proof or type field was bound with its own type, which is not a costed form.
+        if ← isDataLocal fc then
+          let h ← m.consistency τ fc
+          m.checkReplaced fc h
+          unless h.isConstOf ``True do hyps := hyps ++ (← splitConjunctions h)
+      let hypDecls := hyps.zipIdx.map fun (h, i) =>
+        (Name.mkSimple s!"h{i}", BinderInfo.default, fun (_ : Array Expr) => pure h)
+      withLocalDecls hypDecls fun hs => do
+        let ty ← mkForallFVars (m.params ++ m.insts ++ mfields ++ hs)
+          (mkApp m.consistentApp (mkAppN (mkConst (ctor.updatePrefix m.mirrorName) m.levels)
+            (m.params ++ m.insts ++ mfields)))
+        return setBinderInfos ty m.paramInfos
+    ctors := ctors ++ [{ name := ctor.updatePrefix m.consistentName, type := ctorType }]
+  let type ← mkForallFVars (m.params ++ m.insts) (← mkArrow m.mirrorApp (mkSort Level.zero))
+  addDecl (.inductDecl m.info.levelParams m.numParams
+    [{ name := m.consistentName, type, ctors }] false)
+  mkRecOn m.consistentName
+  mkCasesOn m.consistentName
+
+/-- The instance's value: the three parts, as a function of the parameters and the instances of
+the type parameters. -/
+def instanceValue (m : Mirror) : MetaM Expr := do
+  let value ← mkLambdaFVars (m.params ++ m.insts)
+    (mkAppN (mkConst ``Costed.mk [m.v]) #[m.t, m.mirrorApp, m.forgetApp, m.consistentApp])
+  return setBinderInfos value m.paramInfos
+
+end Mirror
+
 mutual
 
 /-- The `Costed` instance for `t`, as `costedInstance` gives it, after generating instances
 for the inductive types inside `t` that have none yet. -/
-partial def ensureCosted (t : Expr) : MetaM (Expr × Array Name) := do
+partial def ensureCosted (t : Expr) : TermElabM (Expr × Array Name) := do
   generateMissing t
   costedInstance t
 
 /-- Generate a `Costed` instance for every inductive type applied inside the type `t` that has
 none, innermost first, so that `List Tree` gets `Tree`'s instance generated and then resolves
 through the built-in instance of `List`. -/
-partial def generateMissing (t : Expr) : MetaM Unit := do
+partial def generateMissing (t : Expr) : TermElabM Unit := do
   match t with
   | .forallE .. => forallTelescope t fun xs body => do
     for x in xs do generateMissing (← inferType x)
@@ -101,28 +465,22 @@ partial def generateMissing (t : Expr) : MetaM Unit := do
 /-- Whether the costed form of `t` is `t` itself: `t` holds no function, so a derived cost function
 can take `t` where `WithCosts t` would be. The two are compared at default transparency, which is
 what type-checking the derived function uses. -/
-partial def isFirstOrder (t : Expr) : MetaM Bool := do
+partial def isFirstOrder (t : Expr) : TermElabM Bool := do
   let (inst, _) ← ensureCosted t
   let u ← getLevel t
   let withCosts := mkApp2 (mkConst ``Costed.WithCosts [u.dec.get!]) t inst
   withDefault (isDefEq withCosts t)
 
-/-- Generate the `Costed` instance of the inductive type `I`, and register it as generated. So
-far only the identity instance: `I` has no type parameter and no index, and every data field of
-every constructor has a first-order type, where a recursive occurrence of `I` counts as first
-order. (An inductive type with function fields, or with type parameters, needs a mirror, which
-is not generated yet.) The check runs with the identity instance of `I` itself in scope as a
-local `let`, so that a field of type `I`, or `List I`, passes. -/
-partial def generateCosted (I : Name) : MetaM Name := do
+/-- Generate the `Costed` instance of the inductive type `I`, and register it as generated:
+the identity instance when `I` has no type parameter and every data field of every constructor
+has a first-order type, where a recursive occurrence of `I` counts as first order; otherwise a
+mirror, by `generateMirror`. An indexed family is refused. -/
+partial def generateCosted (I : Name) : TermElabM Name := do
   let env ← getEnv
   let some (.inductInfo info) := env.find? I
     | throwError "efficient: `{I}` is not an inductive type, so no `Costed` instance can be \
         generated for it"
-  -- A type of the current module gets `I.instCosted`; one of an imported module gets a
-  -- module-private name, as derived cost functions do, since two modules may each generate it.
-  let instName := if (env.getModuleIdxFor? I).isSome then
-      mkPrivateName env (Name.mkSimple (I.toString ++ ".instCosted"))
-    else I ++ `instCosted
+  let instName := generatedName env I "instCosted"
   if env.contains instName then
     throwError "efficient: `{instName}` already exists, so no `Costed` instance can be \
       generated for `{I}`"
@@ -131,37 +489,77 @@ partial def generateCosted (I : Name) : MetaM Name := do
       instance yet; write one and register it with `register_costed`"
   let levels := info.levelParams.map mkLevelParam
   forallTelescope info.type fun params sort => do
-    for p in params do
-      if (← whnf (← inferType p)).isSort then
-        throwError "efficient: `{I}` has the type parameter `{p}`, so its costed form is a \
-          mirror at the costed forms of its parameters, which is not generated yet; write an \
-          instance and register it with `register_costed`"
     let .sort u := sort | throwError "efficient: `{I}` has an unexpected type"
     let some v := u.dec
       | throwError "efficient: `{I}` lives in `{sort}`, which has no costed form"
     let t := mkAppN (mkConst I levels) params
     let cls := mkApp (mkConst ``Costed [v]) t
-    let selfInst := mkApp (mkConst ``Costed.firstOrder [v]) t
-    withLetDecl `selfInst cls selfInst fun _ => do
-      for ctor in info.ctors do
-        let ctorInfo ← getConstInfoCtor ctor
-        forallTelescope (← instantiateForall ctorInfo.type params) fun fields _ => do
-          for f in fields do
-            if ← isDataLocal f then
-              let τ ← inferType f
-              unless ← isFirstOrder τ do
-                throwError "efficient: the field `{f}` of `{ctor}` has type `{τ}`, which holds \
-                  a function, so the costed form of `{I}` is a mirror with that field's costed \
-                  form, which is not generated yet; write an instance and register it with \
-                  `register_costed`"
-    let value ← mkLambdaFVars params selfInst
-    let type ← mkForallFVars params cls
-    addDecl (.defnDecl { name := instName, levelParams := info.levelParams, type, value,
-                         hints := .abbrev, safety := .safe })
+    -- A type parameter (one whose type is a sort) rules the identity instance out: a value of
+    -- the parameter's type may hold functions. A value parameter (`n : Nat`) does not.
+    let typeParams ← params.filterM fun p => return (← whnf (← inferType p)).isSort
+    -- The first-order check runs with the identity instance of `I` itself in scope as a `let`,
+    -- whose value synthesis finds and `whnf` unfolds, so that a recursive field of type `I`,
+    -- or `List I`, counts as first order. The reasoning is coinductive: if every other field
+    -- is first order, so is `I`.
+    let identity ← if !typeParams.isEmpty then pure false else
+      withLetDecl `selfInst cls (mkApp (mkConst ``Costed.firstOrder [v]) t) fun _ => do
+        info.ctors.allM fun ctor => do
+          let ctorInfo ← getConstInfoCtor ctor
+          forallTelescope (← instantiateForall ctorInfo.type params) fun fields _ =>
+            fields.allM fun f => do
+              if ← isDataLocal f then isFirstOrder (← inferType f) else pure true
+    let value ← if identity then
+        mkLambdaFVars params (mkApp (mkConst ``Costed.firstOrder [v]) t)
+      else generateMirror I info levels params typeParams t v
+    -- The mirror's value also binds the instances of the type parameters, so the type comes from
+    -- the value. The instance is compiled as well as added, since the instrumented functions that
+    -- take costed forms are meant to run.
+    addAndCompile (.defnDecl { name := instName, levelParams := info.levelParams,
+                               type := ← inferType value, value, hints := .abbrev,
+                               safety := .safe })
     setReducibilityStatus instName .reducible
     addInstance instName .global (eval_prio default)
     modifyEnv (costedExt.addEntry · { inst := instName, provenance := .generated })
     return instName
+
+/-- The value of the `Costed` instance of `I`, built from a generated mirror (see `Mirror`): a
+function of `I`'s parameters and of the instances of its type parameters. -/
+partial def generateMirror (I : Name) (info : InductiveVal) (levels : List Level)
+    (params typeParams : Array Expr) (t : Expr) (v : Level) : TermElabM Expr := do
+  let env ← getEnv
+  let mirrorName := generatedName env I "withCosts"
+  let forgetName := mirrorName ++ `forget
+  let consistentName := mirrorName ++ `Consistent
+  for n in [mirrorName, forgetName, consistentName] do
+    if env.contains n then
+      throwError "efficient: `{n}` already exists, so no mirror can be generated for `{I}`"
+  -- The instances of the type parameters, as instance-implicit binders of everything generated.
+  let instDecls ← typeParams.mapM fun p => do
+    let ty := mkApp (mkConst ``Costed [(← getLevel p).dec.get!]) p
+    return ((← p.fvarId!.getUserName).appendAfter "Costed", BinderInfo.instImplicit,
+      fun (_ : Array Expr) => pure ty)
+  withLocalDecls instDecls fun insts => do
+  -- The hypothetical instance of `I` itself, a local variable with no value. Instance synthesis
+  -- for a field's type finds it for the occurrences of `I`, so a field of type `F → I` gets the
+  -- function instance with this one for its codomain. Nothing can unfold it, so the operations
+  -- applied to it stay stuck, and that is what the mirror replaces.
+  withLocalDecl `instI .instImplicit (mkApp (mkConst ``Costed [v]) t) fun instI => do
+  let applied (n : Name) := mkAppN (mkConst n levels) (params ++ insts)
+  let m : Mirror := { I, info, levels, params, insts, t, v, instI := instI.fvarId!,
+                      mirrorName, forgetName, consistentName,
+                      mirrorApp := applied mirrorName, forgetApp := applied forgetName,
+                      consistentApp := applied consistentName }
+  -- The other inductive types in the fields need their instances first; `I`'s own occurrences
+  -- resolve to the hypothetical instance and generate nothing.
+  for ctor in info.ctors do
+    let ctorInfo ← getConstInfoCtor ctor
+    forallTelescope (← instantiateForall ctorInfo.type params) fun fields _ =>
+      for f in fields do
+        if ← isDataLocal f then generateMissing (← inferType f)
+  m.addInductive
+  m.addForget
+  m.addConsistent
+  m.instanceValue
 
 end
 
