@@ -64,14 +64,106 @@ def costedInstance (t : Expr) : MetaM (Expr × Array Name) := do
           is a trusted assumption about cost; register it with `register_costed {c}` to say so"
   return (inst, trusted)
 
+/-- Whether the local `x` is data: its type is not a proposition, a type, or a class. -/
+def isDataLocal (x : Expr) : MetaM Bool := do
+  let t ← inferType x
+  if ← isTypeFormerType t then return false
+  if ← isProp t then return false
+  if (← isClass? t).isSome then return false
+  return true
+
+mutual
+
+/-- The `Costed` instance for `t`, as `costedInstance` gives it, after generating instances
+for the inductive types inside `t` that have none yet. -/
+partial def ensureCosted (t : Expr) : MetaM (Expr × Array Name) := do
+  generateMissing t
+  costedInstance t
+
+/-- Generate a `Costed` instance for every inductive type applied inside the type `t` that has
+none, innermost first, so that `List Tree` gets `Tree`'s instance generated and then resolves
+through the built-in instance of `List`. -/
+partial def generateMissing (t : Expr) : MetaM Unit := do
+  match t with
+  | .forallE .. => forallTelescope t fun xs body => do
+    for x in xs do generateMissing (← inferType x)
+    generateMissing body
+  | .app .. | .const .. =>
+    for a in t.getAppArgs do generateMissing a
+    let .const I _ := t.getAppFn | return
+    let some (.inductInfo _) := (← getEnv).find? I | return
+    unless (← whnf (← inferType t)).isSort do return
+    let some v := (← getLevel t).dec | return
+    if (← trySynthInstance (mkApp (mkConst ``Costed [v]) t)) matches .none then
+      discard <| generateCosted I
+  | _ => pure ()
+
 /-- Whether the costed form of `t` is `t` itself: `t` holds no function, so a derived cost function
 can take `t` where `WithCosts t` would be. The two are compared at default transparency, which is
 what type-checking the derived function uses. -/
-def isFirstOrder (t : Expr) : MetaM Bool := do
-  let (inst, _) ← costedInstance t
+partial def isFirstOrder (t : Expr) : MetaM Bool := do
+  let (inst, _) ← ensureCosted t
   let u ← getLevel t
   let withCosts := mkApp2 (mkConst ``Costed.WithCosts [u.dec.get!]) t inst
   withDefault (isDefEq withCosts t)
+
+/-- Generate the `Costed` instance of the inductive type `I`, and register it as generated. So
+far only the identity instance: `I` has no type parameter and no index, and every data field of
+every constructor has a first-order type, where a recursive occurrence of `I` counts as first
+order. (An inductive type with function fields, or with type parameters, needs a mirror, which
+is not generated yet.) The check runs with the identity instance of `I` itself in scope as a
+local `let`, so that a field of type `I`, or `List I`, passes. -/
+partial def generateCosted (I : Name) : MetaM Name := do
+  let env ← getEnv
+  let some (.inductInfo info) := env.find? I
+    | throwError "efficient: `{I}` is not an inductive type, so no `Costed` instance can be \
+        generated for it"
+  -- A type of the current module gets `I.instCosted`; one of an imported module gets a
+  -- module-private name, as derived cost functions do, since two modules may each generate it.
+  let instName := if (env.getModuleIdxFor? I).isSome then
+      mkPrivateName env (Name.mkSimple (I.toString ++ ".instCosted"))
+    else I ++ `instCosted
+  if env.contains instName then
+    throwError "efficient: `{instName}` already exists, so no `Costed` instance can be \
+      generated for `{I}`"
+  unless info.numIndices == 0 do
+    throwError "efficient: `{I}` is an indexed family, which has no generated `Costed` \
+      instance yet; write one and register it with `register_costed`"
+  let levels := info.levelParams.map mkLevelParam
+  forallTelescope info.type fun params sort => do
+    for p in params do
+      if (← whnf (← inferType p)).isSort then
+        throwError "efficient: `{I}` has the type parameter `{p}`, so its costed form is a \
+          mirror at the costed forms of its parameters, which is not generated yet; write an \
+          instance and register it with `register_costed`"
+    let .sort u := sort | throwError "efficient: `{I}` has an unexpected type"
+    let some v := u.dec
+      | throwError "efficient: `{I}` lives in `{sort}`, which has no costed form"
+    let t := mkAppN (mkConst I levels) params
+    let cls := mkApp (mkConst ``Costed [v]) t
+    let selfInst := mkApp (mkConst ``Costed.firstOrder [v]) t
+    withLetDecl `selfInst cls selfInst fun _ => do
+      for ctor in info.ctors do
+        let ctorInfo ← getConstInfoCtor ctor
+        forallTelescope (← instantiateForall ctorInfo.type params) fun fields _ => do
+          for f in fields do
+            if ← isDataLocal f then
+              let τ ← inferType f
+              unless ← isFirstOrder τ do
+                throwError "efficient: the field `{f}` of `{ctor}` has type `{τ}`, which holds \
+                  a function, so the costed form of `{I}` is a mirror with that field's costed \
+                  form, which is not generated yet; write an instance and register it with \
+                  `register_costed`"
+    let value ← mkLambdaFVars params selfInst
+    let type ← mkForallFVars params cls
+    addDecl (.defnDecl { name := instName, levelParams := info.levelParams, type, value,
+                         hints := .abbrev, safety := .safe })
+    setReducibilityStatus instName .reducible
+    addInstance instName .global (eval_prio default)
+    modifyEnv (costedExt.addEntry · { inst := instName, provenance := .generated })
+    return instName
+
+end
 
 /-- `register_costed inst` registers the hand-written `Costed` instance `inst` as a trusted
 assumption about cost: that the costed form it gives carries every function inside a value of
