@@ -47,6 +47,30 @@ initialize costedExt : SimplePersistentEnvExtension CostedEntry (NameMap CostedE
 def costedEntry? (env : Environment) (inst : Name) : Option CostedEntry :=
   (costedExt.getState env).find? inst
 
+/-- A registered instrumented function: `inst` takes the costed forms of `fn`'s binders and
+returns the cost of a call with the costed form of its result. `registered` says that it was
+written by hand, a trusted assumption about cost, rather than derived. -/
+structure InstEntry where
+  fn : Name
+  inst : Name
+  registered : Bool
+  deriving Inhabited, Repr
+
+/-- The registry of instrumented functions, by the function. -/
+initialize instExt : SimplePersistentEnvExtension InstEntry (NameMap InstEntry) ←
+  registerSimplePersistentEnvExtension {
+    addEntryFn := fun m e => m.insert e.fn e
+    addImportedFn := fun ess => ess.foldl (fun m es => es.foldl (fun m e => m.insert e.fn e) m) {}
+  }
+
+/-- The registry entry of the function `fn`, if any. -/
+def instEntry? (env : Environment) (fn : Name) : Option InstEntry :=
+  (instExt.getState env).find? fn
+
+/-- The instrumented functions whose derivation failed in this module, with the reason, so that
+a second attempt repeats the reason rather than the leftover declaration. -/
+initialize failedInstExt : EnvExtension (NameMap String) ← registerEnvExtension (pure {})
+
 /-- How a generated mirror lays out the fields of each constructor of the original type: for
 each original field, the number of fields of the mirror that represent it. One field holds the
 field's costed form. Three hold a function field whose result holds the type being mirrored:
