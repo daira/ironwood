@@ -74,24 +74,23 @@ abbrev firstOrder (T : Type u) : Costed T where
   forget := id
   Consistent _ := True
 
-instance : Costed Nat := firstOrder Nat
-instance : Costed Int := firstOrder Int
-instance : Costed Bool := firstOrder Bool
-instance : Costed Unit := firstOrder Unit
-instance : Costed PUnit.{u + 1} := firstOrder PUnit
-instance : Costed Char := firstOrder Char
-instance : Costed String := firstOrder String
-instance (n : Nat) : Costed (Fin n) := firstOrder (Fin n)
-instance : Costed UInt8 := firstOrder UInt8
-instance : Costed UInt16 := firstOrder UInt16
-instance : Costed UInt32 := firstOrder UInt32
-instance : Costed UInt64 := firstOrder UInt64
+@[reducible] instance : Costed Nat := firstOrder Nat
+@[reducible] instance : Costed Int := firstOrder Int
+@[reducible] instance : Costed Bool := firstOrder Bool
+@[reducible] instance : Costed PUnit.{u + 1} := firstOrder PUnit
+@[reducible] instance : Costed Char := firstOrder Char
+@[reducible] instance : Costed String := firstOrder String
+@[reducible] instance (n : Nat) : Costed (Fin n) := firstOrder (Fin n)
+@[reducible] instance : Costed UInt8 := firstOrder UInt8
+@[reducible] instance : Costed UInt16 := firstOrder UInt16
+@[reducible] instance : Costed UInt32 := firstOrder UInt32
+@[reducible] instance : Costed UInt64 := firstOrder UInt64
 
 /-- A function with its instrumented version, which returns the cost of a call and the costed
 form of its result. The instrumented version takes the costed form of the argument, and its
 result's type may depend on the argument's value. `forget` recovers that value, forgetting the
 cost. -/
-instance instPi {α : Type u} {β : α → Type v} [Costed α] [∀ a, Costed (β a)] :
+@[reducible] instance instPi {α : Type u} {β : α → Type v} [Costed α] [∀ a, Costed (β a)] :
     Costed ((a : α) → β a) where
   WithCosts := ((a : α) → β a) × ((ac : WithCosts α) → Nat × WithCosts (β (forget ac)))
   forget fc := fc.1
@@ -101,29 +100,29 @@ instance instPi {α : Type u} {β : α → Type v} [Costed α] [∀ a, Costed (�
 /-! A parametric inductive type whose constructors hold functions only through its parameters
 is its own mirror: its costed form is the type at the costed forms of its parameters. -/
 
-instance {α : Type u} [Costed α] : Costed (List α) where
+@[reducible] instance {α : Type u} [Costed α] : Costed (List α) where
   WithCosts := List (WithCosts α)
   forget := List.map forget
   Consistent l := ∀ x ∈ l, Consistent x
 
-instance {α : Type u} [Costed α] : Costed (Array α) where
+@[reducible] instance {α : Type u} [Costed α] : Costed (Array α) where
   WithCosts := Array (WithCosts α)
   forget := Array.map forget
   Consistent l := ∀ x ∈ l, Consistent x
 
-instance {α : Type u} [Costed α] : Costed (Option α) where
+@[reducible] instance {α : Type u} [Costed α] : Costed (Option α) where
   WithCosts := Option (WithCosts α)
   forget := Option.map forget
   Consistent
     | none => True
     | some x => Consistent x
 
-instance {α : Type u} {β : Type v} [Costed α] [Costed β] : Costed (α × β) where
+@[reducible] instance {α : Type u} {β : Type v} [Costed α] [Costed β] : Costed (α × β) where
   WithCosts := WithCosts α × WithCosts β
   forget p := (forget p.1, forget p.2)
   Consistent p := Consistent p.1 ∧ Consistent p.2
 
-instance {α : Type u} {β : Type v} [Costed α] [Costed β] : Costed (α ⊕ β) where
+@[reducible] instance {α : Type u} {β : Type v} [Costed α] [Costed β] : Costed (α ⊕ β) where
   WithCosts := WithCosts α ⊕ WithCosts β
   forget
     | .inl a => .inl (forget a)
@@ -132,13 +131,13 @@ instance {α : Type u} {β : Type v} [Costed α] [Costed β] : Costed (α ⊕ β
     | .inl a => Consistent a
     | .inr b => Consistent b
 
-instance {α : Type u} {β : α → Type v} [Costed α] [∀ a, Costed (β a)] :
+@[reducible] instance {α : Type u} {β : α → Type v} [Costed α] [∀ a, Costed (β a)] :
     Costed ((a : α) × β a) where
   WithCosts := (ac : WithCosts α) × WithCosts (β (forget ac))
   forget p := ⟨forget p.1, forget p.2⟩
   Consistent p := Consistent p.1 ∧ Consistent p.2
 
-instance {α : Type u} {p : α → Prop} [Costed α] : Costed { a : α // p a } where
+@[reducible] instance {α : Type u} {p : α → Prop} [Costed α] : Costed { a : α // p a } where
   WithCosts := { ac : WithCosts α // p (forget ac) }
   forget s := ⟨forget s.1, s.2⟩
   Consistent s := Consistent s.1
