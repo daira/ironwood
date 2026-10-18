@@ -6,7 +6,7 @@ a first-order inductive type gets its identity instance generated. -/
 
 namespace Zcash.Meta.Tests.Instrument
 
-open Lean Elab Term Meta Zcash.Meta.Instrument
+open Lean Elab Term Meta Zcash.Meta.Instrument Zcash.Meta.CostedRegistry
 
 /-- info: first order: true, trusted: [] -/
 #guard_msgs in
@@ -50,7 +50,7 @@ run_elab do
 
 /--
 error: register_costed: `Zcash.Meta.Tests.Instrument.instCostedPair` is already registered as
-Zcash.Meta.Instrument.Provenance.registered
+hand-written
 -/
 #guard_msgs (whitespace := lax) in
 register_costed instCostedPair

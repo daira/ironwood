@@ -54,6 +54,8 @@ rests on.
 
 universe u v
 
+namespace Zcash.Meta
+
 /-- The costed form of a type: its values with the cost functions of the functions inside them.
 See the module documentation for what an instance asserts. -/
 class Costed (T : Type u) where
@@ -143,3 +145,5 @@ is its own mirror: its costed form is the type at the costed forms of its parame
   Consistent s := Consistent s.1
 
 end Costed
+
+end Zcash.Meta

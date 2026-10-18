@@ -11,7 +11,7 @@ its own because an environment extension cannot be used in the module that decla
 
 open Lean
 
-namespace Zcash.Meta.Instrument
+namespace Zcash.Meta.CostedRegistry
 
 /-- Where a `Costed` instance comes from, which decides what it asserts. -/
 inductive Provenance where
@@ -23,6 +23,12 @@ inductive Provenance where
   /-- Written by hand and registered with `register_costed`: a trusted assumption about cost. -/
   | registered
   deriving Inhabited, Repr, BEq
+
+/-- The provenance, in words, for a message. -/
+def Provenance.describe : Provenance → String
+  | .builtin => "built in"
+  | .generated => "generated"
+  | .registered => "hand-written"
 
 /-- A registered `Costed` instance: the instance's declaration and where it comes from. -/
 structure CostedEntry where
@@ -41,4 +47,4 @@ initialize costedExt : SimplePersistentEnvExtension CostedEntry (NameMap CostedE
 def costedEntry? (env : Environment) (inst : Name) : Option CostedEntry :=
   (costedExt.getState env).find? inst
 
-end Zcash.Meta.Instrument
+end Zcash.Meta.CostedRegistry

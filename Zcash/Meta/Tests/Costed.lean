@@ -7,7 +7,7 @@ the plain types. -/
 
 namespace Zcash.Meta.Tests.Costed
 
-open _root_.Costed
+open Zcash.Meta.Costed
 
 example : WithCosts Nat = Nat := rfl
 example : WithCosts (List Nat) = List Nat := rfl

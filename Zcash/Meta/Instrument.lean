@@ -22,6 +22,7 @@ its consistency predicate (`Mirror`).
 -/
 
 open Lean Elab Command Meta Term
+open Zcash.Meta.CostedRegistry
 
 namespace Zcash.Meta.Instrument
 
@@ -575,7 +576,7 @@ syntax (name := registerCosted) "register_costed " ident : command
     unless ← liftTermElabM (isCostedInstance c) do
       throwError "register_costed: `{c}` is not a `Costed` instance"
     if let some e := costedEntry? (← getEnv) c then
-      throwError "register_costed: `{c}` is already registered as {repr e.provenance}"
+      throwError "register_costed: `{c}` is already registered as {e.provenance.describe}"
     modifyEnv (costedExt.addEntry · { inst := c, provenance := .registered })
   | _ => throwUnsupportedSyntax
 
