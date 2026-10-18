@@ -156,19 +156,20 @@ run_elab do
   let (inst, _) ← ensureCosted t
   logInfo m!"first order: {← isFirstOrder t}, instance: {inst}"
 
--- The mirror's `query` carries the continuation with its instrumented version, which returns
--- a call's cost and the costed form of the computation it continues with.
+-- The mirror's `query` carries the continuation split into three fields: the function, the cost of
+-- a call, and the costed form of the computation it continues with, so that the mirror occurs in a
+-- function's codomain, as the type does, and not nested in a pair.
 example : Costed.WithCosts (OC Nat Bool Nat) = OC.withCosts Nat Bool Nat := rfl
 example : Costed.forget (T := OC Nat Bool Nat) (OC.withCosts.pure 5) = .pure 5 := rfl
 example : Costed.forget (T := OC Nat Bool Nat)
-    (OC.withCosts.query 3 (fun _ => .pure 1, fun _ => (1, OC.withCosts.pure 1))) =
+    (OC.withCosts.query 3 (fun _ => .pure 1) (fun _ => 1) (fun _ => OC.withCosts.pure 1)) =
     .query 3 (fun _ => .pure 1) := rfl
 
--- Consistency of a `query`: the result of each instrumented call erases to the continuation's
--- result, and is consistent itself.
+-- Consistency of a `query`: the result of each call erases to the continuation's result, and
+-- is consistent itself.
 example : Costed.Consistent (T := OC Nat Bool Nat)
-    (OC.withCosts.query 3 (fun _ => .pure 1, fun _ => (1, OC.withCosts.pure 1))) :=
-  OC.withCosts.Consistent.query _ _ trivial (fun _ _ => rfl)
+    (OC.withCosts.query 3 (fun _ => .pure 1) (fun _ => 1) (fun _ => OC.withCosts.pure 1)) :=
+  OC.withCosts.Consistent.query _ _ _ _ trivial (fun _ _ => rfl)
     (fun _ _ => OC.withCosts.Consistent.pure _ trivial)
 
 /-- A recursive type with a function field: the erasure recurses structurally. -/

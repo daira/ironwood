@@ -17,7 +17,9 @@ derived cost function takes *costed forms* of values, not the values themselves:
 `Costed T` gives the costed form of `T`, the map `forget` from it back to the value, and the
 predicate `Consistent`. The latter says that the costs' results agree with the value: for a
 function, that its instrumented version returns, at every consistent argument, the consistent
-costed form of what the original function returns.
+costed form of what the original function returns. Costed forms preserve universes: the costed
+form of a type in `Type u` is in `Type u`, which lets a generator compute the universe of a costed
+form from the original type before the costed form exists.
 
 ## Background
 

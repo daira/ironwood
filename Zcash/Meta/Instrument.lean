@@ -218,6 +218,33 @@ mirror (`substituteStuck`). A nested occurrence of `I` inside another inductive 
 field of type `List I`, is accepted by the kernel but refused here, since its erasure would have
 to recurse under that type's map, which `forget` cannot do structurally. -/
 
+/-- `e` with the beta-redexes and the projections of literal pairs reduced, as the pair form of a
+split field leaves them: `(fun a => (kc a, kr a)) x` and `Prod.snd (c, r)`. -/
+def reduceProjs (e : Expr) : MetaM Expr := do
+  Meta.transform e (post := fun s => do
+    -- Only a projection of a *literal* pair is reduced, syntactically: a projection of a
+    -- `let`-bound local must stay, since unfolding it could reach a recursive call of a constant
+    -- that does not exist yet. The children are reduced first (`post`), so that an application
+    -- headed by such a projection meets the literal pair and is beta-reduced.
+    let component (pair : Expr) (i : Nat) : Option Expr :=
+      if pair.isAppOfArity ``Prod.mk 4 then some pair.getAppArgs[2 + i]! else none
+    let s := s.headBeta
+    match s with
+    | .proj ``Prod i pair =>
+      if let some c := component pair i then return .visit c
+    | _ =>
+      let f := s.getAppFn
+      let args := s.getAppArgs
+      match f with
+      | .proj ``Prod i pair =>
+        if let some c := component pair i then return .visit (mkAppN c args).headBeta
+      | .const n _ =>
+        if (n == ``Prod.fst || n == ``Prod.snd) && args.size ≥ 3 then
+          if let some c := component args[2]! (if n == ``Prod.fst then 0 else 1) then
+            return .visit (mkAppN c args[3:]).headBeta
+      | _ => pure ()
+    return .done s)
+
 /-- What the parts of a mirror share: the type being mirrored, its parameters and the instances
 of its type parameters as local variables, the hypothetical instance, and the names and the
 applied forms of the three declarations, which are referred to before they exist. -/
@@ -303,19 +330,65 @@ def erasure (m : Mirror) (τ fc : Expr) : MetaM Expr := m.reducedOp ``Costed.for
 def consistency (m : Mirror) (τ fc : Expr) : MetaM Expr := do
   simpTrue (← m.reducedOp ``Costed.Consistent τ #[fc])
 
+/-- One original field of a constructor, as the mirror represents it. -/
+structure FieldView where
+  /-- The mirror's fields for it: one, or three for a split function field. -/
+  mirror : Array Expr
+  /-- The original field's type, with the earlier fields' erasures substituted. -/
+  type : Expr
+  /-- The field's costed form as a value: the mirror field, or the pair rebuilt from the three. -/
+  costed : Expr
+  /-- The field's erasure. -/
+  erasure : Expr
+  /-- Whether the field is data; a proposition or a type is kept as it is. -/
+  isData : Bool
+
+/-- Bind the three mirror fields of a split function field named `name`: the function at its
+original type `τ`, the cost of a call `dom → Nat`, and the result `(a : dom) → cod`, where `fn`
+is the original function type and `dom` and `cod` are the costed domain and codomain, the latter
+with the bound variable loose. The continuation also gets the pair form, the function with
+`fun a => (cost a, result a)`, for the uses that expect a function's costed form. The universes
+come from the original function type, since the costed codomain names the mirror, which does not
+exist yet and so cannot be type-checked. -/
+def withSplitField {α} (name : Name) (τ fn dom cod : Expr)
+    (k : Expr → Expr → Expr → Expr → MetaM α) : MetaM α := do
+  let .forallE _ a b _ := fn | unreachable!
+  let vA := (← getLevel a).dec.get!
+  let vB ← withLocalDecl `a .default a fun x => do
+    return (← getLevel (b.instantiate1 x)).dec.get!
+  let vDom := (← getLevel dom).dec.get!
+  let natProd (x : Expr) : Expr := mkApp2 (mkConst ``Prod [Level.zero, vB]) (mkConst ``Nat) x
+  let instrumentedType := Expr.forallE `a dom (natProd cod) .default
+  withLocalDecl name .default τ fun kf => do
+  withLocalDecl (name.appendAfter "Cost") .default (← mkArrow dom (mkConst ``Nat)) fun kc => do
+  withLocalDecl (name.appendAfter "Res") .default (.forallE `a dom cod .default) fun kr => do
+    let instrumented ← withLocalDecl `a .default dom fun x => do
+      mkLambdaFVars #[x] (mkApp4 (mkConst ``Prod.mk [Level.zero, vB])
+        (mkConst ``Nat) (cod.instantiate1 x) (mkApp kc x) (mkApp kr x))
+    let pair := mkApp4 (mkConst ``Prod.mk [mkLevelMax vA vB, mkLevelMax vDom vB])
+      τ instrumentedType kf instrumented
+    k kf kc kr pair
+
 /-- The mirror's fields for one constructor of `I`, as local variables, so that each part of the
-mirror is built in the same telescope: a binder of the costed form for each data field, and the
-original binder for a proof or a type. A later field's type may mention an earlier field, as
-`(n : Nat) (v : Fin n)` does, or a proof field may mention a function field; in the mirror that
-earlier field is only available as its costed form, so its *erasure* takes its place in the
-later types. The continuation gets the mirror fields, the original fields' types after that
-replacement, and the erasures of the mirror fields. -/
-partial def withFields {α} (m : Mirror) (fields : Array Expr)
-    (k : Array Expr → Array Expr → Array Expr → MetaM α) : MetaM α :=
+mirror is built in the same telescope:
+
+* a data field whose costed form is a pair of a function and its instrumented version, and
+  whose result holds `I`, is *split* into three fields: the function, the cost of a call, and the
+  costed form of its result. A map into a product is a pair of maps, so nothing is lost, and the
+  mirror then occurs in the codomain of a function, as `I` does in the original, rather than
+  nested in a pair, which structural recursion over the mirror could not see through;
+* any other data field gets a binder of its costed form;
+* a proof or a type keeps its binder.
+
+A later field's type may mention an earlier field, as `(n : Nat) (v : Fin n)` does, or a proof
+field may mention a function field; in the mirror that earlier field is only available as its
+costed form, so its *erasure* takes its place in the later types. -/
+def withFields {α} (m : Mirror) (fields : Array Expr)
+    (k : Array FieldView → MetaM α) : MetaM α :=
   -- `olds` are the original fields seen so far and `news` what replaces them in later types.
-  go 0 #[] #[] #[] #[] #[]
+  go 0 #[] #[] #[]
 where
-  go (i : Nat) (olds news types erasures acc : Array Expr) : MetaM α := do
+  go (i : Nat) (olds news : Array Expr) (acc : Array FieldView) : MetaM α := do
     if h : i < fields.size then
       let f := fields[i]
       let τ := (← inferType f).replaceFVars olds news
@@ -323,26 +396,52 @@ where
       if ← isDataLocal f then
         let τc ← m.costedForm τ
         m.checkReplaced f τc
-        withLocalDecl name .default τc fun fc => do
-          let er ← m.erasure τ fc
-          -- An erasure that still mentions the hypothetical instance would need the mirror's
-          -- `forget` under some other type's map (`List.map forget` for a field of type `List I`),
-          -- which `forget` cannot do by structural recursion; a field of type `I` itself is fine,
-          -- since its erasure is a plain recursive call.
-          if er.hasAnyFVar (· == m.instI) then
-            throwError "efficient: the erasure of the field `{f}` of `{m.I}`, of type `{τ}`, \
-              would recurse into `{m.I}` under another type, which is not supported yet; \
-              write a `Costed` instance for `{m.I}` and register it with `register_costed`"
-          go (i + 1) (olds.push f) (news.push er) (types.push τ) (erasures.push er) (acc.push fc)
+        if let some (fn, dom, cod) ← splitShape? τc then
+          withSplitField name τ fn dom cod fun kf kc kr pair => do
+            let view := { mirror := #[kf, kc, kr], type := τ, costed := pair, erasure := kf,
+                          isData := true }
+            go (i + 1) (olds.push f) (news.push kf) (acc.push view)
+        else
+          withLocalDecl name .default τc fun fc => do
+            let er ← m.erasure τ fc
+            -- An erasure that still mentions the hypothetical instance would need the mirror's
+            -- `forget` under some other type's map (`List.map forget` for a field of type
+            -- `List I`), which `forget` cannot do by structural recursion; a field of type `I`
+            -- itself is fine, since its erasure is a plain recursive call.
+            if er.hasAnyFVar (· == m.instI) then
+              throwError "efficient: the erasure of the field `{f}` of `{m.I}`, of type `{τ}`, \
+                would recurse into `{m.I}` under another type, which is not supported yet; \
+                write a `Costed` instance for `{m.I}` and register it with `register_costed`"
+            let view := { mirror := #[fc], type := τ, costed := fc, erasure := er, isData := true }
+            go (i + 1) (olds.push f) (news.push er) (acc.push view)
       else
         withLocalDecl name (← f.fvarId!.getBinderInfo) τ fun f' =>
-          go (i + 1) (olds.push f) (news.push f') (types.push τ) (erasures.push f') (acc.push f')
-    else k acc types erasures
+          let view := { mirror := #[f'], type := τ, costed := f', erasure := f', isData := false }
+          go (i + 1) (olds.push f) (news.push f') (acc.push view)
+    else k acc
+  termination_by fields.size - i
+  /-- Whether the costed form `τc` is that of a function of one argument whose result holds the
+  mirror: a pair of the function type and `(a : dom) → Nat × cod` with the mirror in `cod`. Returns
+  the function type, the domain, and the codomain (with the bound variable loose). A function of
+  more than one argument into `I` would need the split carried through every arrow, which is not
+  done yet. -/
+  splitShape? (τc : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
+    unless τc.isAppOfArity ``Prod 2 do return none
+    let fn := τc.getAppArgs[0]!
+    unless fn.isForall do return none
+    let .forallE _ dom body _ := τc.getAppArgs[1]! | return none
+    unless body.isAppOfArity ``Prod 2 do return none
+    let cod := body.getAppArgs[1]!
+    unless (cod.find? (·.isConstOf m.mirrorName)).isSome do return none
+    if cod.isAppOfArity ``Prod 2 then
+      throwError "efficient: a function field of `{m.I}` with more than one argument whose \
+        result holds `{m.I}` is not supported yet; write a `Costed` instance for `{m.I}` and \
+        register it with `register_costed`"
+    return some (fn, dom, cod)
 
 /-- `withFields` over the fields of the constructor `ctor` of `I`, with the parameters instantiated.
 -/
-def withCtorFields {α} (m : Mirror) (ctor : Name)
-    (k : Array Expr → Array Expr → Array Expr → MetaM α) : MetaM α := do
+def withCtorFields {α} (m : Mirror) (ctor : Name) (k : Array FieldView → MetaM α) : MetaM α := do
   let ctorInfo ← getConstInfoCtor ctor
   forallTelescope (← instantiateForall ctorInfo.type m.params) fun fields _ =>
     m.withFields fields k
@@ -355,28 +454,38 @@ well-founded recursion, `noConfusion` for proofs). The constructor types name th
 constant, as any inductive declaration does. -/
 def addInductive (m : Mirror) : MetaM Unit := do
   let mut ctors : List Constructor := []
+  let mut layout : Array (Array Nat) := #[]
   for ctor in m.info.ctors do
-    let ctorType ← m.withCtorFields ctor fun mfields _ _ =>
-      return setBinderInfos (← mkForallFVars (m.params ++ m.insts ++ mfields) m.mirrorApp)
-        m.paramInfos
+    let (ctorType, ctorLayout) ← m.withCtorFields ctor fun views => do
+      let mfields := views.flatMap (·.mirror)
+      let ty ← mkForallFVars (m.params ++ m.insts ++ mfields) m.mirrorApp
+      return (setBinderInfos ty m.paramInfos, views.map (·.mirror.size))
+    layout := layout.push ctorLayout
     -- Every stuck occurrence was checked field by field; this is the last resort before the
     -- hypothetical instance could escape into a declaration.
     if ctorType.hasAnyFVar (· == m.instI) then
       throwError "efficient: no `Costed` instance could be generated for `{m.I}`: the \
-        constructor `{ctor}` of its mirror would mention the hypothetical instance of `{m.I}`, \
-        which the generator does not handle yet. Write an instance for `{m.I}` by hand and \
-        register it with `register_costed`, and please report this case"
+        constructor `{ctor}` of its mirror would mention the hypothetical instance \
+        `{mkFVar m.instI}` of `{m.I}`, which the generator does not handle yet. Write an \
+        instance for `{m.I}` by hand and register it with `register_costed`, and please report \
+        this case, with the constructor's type:{indentExpr ctorType}"
     ctors := ctors ++ [{ name := ctor.updatePrefix m.mirrorName, type := ctorType }]
   let type ← mkForallFVars (m.params ++ m.insts) (mkSort (mkLevelSucc m.v))
   addDecl (.inductDecl m.info.levelParams m.numParams
     [{ name := m.mirrorName, type, ctors }] false)
+  modifyEnv (mirrorExt.addEntry · { original := m.I, mirror := m.mirrorName, layout })
   mkRecOn m.mirrorName
   mkCasesOn m.mirrorName
-  -- The remaining constructions are conveniences, and a mirror that nests in another inductive type
-  -- (a function field's codomain is a pair) does not get all of them; the derivation needs only
-  -- `casesOn`.
-  for mk in [Lean.mkNoConfusion, mkBelow, mkBRecOn, mkSizeOfInstances] do
-    try mk m.mirrorName catch _ => pure ()
+  -- The remaining constructions serve proofs and recursion over the mirror; one that fails is
+  -- reported as a warning, since a later structural recursion over the mirror would fail for
+  -- the lack of it without saying why.
+  let constructions : List (Name × (Name → MetaM Unit)) :=
+    [(``Lean.mkNoConfusion, Lean.mkNoConfusion), (``mkBelow, mkBelow), (``mkBRecOn, mkBRecOn),
+     (``mkSizeOfInstances, mkSizeOfInstances)]
+  for c in constructions do
+    try c.2 m.mirrorName
+    catch ex => logWarning m!"efficient: `{c.1}` failed for the mirror `{m.mirrorName}`: \
+      {ex.toMessageData}"
 
 /-- Define `forget`: by cases on the mirror, each constructor of `I` rebuilt from the erasures of
 the mirror fields. The erasure of a field of type `I` is the recursive call, written as an
@@ -388,8 +497,9 @@ def addForget (m : Mirror) : TermElabM Unit := do
     let motive ← mkLambdaFVars #[x] m.t
     let mut minors := #[]
     for ctor in m.info.ctors do
-      let minor ← m.withCtorFields ctor fun mfields _ erasures =>
-        mkLambdaFVars mfields (mkAppN (mkConst ctor m.levels) (m.params ++ erasures))
+      let minor ← m.withCtorFields ctor fun views =>
+        mkLambdaFVars (views.flatMap (·.mirror))
+          (mkAppN (mkConst ctor m.levels) (m.params ++ views.map (·.erasure)))
       minors := minors.push minor
     -- `casesOn` takes the parameters, the motive, the major premise, and the minor premises;
     -- its first universe parameter is the motive's, here the universe of `I`.
@@ -406,13 +516,15 @@ function field, which is positive. -/
 def addConsistent (m : Mirror) : MetaM Unit := do
   let mut ctors : List Constructor := []
   for ctor in m.info.ctors do
-    let ctorType ← m.withCtorFields ctor fun mfields types _ => do
+    let ctorType ← m.withCtorFields ctor fun views => do
+      let mfields := views.flatMap (·.mirror)
       let mut hyps := #[]
-      for fc in mfields, τ in types do
-        -- A proof or type field was bound with its own type, which is not a costed form.
-        if ← isDataLocal fc then
-          let h ← m.consistency τ fc
-          m.checkReplaced fc h
+      for view in views do
+        if view.isData then
+          -- The consistency of the field's costed form; for a split field the pair form leaves
+          -- projections of literal pairs behind, which `reduceProjs` removes.
+          let h ← reduceProjs (← m.consistency view.type view.costed)
+          m.checkReplaced view.costed h
           unless h.isConstOf ``True do hyps := hyps ++ (← splitConjunctions h)
       let hypDecls := hyps.zipIdx.map fun (h, i) =>
         (Name.mkSimple s!"h{i}", BinderInfo.default, fun (_ : Array Expr) => pure h)

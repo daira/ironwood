@@ -47,4 +47,28 @@ initialize costedExt : SimplePersistentEnvExtension CostedEntry (NameMap CostedE
 def costedEntry? (env : Environment) (inst : Name) : Option CostedEntry :=
   (costedExt.getState env).find? inst
 
+/-- How a generated mirror lays out the fields of each constructor of the original type: for
+each original field, the number of fields of the mirror that represent it. One field holds the
+field's costed form. Three hold a function field whose result holds the type being mirrored:
+the function, the cost of a call, and the costed form of its result, as separate fields rather
+than the pair that a function's costed form is otherwise, so that the mirror does not occur
+nested in a pair, which structural recursion over it could not see through. -/
+structure MirrorInfo where
+  original : Name
+  mirror : Name
+  layout : Array (Array Nat)
+  deriving Inhabited, Repr
+
+/-- The registry of generated mirrors, by the mirror's name. -/
+initialize mirrorExt : SimplePersistentEnvExtension MirrorInfo (NameMap MirrorInfo) ←
+  registerSimplePersistentEnvExtension {
+    addEntryFn := fun m e => m.insert e.mirror e
+    addImportedFn := fun ess =>
+      ess.foldl (fun m es => es.foldl (fun m e => m.insert e.mirror e) m) {}
+  }
+
+/-- The layout of the mirror `mirror`, if it is a generated one. -/
+def mirrorInfo? (env : Environment) (mirror : Name) : Option MirrorInfo :=
+  (mirrorExt.getState env).find? mirror
+
 end Zcash.Meta.CostedRegistry
